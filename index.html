@@ -485,7 +485,7 @@ select:focus{outline:2px solid var(--green)}
     <div class="pc" style="margin-top:8px">
       <h3>☁ Database Cloud</h3>
       <div id="cloudStatus" style="font-size:13px;margin-bottom:8px"></div>
-      <p style="font-size:12px;color:var(--muted);line-height:1.6">Il database cloud è configurato e condiviso tra tutti gli utenti. I dati vengono sincronizzati automaticamente ad ogni salvataggio.</p>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6">Database: <strong style="color:var(--light)">Firebase Realtime Database</strong> — I dati vengono sincronizzati automaticamente tra tutti i dispositivi.</p>
     </div>
   </div>
 </div>
@@ -610,15 +610,14 @@ select:focus{outline:2px solid var(--green)}
 
 <script>
 // ══════════════════════════════════════════════════
-// DATA LAYER — Memory + JSONBin cloud only
-// localStorage is NOT used (blocked in published artifacts)
+// DATA LAYER — Firebase Realtime Database
+// REST API: GET/PUT {FIREBASE_URL}/db.json
+// No auth headers needed in test mode
 // ══════════════════════════════════════════════════
 
-const JSONBIN_MASTER_KEY = '$2a$10$zDZ8r5ToCToxC.4dfbFrceSZDA.RbwQV6Owc49/iS4VUooVvgoGem';
-const JSONBIN_BIN_ID     = '6a133e926877513b27c70717';
-const JSONBIN_BASE       = 'https://api.jsonbin.io/v3';
+const FIREBASE_URL = 'https://comemigliorareafreccette-default-rtdb.europe-west1.firebasedatabase.app';
 
-let _dbCache = null;  // single in-memory DB — source of truth
+let _dbCache = null;
 
 function emptyDB(){
   return {
@@ -631,31 +630,23 @@ function emptyDB(){
   };
 }
 
-// Safe deep clone — always returns a plain JSON-serializable object
 function deepClean(obj){
   try{
     const s = JSON.stringify(obj);
-    if(s === undefined) return emptyDB();
-    return JSON.parse(s);
+    return s !== undefined ? JSON.parse(s) : emptyDB();
   } catch(e){
-    // If stringify fails, convert manually
-    try{ return JSON.parse(JSON.stringify(Object.assign({}, obj))); }
-    catch{ return emptyDB(); }
+    return emptyDB();
   }
 }
 
-// ── Load from cloud ──
+// ── Load from Firebase ──
 async function loadDBFromCloud(){
   const controller = new AbortController();
   const timer = setTimeout(()=>controller.abort(), 15000);
-  const r = await fetch(`${JSONBIN_BASE}/b/${JSONBIN_BIN_ID}/latest`,{
-    method: 'GET',
-    mode: 'cors',
-    credentials: 'omit',
-    headers:{
-      'X-Master-Key': JSONBIN_MASTER_KEY,
-      'Accept': 'application/json'
-    },
+  const r = await fetch(`${FIREBASE_URL}/db.json`,{
+    method:'GET',
+    mode:'cors',
+    credentials:'omit',
     signal: controller.signal
   });
   clearTimeout(timer);
@@ -663,44 +654,45 @@ async function loadDBFromCloud(){
     const txt = await r.text().catch(()=>'');
     throw new Error(`HTTP ${r.status}: ${txt.substring(0,150)}`);
   }
-  const data = await r.json();
-  const raw = data.record || data;
-  // Validate structure before assigning
+  const raw = await r.json();
   if(raw && typeof raw === 'object'){
     _dbCache = deepClean(raw);
-    if(!_dbCache.users) _dbCache.users = emptyDB().users;
+    if(!_dbCache.users || !_dbCache.users.length) _dbCache.users = emptyDB().users;
     if(!_dbCache.userData) _dbCache.userData = {};
   } else {
-    throw new Error('Invalid DB structure from cloud');
+    // First time: DB is empty (null), initialize it
+    _dbCache = emptyDB();
+    await saveDBNow();
   }
-  console.log('✓ Cloud DB loaded, users:', _dbCache.users?.length || 0);
+  console.log('✓ Firebase DB loaded, users:', _dbCache.users?.length || 0);
 }
 
-// ── Save to cloud (debounced 1.5s) ──
+// ── Save to Firebase (debounced 1.5s) ──
 let _saveTimer = null;
 function saveDBToCloud(){
   clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(async ()=>{
-    try{
-      const payload = deepClean(_dbCache);
-      const r = await fetch(`${JSONBIN_BASE}/b/${JSONBIN_BIN_ID}`,{
-        method: 'PUT',
-        mode: 'cors',
-        credentials: 'omit',
-        headers:{
-          'Content-Type': 'application/json',
-          'X-Master-Key': JSONBIN_MASTER_KEY
-        },
-        body: JSON.stringify(payload)
-      });
-      if(!r.ok){
-        const txt = await r.text().catch(()=>'');
-        console.warn('Cloud save failed:', r.status, txt.substring(0,150));
-      } else {
-        console.log('✓ Cloud DB saved');
-      }
-    } catch(e){ console.warn('Cloud save error:', e.message); }
-  }, 1500);
+  _saveTimer = setTimeout(saveDBNow, 1500);
+}
+
+async function saveDBNow(){
+  try{
+    const payload = deepClean(_dbCache);
+    const r = await fetch(`${FIREBASE_URL}/db.json`,{
+      method:'PUT',
+      mode:'cors',
+      credentials:'omit',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if(!r.ok){
+      const txt = await r.text().catch(()=>'');
+      console.warn('Firebase save failed:', r.status, txt.substring(0,150));
+    } else {
+      console.log('✓ Firebase DB saved');
+    }
+  } catch(e){
+    console.warn('Firebase save error:', e.message);
+  }
 }
 
 // ── Accessors ──
@@ -724,9 +716,7 @@ function setUD(uid,d){
 // ── Setup modal (informativo) ──
 function showSetupModal(){ document.getElementById('setupModal').style.display='flex'; }
 function hideSetupModal(){ document.getElementById('setupModal').style.display='none'; }
-
-// ── Init ──
-function initUsers(){ /* no-op: handled by loadDBFromCloud */ }
+function initUsers(){ /* no-op */ }
 
 async function bootApp(){
   const btns = document.querySelectorAll('.l-cta');
@@ -735,13 +725,12 @@ async function bootApp(){
     await loadDBFromCloud();
     btns.forEach((b,i)=>{ b.textContent = i===0 ? 'INIZIA ORA — ACCEDI' : "ACCEDI ALL'APP"; });
   } catch(e){
-    console.warn('Cloud unavailable:', e.message);
+    console.warn('Firebase unavailable:', e.message);
     _dbCache = emptyDB();
     btns.forEach((b,i)=>{ b.textContent = i===0 ? 'INIZIA ORA — ACCEDI' : "ACCEDI ALL'APP"; });
-    // Show a subtle banner if cloud failed (won't block usage)
     const banner = document.createElement('div');
     banner.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#7f1d1d;color:#fca5a5;font-size:12px;padding:8px 16px;text-align:center;z-index:999';
-    banner.textContent='⚠ Database cloud non raggiungibile — i dati non verranno salvati in questa sessione';
+    banner.textContent='⚠ Database non raggiungibile — i dati non verranno salvati in questa sessione';
     document.body.appendChild(banner);
     setTimeout(()=>banner.remove(), 8000);
   }
@@ -749,7 +738,6 @@ async function bootApp(){
 
 function initApp(){ /* no-op */ }
 
-// Boot when DOM ready
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded', bootApp);
 } else {
@@ -1464,7 +1452,7 @@ function renderAdmin(){
   // Show cloud status
   const cs=document.getElementById('cloudStatus');
   if(cs){
-    cs.innerHTML=`<span style="color:var(--green)">✓ Cloud attivo</span> — Bin ID: <code style="background:var(--d3);padding:2px 6px;border-radius:3px;font-size:12px">${JSONBIN_BIN_ID}</code>`;
+    cs.innerHTML=`<span style="color:var(--green)">✓ Firebase attivo</span> — <code style="background:var(--d3);padding:2px 6px;border-radius:3px;font-size:11px">comemigliorareafreccette-rtdb</code>`;
   }
   const users=getUsers();
   const listEl=document.getElementById('userList');
