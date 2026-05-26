@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -610,12 +612,24 @@ select:focus{outline:2px solid var(--green)}
 
 <script>
 // ══════════════════════════════════════════════════
-// DATA LAYER — Firebase Realtime Database
-// REST API: GET/PUT {FIREBASE_URL}/db.json
-// No auth headers needed in test mode
+// DATA LAYER — Firebase SDK (CDN) + Realtime Database
+// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
+// DATA LAYER — Firebase Realtime Database (compat SDK)
 // ══════════════════════════════════════════════════
 
-const FIREBASE_URL = 'https://comemigliorareafreccette-default-rtdb.europe-west1.firebasedatabase.app';
+const firebaseConfig = {
+  apiKey: "AIzaSyBsGiCLANS9P01TbVSxm5YUXj2_pJz7NfA",
+  authDomain: "comemigliorareafreccette.firebaseapp.com",
+  databaseURL: "https://comemigliorareafreccette-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "comemigliorareafreccette",
+  storageBucket: "comemigliorareafreccette.firebasestorage.app",
+  messagingSenderId: "738419048923",
+  appId: "1:738419048923:web:15ef4587943284ab96e7fe"
+};
+
+firebase.initializeApp(firebaseConfig);
+const _fbDB = firebase.database();
 
 let _dbCache = null;
 
@@ -634,35 +648,20 @@ function deepClean(obj){
   try{
     const s = JSON.stringify(obj);
     return s !== undefined ? JSON.parse(s) : emptyDB();
-  } catch(e){
-    return emptyDB();
-  }
+  } catch(e){ return emptyDB(); }
 }
 
 // ── Load from Firebase ──
 async function loadDBFromCloud(){
-  const controller = new AbortController();
-  const timer = setTimeout(()=>controller.abort(), 15000);
-  const r = await fetch(`${FIREBASE_URL}/db.json`,{
-    method:'GET',
-    mode:'cors',
-    credentials:'omit',
-    signal: controller.signal
-  });
-  clearTimeout(timer);
-  if(!r.ok){
-    const txt = await r.text().catch(()=>'');
-    throw new Error(`HTTP ${r.status}: ${txt.substring(0,150)}`);
-  }
-  const raw = await r.json();
+  const snap = await _fbDB.ref('db').once('value');
+  const raw = snap.val();
   if(raw && typeof raw === 'object'){
     _dbCache = deepClean(raw);
     if(!_dbCache.users || !_dbCache.users.length) _dbCache.users = emptyDB().users;
     if(!_dbCache.userData) _dbCache.userData = {};
   } else {
-    // First time: DB is empty (null), initialize it
     _dbCache = emptyDB();
-    await saveDBNow();
+    await _fbDB.ref('db').set(deepClean(_dbCache));
   }
   console.log('✓ Firebase DB loaded, users:', _dbCache.users?.length || 0);
 }
@@ -671,28 +670,12 @@ async function loadDBFromCloud(){
 let _saveTimer = null;
 function saveDBToCloud(){
   clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(saveDBNow, 1500);
-}
-
-async function saveDBNow(){
-  try{
-    const payload = deepClean(_dbCache);
-    const r = await fetch(`${FIREBASE_URL}/db.json`,{
-      method:'PUT',
-      mode:'cors',
-      credentials:'omit',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
-    });
-    if(!r.ok){
-      const txt = await r.text().catch(()=>'');
-      console.warn('Firebase save failed:', r.status, txt.substring(0,150));
-    } else {
+  _saveTimer = setTimeout(async ()=>{
+    try{
+      await _fbDB.ref('db').set(deepClean(_dbCache));
       console.log('✓ Firebase DB saved');
-    }
-  } catch(e){
-    console.warn('Firebase save error:', e.message);
-  }
+    } catch(e){ console.warn('Firebase save error:', e.message); }
+  }, 1500);
 }
 
 // ── Accessors ──
@@ -713,7 +696,6 @@ function setUD(uid,d){
   saveDBToCloud();
 }
 
-// ── Setup modal (informativo) ──
 function showSetupModal(){ document.getElementById('setupModal').style.display='flex'; }
 function hideSetupModal(){ document.getElementById('setupModal').style.display='none'; }
 function initUsers(){ /* no-op */ }
@@ -737,12 +719,6 @@ async function bootApp(){
 }
 
 function initApp(){ /* no-op */ }
-
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded', bootApp);
-} else {
-  bootApp();
-}
 
 // ══════════════════════════════════════════════════
 // AUTH
@@ -2205,8 +2181,13 @@ function finalize201Game(){
 function close201(){document.getElementById('g201overlay').style.display='none';}
 
 // ══════════════════════════════════════════════════
-// INIT — bootApp() called above via DOMContentLoaded
+// INIT — bootApp() called via DOMContentLoaded
 // ══════════════════════════════════════════════════
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', bootApp);
+} else {
+  bootApp();
+}
 </script>
 <!-- Setup / Cloud Info Modal (informativo — credenziali hardcoded) -->
 <div id="setupModal" style="position:fixed;inset:0;z-index:1900;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;padding:20px">
