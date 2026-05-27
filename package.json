@@ -1,0 +1,28 @@
+{
+  "name": "comemigliorareafreccette",
+  "version": "1.0.0",
+  "description": "Come Migliorare a Freccette - Dart Training Application",
+  "type": "module",
+  "scripts": {
+    "dev": "python3 -m http.server 8000",
+    "test": "echo \"No tests specified\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/micheledemonte/comemigliorareafreccette.git"
+  },
+  "keywords": [
+    "darts",
+    "training",
+    "analytics"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/micheledemonte/comemigliorareafreccette/issues"
+  },
+  "homepage": "https://github.com/micheledemonte/comemigliorareafreccette#readme",
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  }
+}
