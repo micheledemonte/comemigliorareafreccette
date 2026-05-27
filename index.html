@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Come Migliorare a Freccette</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -67,7 +67,7 @@ button{cursor:pointer}
 @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
 
 /* ─── CAROUSEL SECTION ─── */
-.l-carousel-section{background:var(--d2);padding:56px 0 44px}
+.l-carousel-section{background:var(--d2);padding:80px 0 72px}
 .l-carousel-header{text-align:center;margin-bottom:24px;padding:0 24px}
 .l-carousel-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,7vw,48px);color:var(--light);letter-spacing:.04em;margin-bottom:6px}
 .l-carousel-sub{font-size:13px;color:var(--muted);line-height:1.7}
@@ -93,7 +93,7 @@ button{cursor:pointer}
 @keyframes swipeHint{0%,100%{transform:translateX(0)}50%{transform:translateX(-10px)}}
 
 /* ─── JOURNEY SECTION ─── */
-.l-journey{padding:60px 24px;max-width:600px;margin:0 auto}
+.l-journey{padding:80px 24px 80px;max-width:600px;margin:0 auto}
 .l-journey-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,7vw,48px);color:var(--light);text-align:center;margin-bottom:12px;letter-spacing:.04em}
 .l-journey-sub{font-size:14px;color:var(--muted);text-align:center;margin-bottom:48px;line-height:1.7}
 .l-step{display:flex;gap:20px;margin-bottom:0;position:relative}
@@ -304,7 +304,7 @@ select:focus{outline:2px solid var(--green)}
   <!-- HERO -->
   <div class="lhero">
     <div class="l-logo">COME MIGLIORARE A FRECCETTE</div>
-    <h1 class="l-head">ALLENA IL TUO<br><span>TALENTO</span></h1>
+    <h1 class="l-head">ALLENA IL TUO<br><span>TALENTO</span> A FRECCETTE</h1>
     <p class="l-sub">Un programma strutturato di 8 allenamenti progressivi con 5 sessioni ciascuno. Registra ogni risultato, analizza i tuoi progressi con grafici dettagliati e gioca a 501 con statistiche complete.</p>
     <button class="l-cta" onclick="openLogin()">CLICCA QUI PER ACCEDERE</button>
     <div class="l-scroll-hint">↓ &nbsp; Scopri di più &nbsp; ↓</div>
@@ -879,7 +879,17 @@ function getUD(uid){
 function setUD(uid,d){
   if(!_dbCache) _dbCache=emptyDB();
   if(!_dbCache.userData) _dbCache.userData={};
-  _dbCache.userData[uid]=deepClean(d);
+  // Enforce 365-day retention: remove training sessions older than 365 days
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 365);
+  const cleaned = deepClean(d);
+  Object.keys(cleaned).forEach(k=>{
+    const v = cleaned[k];
+    if(v?.__meta?.savedAt && new Date(v.__meta.savedAt) < cutoff){
+      delete cleaned[k];
+    }
+  });
+  _dbCache.userData[uid]=cleaned;
   saveDBToCloud();
 }
 
@@ -1003,8 +1013,8 @@ function autoLoadNextSession(){
 
 function doLogout(){
   CU=null;
+  reset501Sessions();
   document.getElementById('appLayer').classList.remove('visible');
-  // reset tabs
   showTab('training',true);
 }
 
@@ -1671,6 +1681,8 @@ function selAdmin(uid){
   if(!selAU) return;
   renderAdmin();
   document.getElementById('astTitle').textContent=`Statistiche — ${selAU.firstName} ${selAU.lastName}`;
+  // Reset admin 501 session selections for this user
+  if(!_adminSelected501[selAU.id]) _adminSelected501[selAU.id]=[];
   // Render full stats + 501 sessions for this user
   document.getElementById('astContent').innerHTML=`
     <div id="adminStatsContainer" style="margin-top:8px"></div>
@@ -1698,7 +1710,9 @@ function selAdmin(uid){
   }
 }
 
-// Returns HTML for last 10 free 501 sessions of a user
+// Admin: selected 501 sessions per user
+let _adminSelected501 = {};
+
 function render501SessionsFor(uid){
   const data=getUD(uid);
   const sessions=Object.entries(data)
@@ -1706,27 +1720,94 @@ function render501SessionsFor(uid){
     .sort((a,b)=>new Date(b[1].__meta.savedAt)-new Date(a[1].__meta.savedAt))
     .slice(0,10);
   if(!sessions.length) return '<p style="color:var(--muted);font-size:13px;padding:8px 0">Nessuna sessione 501 registrata.</p>';
-  return sessions.map(([k,v],si)=>{
-    const d=new Date(v.__meta.savedAt).toLocaleDateString('it-IT');
-    const legs=v.legs||[];
-    const legRows=legs.map((l,i)=>`
-      <div style="background:var(--d4);border-radius:5px;padding:9px 12px;margin-bottom:6px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--green);margin-bottom:4px">Leg ${i+1}</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:5px;font-size:12px">
-          <div><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
-          <div><span style="color:var(--muted)">Frecce: </span>${l.dartsThrown||0}</div>
-          <div><span style="color:var(--muted)">Media: </span>${l.avgPerRound||0}</div>
-          <div><span style="color:var(--muted)">Doppie: </span>${l.doublesThrown||0}/${l.doublesHit||0}</div>
-          <div><span style="color:var(--muted)">%: </span>${(l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0}%</div>
-        </div>
+
+  if(!_adminSelected501[uid]) _adminSelected501[uid]=[];
+
+  const selectOpts='<option value="">— Seleziona sessione —</option>'+
+    sessions.map(([k,v])=>`<option value="${k}">${new Date(v.__meta.savedAt).toLocaleDateString('it-IT')} — ${(v.legs||[]).length} legs</option>`).join('');
+
+  let html=`<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <select id="admin501Sel_${uid}" style="flex:1;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:8px 10px;border-radius:6px;font-size:13px">${selectOpts}</select>
+    <button onclick="addAdmin501Sess('${uid}')" style="background:var(--green);color:#000;border:none;padding:8px 16px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:14px;cursor:pointer">AGGIUNGI</button>
+  </div>
+  <div id="admin501Panel_${uid}"></div>`;
+
+  return html;
+}
+
+function addAdmin501Sess(uid){
+  const sel=document.getElementById('admin501Sel_'+uid);
+  if(!sel) return;
+  const key=sel.value; if(!key) return;
+  const data=getUD(uid);
+  const sess=data[key]; if(!sess?.legs) return;
+  if(!_adminSelected501[uid]) _adminSelected501[uid]=[];
+  if(_adminSelected501[uid].find(s=>s.key===key)) return;
+  const date=new Date(sess.__meta.savedAt).toLocaleDateString('it-IT');
+  _adminSelected501[uid].push({key,date,legs:sess.legs});
+  renderAdmin501Panel(uid);
+}
+
+function renderAdmin501Panel(uid){
+  const panel=document.getElementById('admin501Panel_'+uid);
+  if(!panel) return;
+  const selected=_adminSelected501[uid]||[];
+  if(!selected.length){panel.innerHTML='';return;}
+  let html='';
+  if(selected.length>=2){
+    html+=`<button onclick="toggleAdmin501Compare('${uid}')" style="background:var(--d3);border:1px solid var(--green);color:var(--green);font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.06em;padding:8px 16px;border-radius:6px;cursor:pointer;margin-bottom:12px;width:100%">⬆ CONFRONTA</button>
+    <div id="adminCompare501_${uid}" style="display:none;background:var(--d4);border-radius:8px;padding:12px;margin-bottom:12px">
+      ${renderAdmin501Compare(uid)}
+    </div>`;
+  }
+  selected.forEach((s,idx)=>{
+    const sum=calc501SessSummary(s.legs);
+    const legRows=s.legs.map((l,i)=>`
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:4px;font-size:11px;padding:5px 0;border-bottom:1px solid var(--d4)">
+        <div style="color:var(--green)">Leg ${i+1}</div>
+        <div><span style="color:var(--muted)">T: </span>${l.rounds||0}</div>
+        <div><span style="color:var(--muted)">F: </span>${l.dartsThrown||0}</div>
+        <div><span style="color:var(--muted)">M: </span>${l.avgPerRound||0}</div>
+        <div><span style="color:var(--muted)">D: </span>${l.doublesThrown||0}/${l.doublesHit||0}</div>
+        <div><span style="color:var(--muted)">%: </span>${(l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0}%</div>
       </div>`).join('');
-    return `<div style="background:var(--d3);border-radius:8px;padding:12px;margin-bottom:10px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--light);margin-bottom:8px">
-        Sessione ${si+1} — <span style="color:var(--muted);font-size:13px;font-family:'DM Sans',sans-serif">${d} · ${legs.length} legs</span>
+    html+=`<div style="background:var(--d3);border-radius:8px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--light)">📅 ${s.date} — ${s.legs.length} legs</div>
+        <button onclick="_adminSelected501['${uid}'].splice(${idx},1);renderAdmin501Panel('${uid}')" style="background:transparent;border:1px solid var(--d5);color:var(--muted);border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer">✕</button>
       </div>
       ${legRows}
+      <div style="margin-top:6px;padding:6px 8px;background:var(--d4);border-radius:5px;font-size:11px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:12px;color:var(--green);margin-bottom:4px">RIEPILOGO</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:4px">
+          <div><span style="color:var(--muted)">T avg: </span>${sum.avgRounds}</div>
+          <div><span style="color:var(--muted)">F avg: </span>${sum.avgDarts}</div>
+          <div><span style="color:var(--muted)">M avg: </span>${sum.avgPts}</div>
+          <div><span style="color:var(--muted)">D avg: </span>${sum.avgDbl}</div>
+          <div><span style="color:var(--muted)">% avg: </span>${sum.avgPct}%</div>
+        </div>
+      </div>
     </div>`;
-  }).join('');
+  });
+  panel.innerHTML=html;
+}
+
+function toggleAdmin501Compare(uid){
+  const p=document.getElementById('adminCompare501_'+uid);
+  if(p) p.style.display=p.style.display==='none'?'block':'none';
+}
+
+function renderAdmin501Compare(uid){
+  const selected=_adminSelected501[uid]||[];
+  const summaries=selected.map(s=>({date:s.date,...calc501SessSummary(s.legs)}));
+  const header=summaries.map(s=>`<th style="padding:5px 8px;font-size:11px;color:var(--light)">${s.date}</th>`).join('');
+  const rows=[
+    {label:'Turni',key:'avgRounds'},{label:'Frecce',key:'avgDarts'},
+    {label:'Media',key:'avgPts'},{label:'Doppie',key:'avgDbl'},{label:'%',key:'avgPct'}
+  ].map(r=>`<tr><td style="padding:4px 8px;font-size:11px;color:var(--muted)">${r.label}</td>${summaries.map(s=>`<td style="padding:4px 8px;font-size:11px;text-align:center;color:var(--light)">${s[r.key]}</td>`).join('')}</tr>`).join('');
+  return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+    <thead><tr><th style="padding:5px 8px;font-size:11px;color:var(--muted);text-align:left">Dato</th>${header}</tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
 }
 
 // Render stats into a specific container element for a given user
@@ -2188,14 +2269,17 @@ function g501MissOK(){
 }
 
 function finishFreeLeg(){
+  const darts = G.legDartsThrown;
+  // Average points per 3-dart turn = (501 / darts_to_finish) * 3
+  // This is the standard darts average calculation
+  const avg = darts > 0 ? +((501 / darts) * 3).toFixed(1) : 0;
   const res={
     legNum: G.currentLeg+1,
-    // round was incremented after checkout commit, so rounds played = round-1
     rounds: G.round-1,
-    dartsThrown: G.legDartsThrown,
+    dartsThrown: darts,
     doublesThrown: G.legDoublesThrown,
     doublesHit: G.legDoublesHit,
-    avgPerRound: G.legScores.length ? +(G.legScores.reduce((a,b)=>a+b,0)/G.legScores.length).toFixed(1) : 0
+    avgPerRound: avg
   };
   G.legsResults.push(res);
   G.currentLeg++;
@@ -2243,10 +2327,9 @@ function show501Results(legs){
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;font-size:13px">
         <div><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
         <div><span style="color:var(--muted)">Frecce: </span>${l.dartsThrown||0}</div>
-        <div><span style="color:var(--muted)">Media pts/turno: </span>${l.avgPerRound||0}</div>
-        <div><span style="color:var(--muted)">Doppie tentate: </span>${l.doublesThrown||0}</div>
-        <div><span style="color:var(--muted)">Doppie colpite: </span>${l.doublesHit||0}</div>
-        <div><span style="color:var(--muted)">% doppia: </span>${(l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0}%</div>
+        <div><span style="color:var(--muted)">Media: </span>${l.avgPerRound||0}</div>
+        <div><span style="color:var(--muted)">Doppie: </span>${l.doublesThrown||0}/${l.doublesHit||0}</div>
+        <div><span style="color:var(--muted)">%: </span>${(l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0}%</div>
       </div>
     </div>`).join('');
   document.getElementById('free501Results').style.display='block';
@@ -2265,25 +2348,116 @@ function loadPrev501Sessions(){
     sessions.map(([k,v])=>`<option value="${k}">${new Date(v.__meta.savedAt).toLocaleDateString('it-IT')} — ${(v.legs||[]).length} legs</option>`).join('');
 }
 
+// Track selected sessions persistently until logout
+let _selected501Sessions = [];
+
 function showPrev501Sess(){
   if(!CU) return;
   const key=document.getElementById('prevSessSelect').value;
-  if(!key){ document.getElementById('prev501Content').innerHTML=''; return; }
+  if(!key) return;
   const data=getUD(CU.id);
   const sess=data[key];
   if(!sess?.legs) return;
-  document.getElementById('prev501Content').innerHTML=sess.legs.map((l,i)=>`
-    <div style="background:var(--d3);border-radius:6px;padding:12px;margin-bottom:8px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--green);margin-bottom:5px">Leg ${i+1}</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:7px;font-size:13px">
+  // Avoid duplicates
+  if(_selected501Sessions.find(s=>s.key===key)) return;
+  const date=new Date(sess.__meta.savedAt).toLocaleDateString('it-IT');
+  _selected501Sessions.push({key, date, legs:sess.legs});
+  render501SessPanel();
+}
+
+function render501SessPanel(){
+  const container=document.getElementById('prev501Content');
+  if(!container) return;
+  if(!_selected501Sessions.length){container.innerHTML='';return;}
+  // Helper: build session card HTML
+  function sessCard(s, idx){
+    const legs=s.legs;
+    const legRows=legs.map((l,i)=>`
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:5px;font-size:12px;padding:6px 0;border-bottom:1px solid var(--d4)">
+        <div style="color:var(--green);font-weight:600">Leg ${i+1}</div>
         <div><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
         <div><span style="color:var(--muted)">Frecce: </span>${l.dartsThrown||0}</div>
         <div><span style="color:var(--muted)">Media: </span>${l.avgPerRound||0}</div>
         <div><span style="color:var(--muted)">Doppie: </span>${l.doublesThrown||0}/${l.doublesHit||0}</div>
         <div><span style="color:var(--muted)">%: </span>${(l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0}%</div>
+      </div>`).join('');
+    // Summary row
+    const summary=calc501SessSummary(legs);
+    return `<div style="background:var(--d3);border-radius:8px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--light)">📅 ${s.date} — ${legs.length} legs</div>
+        <button onclick="_selected501Sessions.splice(${idx},1);render501SessPanel()" style="background:transparent;border:1px solid var(--d5);color:var(--muted);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer">✕ rimuovi</button>
       </div>
-    </div>`).join('');
+      ${legRows}
+      <div style="margin-top:8px;padding:8px;background:var(--d4);border-radius:6px;font-size:12px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--green);margin-bottom:6px">RIEPILOGO SESSIONE</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:5px">
+          <div><span style="color:var(--muted)">Turni avg: </span>${summary.avgRounds}</div>
+          <div><span style="color:var(--muted)">Frecce avg: </span>${summary.avgDarts}</div>
+          <div><span style="color:var(--muted)">Media avg: </span>${summary.avgPts}</div>
+          <div><span style="color:var(--muted)">Doppie avg: </span>${summary.avgDbl}</div>
+          <div><span style="color:var(--muted)">% avg: </span>${summary.avgPct}%</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  let html='';
+  // Compare button — only show when 2+ sessions
+  if(_selected501Sessions.length>=2){
+    html+=`<button onclick="toggle501Compare()" id="btn501Compare" style="background:var(--d3);border:1px solid var(--green);color:var(--green);font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.06em;padding:9px 20px;border-radius:6px;cursor:pointer;margin-bottom:14px;width:100%">⬆ CONFRONTA SESSIONI</button>
+    <div id="panel501Compare" style="display:none;background:var(--d4);border-radius:8px;padding:14px;margin-bottom:14px">
+      ${render501Compare()}
+    </div>`;
+  }
+  _selected501Sessions.forEach((s,i)=>{ html+=sessCard(s,i); });
+  container.innerHTML=html;
 }
+
+function toggle501Compare(){
+  const panel=document.getElementById('panel501Compare');
+  if(!panel) return;
+  panel.style.display = panel.style.display==='none' ? 'block' : 'none';
+}
+
+function render501Compare(){
+  const summaries=_selected501Sessions.map(s=>({date:s.date,...calc501SessSummary(s.legs)}));
+  const header=summaries.map((s,i)=>`<th style="padding:6px 10px;font-size:12px;color:var(--light)">📅 ${s.date}</th>`).join('');
+  const rows=[
+    {label:'Turni avg', key:'avgRounds'},
+    {label:'Frecce avg', key:'avgDarts'},
+    {label:'Media avg', key:'avgPts'},
+    {label:'Doppie avg', key:'avgDbl'},
+    {label:'% avg', key:'avgPct'},
+  ].map(r=>`<tr>
+    <td style="padding:5px 10px;font-size:12px;color:var(--muted)">${r.label}</td>
+    ${summaries.map(s=>`<td style="padding:5px 10px;font-size:12px;text-align:center;color:var(--light)">${s[r.key]}</td>`).join('')}
+  </tr>`).join('');
+  return `<div style="font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--green);margin-bottom:8px">CONFRONTO</div>
+  <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+    <thead><tr><th style="padding:6px 10px;font-size:12px;color:var(--muted);text-align:left">Dato</th>${header}</tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function calc501SessSummary(legs){
+  const n=legs.length||1;
+  const avg=(arr,key)=>+(arr.reduce((s,l)=>s+(l[key]||0),0)/n).toFixed(1);
+  const avgPct=legs.reduce((s,l)=>{
+    const t=l.doublesThrown||0, h=l.doublesHit||0;
+    return s+(t>0?Math.round(h/t*100):0);
+  },0)/n;
+  return {
+    avgRounds: avg(legs,'rounds'),
+    avgDarts: avg(legs,'dartsThrown'),
+    avgPts: avg(legs,'avgPerRound'),
+    avgDbl: avg(legs,'doublesThrown')+'/'+avg(legs,'doublesHit'),
+    avgPct: Math.round(avgPct)
+  };
+}
+
+// Reset on logout
+function reset501Sessions(){ _selected501Sessions=[]; }
 
 // ══════════════════════════════════════════════════
 // 201 IN 9 GAME ENGINE
