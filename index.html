@@ -483,7 +483,6 @@ select:focus{outline:2px solid var(--green)}
         <div class="amsg" id="aeMsg"></div>
       </div>
     </div>
-    <div class="cw"><h3>Statistiche globali — Scoring</h3><canvas id="adChart" height="80"></canvas></div>
     <div class="pc" style="margin-top:8px">
       <h3>☁ Database Cloud</h3>
       <div id="cloudStatus" style="font-size:13px;margin-bottom:8px"></div>
@@ -628,8 +627,15 @@ const firebaseConfig = {
   appId: "1:738419048923:web:15ef4587943284ab96e7fe"
 };
 
-firebase.initializeApp(firebaseConfig);
-const _fbDB = firebase.database();
+let _fbDB = null;
+let _firebaseOK = false;
+try {
+  firebase.initializeApp(firebaseConfig);
+  _fbDB = firebase.database();
+  _firebaseOK = true;
+} catch(e) {
+  console.warn('Firebase SDK not available (Claude sandbox mode):', e.message);
+}
 
 let _dbCache = null;
 
@@ -653,6 +659,7 @@ function deepClean(obj){
 
 // ── Load from Firebase ──
 async function loadDBFromCloud(){
+  if(!_firebaseOK || !_fbDB) throw new Error('Firebase not available');
   const snap = await _fbDB.ref('db').once('value');
   const raw = snap.val();
   if(raw && typeof raw === 'object'){
@@ -669,6 +676,7 @@ async function loadDBFromCloud(){
 // ── Save to Firebase (debounced 1.5s) ──
 let _saveTimer = null;
 function saveDBToCloud(){
+  if(!_firebaseOK || !_fbDB) return; // silent no-op in sandbox
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(async ()=>{
     try{
@@ -784,8 +792,8 @@ function enterApp(){
   document.getElementById('adminTabBtn').style.display=CU.role==='admin'?'':'none';
   loadProfileForm();
   document.getElementById('appLayer').classList.add('visible');
-  // Auto-load the next unsaved session
   autoLoadNextSession();
+  loadPrev501Sessions(); // load saved 501 sessions for this user
   checkReset();
 }
 
@@ -1421,7 +1429,7 @@ function changePwProfile(){
 // ══════════════════════════════════════════════════
 // ADMIN
 // ══════════════════════════════════════════════════
-let selAU=null, adCh=null;
+let selAU=null;
 
 function renderAdmin(){
   if(!CU||CU.role!=='admin') return;
@@ -1434,18 +1442,6 @@ function renderAdmin(){
   const listEl=document.getElementById('userList');
   if(!users.length){listEl.innerHTML='<p style="color:var(--muted);font-size:13px;padding:10px">Nessun utente.</p>';return;}
   renderAdminList(users, listEl);
-  // global chart
-  const allS=[];
-  users.forEach(u=>allS.push(...getAllSess(u.id)));
-  const sc=allS.filter(s=>s.meta.type==='scoring').map(compScore);
-  if(adCh){try{adCh.destroy();}catch{}}
-  const cv=document.getElementById('adChart');
-  if(cv&&sc.length){
-    adCh=new Chart(cv.getContext('2d'),{type:'bar',
-      data:{labels:allS.filter(s=>s.meta.type==='scoring').map(s=>`A${s.meta.week}.S${s.meta.session}`),
-        datasets:[{label:'Scoring',data:sc,backgroundColor:'#22c55e44',borderColor:'#22c55e',borderWidth:1}]},
-      options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#666',font:{size:10}},grid:{color:'#1e1e1e'}},y:{ticks:{color:'#666'},grid:{color:'#1e1e1e'},beginAtZero:true}}}});
-  }
 }
 
 function renderAdminList(users, listEl, pinnedId=null){
@@ -1496,13 +1492,14 @@ function selAdmin(uid){
   if(!selAU) return;
   renderAdmin();
   document.getElementById('astTitle').textContent=`Statistiche — ${selAU.firstName} ${selAU.lastName}`;
-  // Render full stats for this user in the admin stats container
-  document.getElementById('astContent').innerHTML=`<div id="adminStatsContainer" style="margin-top:8px"></div>`;
-  // Temporarily redirect statsContainer to admin view
-  const realContainer=document.getElementById('statsContainer');
-  const adminContainer=document.getElementById('adminStatsContainer');
-  // Use the same renderStats but targeting adminStatsContainer
-  renderStatsInto(adminContainer, selAU.id);
+  // Render full stats + 501 sessions for this user
+  document.getElementById('astContent').innerHTML=`
+    <div id="adminStatsContainer" style="margin-top:8px"></div>
+    <div class="cw" style="margin-top:12px">
+      <h3>Sessioni 501 — ${selAU.firstName} ${selAU.lastName}</h3>
+      <div id="admin501Sessions">${render501SessionsFor(selAU.id)}</div>
+    </div>`;
+  renderStatsInto(document.getElementById('adminStatsContainer'), selAU.id);
   const ed=document.getElementById('adminEditUser');
   ed.style.display='block';
   document.getElementById('aeTitle').textContent=`Modifica — ${selAU.firstName} ${selAU.lastName}`;
@@ -1520,6 +1517,37 @@ function selAdmin(uid){
     if(selAU.blocked){bb.textContent='SBLOCCA UTENTE';bb.style.background='#16a34a';bb.style.color='#000';}
     else{bb.textContent='BLOCCA UTENTE';bb.style.background='#7f1d1d';bb.style.color='#fff';}
   }
+}
+
+// Returns HTML for last 10 free 501 sessions of a user
+function render501SessionsFor(uid){
+  const data=getUD(uid);
+  const sessions=Object.entries(data)
+    .filter(([k,v])=>v?.__meta?.type==='501free')
+    .sort((a,b)=>new Date(b[1].__meta.savedAt)-new Date(a[1].__meta.savedAt))
+    .slice(0,10);
+  if(!sessions.length) return '<p style="color:var(--muted);font-size:13px;padding:8px 0">Nessuna sessione 501 registrata.</p>';
+  return sessions.map(([k,v],si)=>{
+    const d=new Date(v.__meta.savedAt).toLocaleDateString('it-IT');
+    const legs=v.legs||[];
+    const legRows=legs.map((l,i)=>`
+      <div style="background:var(--d4);border-radius:5px;padding:9px 12px;margin-bottom:6px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--green);margin-bottom:4px">Leg ${i+1}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:5px;font-size:12px">
+          <div><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
+          <div><span style="color:var(--muted)">Frecce: </span>${l.dartsThrown||0}</div>
+          <div><span style="color:var(--muted)">Media: </span>${l.avgPerRound||0}</div>
+          <div><span style="color:var(--muted)">Doppie: </span>${l.doublesThrown||0}↗ ${l.doublesHit||0}✓</div>
+          <div><span style="color:var(--muted)">%: </span>${(l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0}%</div>
+        </div>
+      </div>`).join('');
+    return `<div style="background:var(--d3);border-radius:8px;padding:12px;margin-bottom:10px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--light);margin-bottom:8px">
+        Sessione ${si+1} — <span style="color:var(--muted);font-size:13px;font-family:'DM Sans',sans-serif">${d} · ${legs.length} legs</span>
+      </div>
+      ${legRows}
+    </div>`;
+  }).join('');
 }
 
 // Render stats into a specific container element for a given user
