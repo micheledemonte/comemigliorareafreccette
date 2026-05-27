@@ -29,7 +29,8 @@ button{cursor:pointer}
 #appLayer.visible{display:flex}
 #loginModal{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s}
 #loginModal.open{opacity:1;pointer-events:all}
-.modal-box{background:var(--d2);border:1px solid var(--d4);border-radius:14px;padding:40px 36px;width:100%;max-width:400px;transform:translateY(16px);transition:transform .25s;position:relative}
+.modal-box{background:var(--d2);border:1px solid #166534;border-radius:16px;padding:40px 36px;width:100%;max-width:400px;transform:translateY(16px);transition:transform .25s;position:relative;box-shadow:0 0 40px #22c55e1a,0 24px 48px rgba(0,0,0,.6)}
+.modal-box::before{content:'';position:absolute;top:-1px;left:15%;right:15%;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);border-radius:2px;pointer-events:none}
 #loginModal.open .modal-box{transform:translateY(0)}
 .modal-close{position:absolute;top:14px;right:16px;background:transparent;border:none;color:var(--muted);font-size:22px;line-height:1;padding:4px 8px;transition:color .2s}
 .modal-close:hover{color:var(--light)}
@@ -66,30 +67,30 @@ button{cursor:pointer}
 @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
 
 /* ─── CAROUSEL SECTION ─── */
-.l-carousel-section{background:var(--d2);overflow:hidden}
-.l-carousel-sticky-inner{position:sticky;top:0;height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+/* Placeholder div holds scroll space; JS fixes the panel to viewport when in range */
+.l-carousel-placeholder{background:var(--d2)}
+.l-carousel-panel{background:var(--d2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 0 24px;width:100%;box-sizing:border-box}
+.l-carousel-panel.is-fixed{position:fixed;top:0;left:0;right:0;z-index:10;height:100svh}
+.l-carousel-panel.is-bottom{position:absolute;bottom:0;left:0;right:0}
 .l-carousel-header{text-align:center;margin-bottom:20px;padding:0 24px}
 .l-carousel-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,7vw,48px);color:var(--light);letter-spacing:.04em;margin-bottom:6px}
 .l-carousel-sub{font-size:13px;color:var(--muted);line-height:1.7}
-.l-carousel-viewport{width:100%;overflow:hidden;padding:4px 0 4px}
-.l-carousel-track{display:flex;will-change:transform;transition:transform .45s cubic-bezier(.25,.46,.45,.94);padding:0}
-.l-card{flex:0 0 min(85vw,380px);margin:0 10px;background:var(--d3);border:1px solid var(--d4);border-radius:20px;padding:36px 28px 32px;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;overflow:hidden;transition:transform .4s,opacity .4s,box-shadow .4s,border-color .4s}
+.l-carousel-viewport{width:100%;overflow:hidden;padding:4px 0}
+.l-carousel-track{display:flex;will-change:transform;transition:transform .45s cubic-bezier(.25,.46,.45,.94)}
+.l-card{flex:0 0 min(82vw,360px);margin:0 10px;background:var(--d3);border:1px solid var(--d4);border-radius:20px;padding:32px 26px 28px;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;overflow:hidden;transition:transform .4s,opacity .4s,box-shadow .4s,border-color .4s}
 .l-card.active-card{box-shadow:0 0 40px #22c55e22;border-color:#166534}
 .l-card::before{content:'';position:absolute;inset:0;border-radius:20px;background:radial-gradient(ellipse 70% 40% at 50% 0%,#052e1620,transparent);pointer-events:none}
 .l-card-glow{position:absolute;top:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);border-radius:2px;opacity:0;transition:opacity .4s}
 .l-card.active-card .l-card-glow{opacity:1}
-.l-card-num{font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:.2em;color:var(--muted);margin-bottom:20px}
-.l-card-icon{font-size:44px;margin-bottom:16px;filter:drop-shadow(0 0 12px #22c55e55)}
-.l-card-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.06em;color:var(--light);margin-bottom:10px}
+.l-card-num{font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:.2em;color:var(--muted);margin-bottom:18px}
+.l-card-icon{font-size:42px;margin-bottom:14px;filter:drop-shadow(0 0 10px #22c55e55)}
+.l-card-title{font-family:'Bebas Neue',sans-serif;font-size:23px;letter-spacing:.06em;color:var(--light);margin-bottom:10px}
 .l-card-desc{font-size:13px;color:var(--mu2);line-height:1.75;flex:1}
 .l-card-tag{margin-top:16px;display:inline-block;background:var(--gdim);border:1px solid #166534;color:var(--green);font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:4px 12px;border-radius:20px}
-/* Dots */
-.l-dot-wrap{display:flex;gap:8px;justify-content:center;margin-top:16px}
+.l-dot-wrap{display:flex;gap:8px;justify-content:center;margin-top:18px}
 .l-dot{width:7px;height:7px;border-radius:50%;background:var(--d5);transition:all .3s;cursor:pointer;border:none;padding:0}
 .l-dot:hover{background:var(--mu2)}
 .l-dot.on{background:var(--green);width:22px;border-radius:4px}
-/* Spacer that creates scroll room */
-.l-carousel-spacer{background:var(--d2)}
 
 /* ─── JOURNEY SECTION ─── */
 .l-journey{padding:60px 24px;max-width:600px;margin:0 auto}
@@ -309,9 +310,10 @@ select:focus{outline:2px solid var(--green)}
     <div class="l-scroll-hint">↓ &nbsp; Scopri di più &nbsp; ↓</div>
   </div>
 
-  <!-- CAROUSEL — sticky inner + scroll spacer -->
-  <div class="l-carousel-section">
-    <div class="l-carousel-sticky-inner" id="carouselSticky">
+  <!-- CAROUSEL — fixed panel + placeholder scroll area -->
+  <!-- The placeholder div is 500vh: panel height (100vh) + 4×100vh scroll room for 5 cards -->
+  <div class="l-carousel-placeholder" id="carouselPlaceholder" style="height:500vh;position:relative">
+    <div class="l-carousel-panel" id="carouselPanel">
       <div class="l-carousel-header">
         <div class="l-carousel-title">LE FUNZIONALITÀ</div>
         <div class="l-carousel-sub">Scorri per scoprire cosa offre l'app</div>
@@ -374,9 +376,8 @@ select:focus{outline:2px solid var(--green)}
         <button class="l-dot" onclick="goToCard(4)"></button>
       </div>
     </div>
-    <!-- Spacer: (CARDS-1) * 100vh = 4 * 100vh -->
-    <div class="l-carousel-spacer" id="carouselSpacer" style="height:400vh"></div>
   </div>
+
 
   <!-- JOURNEY — vertical bullet points -->
   <div class="l-journey">
@@ -1718,7 +1719,7 @@ function render501SessionsFor(uid){
           <div><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
           <div><span style="color:var(--muted)">Frecce: </span>${l.dartsThrown||0}</div>
           <div><span style="color:var(--muted)">Media: </span>${l.avgPerRound||0}</div>
-          <div><span style="color:var(--muted)">Doppie: </span>${l.doublesThrown||0}↗ ${l.doublesHit||0}✓</div>
+          <div><span style="color:var(--muted)">Doppie: </span>${l.doublesThrown||0}/${l.doublesHit||0}</div>
           <div><span style="color:var(--muted)">%: </span>${(l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0}%</div>
         </div>
       </div>`).join('');
@@ -2281,7 +2282,7 @@ function showPrev501Sess(){
         <div><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
         <div><span style="color:var(--muted)">Frecce: </span>${l.dartsThrown||0}</div>
         <div><span style="color:var(--muted)">Media: </span>${l.avgPerRound||0}</div>
-        <div><span style="color:var(--muted)">Doppie: </span>${l.doublesThrown||0} tentate / ${l.doublesHit||0} colpite</div>
+        <div><span style="color:var(--muted)">Doppie: </span>${l.doublesThrown||0}/${l.doublesHit||0}</div>
         <div><span style="color:var(--muted)">%: </span>${(l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0}%</div>
       </div>
     </div>`).join('');
@@ -2390,79 +2391,82 @@ function finalize201Game(){
 function close201(){document.getElementById('g201overlay').style.display='none';}
 
 // ══════════════════════════════════════════════════
-// LANDING CAROUSEL — scroll position based (works on all devices)
-// The .l-carousel-section contains:
-//   - .l-carousel-sticky-inner (position:sticky, 100vh) — the visible UI
-//   - #carouselSpacer (400vh) — creates scroll room
-// As user scrolls through the 400vh of space, progress 0→1 maps to card 0→4
+// LANDING CAROUSEL — fixed panel driven by page scroll
+// #carouselPlaceholder = 500vh (100vh panel + 400vh scroll room)
+// When placeholder enters viewport: panel becomes position:fixed
+// When all 4×100vh steps consumed: panel pins to bottom of placeholder
+// This works identically on desktop (mouse wheel) and mobile (touch scroll)
 // ══════════════════════════════════════════════════
 (function(){
   const CARDS = 5;
-  let current = -1; // force first render
+  let curIdx = -1;
 
-  function getCardEl(i){ return document.querySelectorAll('.l-card')[i]; }
-
-  function cardW(){
-    const c = getCardEl(0);
-    if(!c) return 320;
-    return c.offsetWidth + 20;
+  function centerTrack(idx){
+    const track = document.getElementById('carouselTrack');
+    const vp    = document.querySelector('.l-carousel-viewport');
+    const cards = document.querySelectorAll('.l-card');
+    if(!track||!vp||!cards.length) return;
+    const vpW = vp.offsetWidth;
+    const cW  = cards[0].offsetWidth;
+    const gap = 20;
+    const offset = vpW/2 - cW/2 - idx*(cW+gap);
+    track.style.transform = 'translateX(' + offset + 'px)';
+    cards.forEach(function(c,i){
+      var dist = Math.abs(i-idx);
+      c.classList.toggle('active-card', i===idx);
+      c.style.transform = i===idx ? 'scale(1)' : 'scale('+Math.max(0.88,1-dist*0.05)+')';
+      c.style.opacity   = i===idx ? '1' : String(Math.max(0.38,1-dist*0.22));
+    });
+    document.querySelectorAll('#carouselDots .l-dot')
+      .forEach(function(d,i){ d.classList.toggle('on', i===idx); });
   }
 
   window.goToCard = function(idx){
     idx = Math.max(0, Math.min(CARDS-1, idx));
-    if(idx === current) return;
-    current = idx;
-    const track = document.getElementById('carouselTrack');
-    if(!track) return;
-    // Center the active card
-    const vp = document.querySelector('.l-carousel-viewport');
-    const vpW = vp ? vp.offsetWidth : window.innerWidth;
-    const cW = getCardEl(0)?.offsetWidth || 320;
-    const offset = vpW/2 - cW/2 - idx * (cW + 20);
-    track.style.transform = `translateX(${offset}px)`;
-    // Style cards
-    document.querySelectorAll('.l-card').forEach((c, i) => {
-      const dist = Math.abs(i - idx);
-      const isActive = i === idx;
-      c.classList.toggle('active-card', isActive);
-      c.style.transform = isActive ? 'scale(1)' : `scale(${Math.max(0.88, 1 - dist*0.05)})`;
-      c.style.opacity = isActive ? '1' : Math.max(0.4, 1 - dist*0.2).toString();
-    });
-    // Dots
-    document.querySelectorAll('#carouselDots .l-dot')
-      .forEach((d,i) => d.classList.toggle('on', i===idx));
+    if(idx===curIdx) return;
+    curIdx = idx;
+    centerTrack(idx);
   };
 
-  function onScroll(){
-    const section = document.querySelector('.l-carousel-section');
-    const spacer  = document.getElementById('carouselSpacer');
-    if(!section || !spacer) return;
-    const rect = section.getBoundingClientRect();
-    // How far has the user scrolled INTO the section past the top?
-    // scrolled = distance from section top to viewport top (negative when section top is above viewport)
-    const scrolled = -rect.top;
-    // Total scrollable range = spacer height (400vh)
-    const total = spacer.offsetHeight;
-    if(scrolled < 0 || scrolled > total + window.innerHeight) return;
-    // Progress 0→1 over the spacer
-    const progress = Math.max(0, Math.min(1, scrolled / total));
-    const idx = Math.round(progress * (CARDS - 1));
-    goToCard(idx);
+  function updatePanel(){
+    var ph    = document.getElementById('carouselPlaceholder');
+    var panel = document.getElementById('carouselPanel');
+    if(!ph||!panel) return;
+
+    var phRect    = ph.getBoundingClientRect();
+    var phH       = ph.offsetHeight;          // 500vh
+    var vh        = window.innerHeight;
+    var scrollRoom = phH - vh;                // 400vh — the part beyond first screen
+    var scrolledIn = -phRect.top;             // px scrolled past top of placeholder
+
+    if(phRect.top > 1){
+      // Not yet reached — normal flow at top of placeholder
+      panel.style.cssText = 'position:relative;top:0;left:0;right:0;width:100%;height:'+vh+'px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;padding:32px 0 24px;background:var(--d2)';
+      window.goToCard(0);
+    } else if(scrolledIn >= scrollRoom){
+      // Past the end — pin at bottom
+      panel.style.cssText = 'position:absolute;bottom:0;top:auto;left:0;right:0;width:100%;height:'+vh+'px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;padding:32px 0 24px;background:var(--d2)';
+      window.goToCard(CARDS-1);
+    } else {
+      // In range — fix to viewport
+      panel.style.cssText = 'position:fixed;top:0;bottom:auto;left:0;right:0;width:100%;height:'+vh+'px;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;padding:32px 0 24px;background:var(--d2)';
+      // Each 100vh of scroll = advance one card
+      var idx = Math.min(CARDS-1, Math.floor(scrolledIn / (scrollRoom/CARDS)));
+      window.goToCard(idx);
+    }
   }
 
-  // Init
   function init(){
-    goToCard(0);
-    onScroll();
+    centerTrack(0); curIdx=0; updatePanel();
   }
 
-  window.addEventListener('scroll', onScroll, {passive: true});
-  window.addEventListener('resize', ()=>{ current=-1; init(); }, {passive:true});
+  window.addEventListener('scroll', updatePanel, {passive:true});
+  window.addEventListener('resize', function(){ curIdx=-1; setTimeout(init,50); }, {passive:true});
 
   if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded', ()=>setTimeout(init, 200));
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(init,150); });
   } else {
-    setTimeout(init, 200);
+    setTimeout(init,150);
   }
 })();
 if(document.readyState==='loading'){
