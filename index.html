@@ -67,30 +67,30 @@ button{cursor:pointer}
 @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
 
 /* ─── CAROUSEL SECTION ─── */
-/* Placeholder div holds scroll space; JS fixes the panel to viewport when in range */
-.l-carousel-placeholder{background:var(--d2)}
-.l-carousel-panel{background:var(--d2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 0 24px;width:100%;box-sizing:border-box}
-.l-carousel-panel.is-fixed{position:fixed;top:0;left:0;right:0;z-index:10;height:100svh}
-.l-carousel-panel.is-bottom{position:absolute;bottom:0;left:0;right:0}
-.l-carousel-header{text-align:center;margin-bottom:20px;padding:0 24px}
+.l-carousel-section{background:var(--d2);padding:56px 0 44px}
+.l-carousel-header{text-align:center;margin-bottom:24px;padding:0 24px}
 .l-carousel-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,7vw,48px);color:var(--light);letter-spacing:.04em;margin-bottom:6px}
 .l-carousel-sub{font-size:13px;color:var(--muted);line-height:1.7}
-.l-carousel-viewport{width:100%;overflow:hidden;padding:4px 0}
-.l-carousel-track{display:flex;will-change:transform;transition:transform .45s cubic-bezier(.25,.46,.45,.94)}
-.l-card{flex:0 0 min(82vw,360px);margin:0 10px;background:var(--d3);border:1px solid var(--d4);border-radius:20px;padding:32px 26px 28px;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;overflow:hidden;transition:transform .4s,opacity .4s,box-shadow .4s,border-color .4s}
-.l-card.active-card{box-shadow:0 0 40px #22c55e22;border-color:#166534}
+.l-carousel-outer{overflow:hidden;width:100%;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:pan-y}
+.l-carousel-outer.dragging{cursor:grabbing}
+.l-carousel-track{display:flex;transition:transform .4s cubic-bezier(.25,.46,.45,.94)}
+.l-carousel-track.no-transition{transition:none}
+.l-card{flex:0 0 min(82vw,360px);margin:0 10px;background:var(--d3);border:1px solid var(--d4);border-radius:20px;padding:32px 26px 28px;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;overflow:hidden;transition:border-color .3s,box-shadow .3s;pointer-events:none;flex-shrink:0}
+.l-card.active-card{box-shadow:0 0 32px #22c55e1a;border-color:#166534}
 .l-card::before{content:'';position:absolute;inset:0;border-radius:20px;background:radial-gradient(ellipse 70% 40% at 50% 0%,#052e1620,transparent);pointer-events:none}
-.l-card-glow{position:absolute;top:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);border-radius:2px;opacity:0;transition:opacity .4s}
+.l-card-glow{position:absolute;top:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);border-radius:2px;opacity:0;transition:opacity .3s}
 .l-card.active-card .l-card-glow{opacity:1}
 .l-card-num{font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:.2em;color:var(--muted);margin-bottom:18px}
 .l-card-icon{font-size:42px;margin-bottom:14px;filter:drop-shadow(0 0 10px #22c55e55)}
 .l-card-title{font-family:'Bebas Neue',sans-serif;font-size:23px;letter-spacing:.06em;color:var(--light);margin-bottom:10px}
 .l-card-desc{font-size:13px;color:var(--mu2);line-height:1.75;flex:1}
 .l-card-tag{margin-top:16px;display:inline-block;background:var(--gdim);border:1px solid #166534;color:var(--green);font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:4px 12px;border-radius:20px}
-.l-dot-wrap{display:flex;gap:8px;justify-content:center;margin-top:18px}
-.l-dot{width:7px;height:7px;border-radius:50%;background:var(--d5);transition:all .3s;cursor:pointer;border:none;padding:0}
-.l-dot:hover{background:var(--mu2)}
-.l-dot.on{background:var(--green);width:22px;border-radius:4px}
+.l-dot-wrap{display:flex;gap:14px;justify-content:center;margin-top:22px}
+.l-dot{width:14px;height:14px;border-radius:50%;background:var(--d5);transition:all .3s;cursor:pointer;border:none;padding:0;flex-shrink:0}
+.l-dot:hover{background:var(--mu2);transform:scale(1.15)}
+.l-dot.on{background:var(--green);width:36px;border-radius:7px}
+.l-swipe-hint{margin-top:16px;font-size:12px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;text-align:center;animation:swipeHint 2s infinite}
+@keyframes swipeHint{0%,100%{transform:translateX(0)}50%{transform:translateX(-10px)}}
 
 /* ─── JOURNEY SECTION ─── */
 .l-journey{padding:60px 24px;max-width:600px;margin:0 auto}
@@ -310,74 +310,71 @@ select:focus{outline:2px solid var(--green)}
     <div class="l-scroll-hint">↓ &nbsp; Scopri di più &nbsp; ↓</div>
   </div>
 
-  <!-- CAROUSEL — fixed panel + placeholder scroll area -->
-  <!-- The placeholder div is 500vh: panel height (100vh) + 4×100vh scroll room for 5 cards -->
-  <div class="l-carousel-placeholder" id="carouselPlaceholder" style="height:500vh;position:relative">
-    <div class="l-carousel-panel" id="carouselPanel">
-      <div class="l-carousel-header">
-        <div class="l-carousel-title">LE FUNZIONALITÀ</div>
-        <div class="l-carousel-sub">Scorri per scoprire cosa offre l'app</div>
-      </div>
-      <div class="l-carousel-viewport">
-        <div class="l-carousel-track" id="carouselTrack">
+  <!-- CAROUSEL — simple drag/swipe carousel, normal scroll -->
+  <div class="l-carousel-section">
+    <div class="l-carousel-header">
+      <div class="l-carousel-title">LE FUNZIONALITÀ</div>
+      <div class="l-carousel-sub">Scopri cosa offre l'app</div>
+    </div>
+    <div class="l-carousel-outer" id="carouselOuter">
+      <div class="l-carousel-track" id="carouselTrack">
 
-          <div class="l-card active-card">
-            <div class="l-card-glow"></div>
-            <div class="l-card-num">01 / 05</div>
-            <div class="l-card-icon">🎯</div>
-            <div class="l-card-title">40 SESSIONI DI ALLENAMENTO</div>
-            <div class="l-card-desc">8 allenamenti progressivi × 5 sessioni ciascuno. Ogni sessione include esercizi mirati su scoring, precisione alle doppie, chiusure al checkout e partite a 501 con regole speciali.</div>
-            <div class="l-card-tag">Struttura progressiva</div>
-          </div>
-
-          <div class="l-card">
-            <div class="l-card-glow"></div>
-            <div class="l-card-num">02 / 05</div>
-            <div class="l-card-icon">📊</div>
-            <div class="l-card-title">STATISTICHE DETTAGLIATE</div>
-            <div class="l-card-desc">Grafici temporali interattivi per ogni tipo di gioco. Potrai tenere monitorato il tuo miglioramento nel tempo. Ogni risultato è collegato a data, allenamento e sessione specifici.</div>
-            <div class="l-card-tag">Grafici in tempo reale</div>
-          </div>
-
-          <div class="l-card">
-            <div class="l-card-glow"></div>
-            <div class="l-card-num">03 / 05</div>
-            <div class="l-card-icon">🎮</div>
-            <div class="l-card-title">GIOCA A 501</div>
-            <div class="l-card-desc">Segnapunti 501 integrato con suggerimenti automatici di checkout, tracciamento delle doppie tentate e colpite, calcolo della media punti per turno e storico delle ultime 10 sessioni.</div>
-            <div class="l-card-tag">Statistiche complete</div>
-          </div>
-
-          <div class="l-card">
-            <div class="l-card-glow"></div>
-            <div class="l-card-num">04 / 05</div>
-            <div class="l-card-icon">☁️</div>
-            <div class="l-card-title">DATI SEMPRE SINCRONIZZATI</div>
-            <div class="l-card-desc">Tutti i tuoi risultati sono salvati nell'app e accessibili da qualsiasi dispositivo. Accedi dal telefono, dal tablet o dal computer. I dati sono sempre aggiornati in tempo reale.</div>
-            <div class="l-card-tag">Cloud sync automatico</div>
-          </div>
-
-          <div class="l-card">
-            <div class="l-card-glow"></div>
-            <div class="l-card-num">05 / 05</div>
-            <div class="l-card-icon">∞</div>
-            <div class="l-card-title">CICLI INFINITI</div>
-            <div class="l-card-desc">Completa tutti gli 8 allenamenti e ricomincia da capo. I dati storici di ogni ciclo precedente rimangono sempre visibili nelle statistiche per confrontare i progressi nel tempo.</div>
-            <div class="l-card-tag">Allenamento continuo</div>
-          </div>
-
+        <div class="l-card active-card">
+          <div class="l-card-glow"></div>
+          <div class="l-card-num">01 / 05</div>
+          <div class="l-card-icon">🎯</div>
+          <div class="l-card-title">40 SESSIONI DI ALLENAMENTO</div>
+          <div class="l-card-desc">8 allenamenti progressivi × 5 sessioni ciascuno. Ogni sessione include esercizi mirati su scoring, precisione alle doppie, chiusure al checkout e partite a 501 con regole speciali.</div>
+          <div class="l-card-tag">Struttura progressiva</div>
         </div>
-      </div>
-      <div class="l-dot-wrap" id="carouselDots">
-        <button class="l-dot on" onclick="goToCard(0)"></button>
-        <button class="l-dot" onclick="goToCard(1)"></button>
-        <button class="l-dot" onclick="goToCard(2)"></button>
-        <button class="l-dot" onclick="goToCard(3)"></button>
-        <button class="l-dot" onclick="goToCard(4)"></button>
+
+        <div class="l-card">
+          <div class="l-card-glow"></div>
+          <div class="l-card-num">02 / 05</div>
+          <div class="l-card-icon">📊</div>
+          <div class="l-card-title">STATISTICHE DETTAGLIATE</div>
+          <div class="l-card-desc">Grafici temporali interattivi per ogni tipo di gioco. Potrai tenere monitorato il tuo miglioramento nel tempo. Ogni risultato è collegato a data, allenamento e sessione specifici.</div>
+          <div class="l-card-tag">Grafici in tempo reale</div>
+        </div>
+
+        <div class="l-card">
+          <div class="l-card-glow"></div>
+          <div class="l-card-num">03 / 05</div>
+          <div class="l-card-icon">🎮</div>
+          <div class="l-card-title">GIOCA A 501</div>
+          <div class="l-card-desc">Segnapunti 501 integrato con suggerimenti automatici di checkout, tracciamento delle doppie tentate e colpite, calcolo della media punti per turno e storico delle ultime 10 sessioni.</div>
+          <div class="l-card-tag">Statistiche complete</div>
+        </div>
+
+        <div class="l-card">
+          <div class="l-card-glow"></div>
+          <div class="l-card-num">04 / 05</div>
+          <div class="l-card-icon">☁️</div>
+          <div class="l-card-title">DATI SEMPRE SINCRONIZZATI</div>
+          <div class="l-card-desc">Tutti i tuoi risultati sono salvati nell'app e accessibili da qualsiasi dispositivo. Accedi dal telefono, dal tablet o dal computer. I dati sono sempre aggiornati in tempo reale.</div>
+          <div class="l-card-tag">Cloud sync automatico</div>
+        </div>
+
+        <div class="l-card">
+          <div class="l-card-glow"></div>
+          <div class="l-card-num">05 / 05</div>
+          <div class="l-card-icon">∞</div>
+          <div class="l-card-title">CICLI INFINITI</div>
+          <div class="l-card-desc">Completa tutti gli 8 allenamenti e ricomincia da capo. I dati storici di ogni ciclo precedente rimangono sempre visibili nelle statistiche per confrontare i progressi nel tempo.</div>
+          <div class="l-card-tag">Allenamento continuo</div>
+        </div>
+
       </div>
     </div>
+    <div class="l-dot-wrap" id="carouselDots">
+      <button class="l-dot on" onclick="goToCard(0)"></button>
+      <button class="l-dot" onclick="goToCard(1)"></button>
+      <button class="l-dot" onclick="goToCard(2)"></button>
+      <button class="l-dot" onclick="goToCard(3)"></button>
+      <button class="l-dot" onclick="goToCard(4)"></button>
+    </div>
+    <div class="l-swipe-hint">← SCORRI A SINISTRA →</div>
   </div>
-
 
   <!-- JOURNEY — vertical bullet points -->
   <div class="l-journey">
@@ -2391,27 +2388,29 @@ function finalize201Game(){
 function close201(){document.getElementById('g201overlay').style.display='none';}
 
 // ══════════════════════════════════════════════════
-// LANDING CAROUSEL — fixed panel driven by page scroll
-// #carouselPlaceholder = 500vh (100vh panel + 400vh scroll room)
-// When placeholder enters viewport: panel becomes position:fixed
-// When all 4×100vh steps consumed: panel pins to bottom of placeholder
-// This works identically on desktop (mouse wheel) and mobile (touch scroll)
+// LANDING CAROUSEL — simple drag/swipe, no scroll hijack
+// Works with mouse drag on desktop and touch swipe on mobile/tablet
+// Dots are also clickable for navigation
 // ══════════════════════════════════════════════════
 (function(){
   const CARDS = 5;
-  let curIdx = -1;
+  let curIdx = 0;
+  let startX = 0, startTranslate = 0, isDragging = false, hasDragged = false;
 
-  function centerTrack(idx){
-    const track = document.getElementById('carouselTrack');
-    const vp    = document.querySelector('.l-carousel-viewport');
+  function getOuter(){ return document.getElementById('carouselOuter'); }
+  function getTrack(){ return document.getElementById('carouselTrack'); }
+
+  function centerOffset(idx){
+    const outer = getOuter();
     const cards = document.querySelectorAll('.l-card');
-    if(!track||!vp||!cards.length) return;
-    const vpW = vp.offsetWidth;
-    const cW  = cards[0].offsetWidth;
-    const gap = 20;
-    const offset = vpW/2 - cW/2 - idx*(cW+gap);
-    track.style.transform = 'translateX(' + offset + 'px)';
-    cards.forEach(function(c,i){
+    if(!outer || !cards.length) return 0;
+    const ow = outer.offsetWidth;
+    const cw = cards[0].offsetWidth;
+    return ow/2 - cw/2 - idx*(cw+20);
+  }
+
+  function updateVisuals(idx){
+    document.querySelectorAll('.l-card').forEach(function(c,i){
       var dist = Math.abs(i-idx);
       c.classList.toggle('active-card', i===idx);
       c.style.transform = i===idx ? 'scale(1)' : 'scale('+Math.max(0.88,1-dist*0.05)+')';
@@ -2421,52 +2420,93 @@ function close201(){document.getElementById('g201overlay').style.display='none';
       .forEach(function(d,i){ d.classList.toggle('on', i===idx); });
   }
 
-  window.goToCard = function(idx){
+  window.goToCard = function(idx, animated){
     idx = Math.max(0, Math.min(CARDS-1, idx));
-    if(idx===curIdx) return;
     curIdx = idx;
-    centerTrack(idx);
+    var track = getTrack();
+    if(!track) return;
+    if(animated !== false){
+      track.classList.remove('no-transition');
+    } else {
+      track.classList.add('no-transition');
+    }
+    track.style.transform = 'translateX('+centerOffset(idx)+'px)';
+    updateVisuals(idx);
   };
 
-  function updatePanel(){
-    var ph    = document.getElementById('carouselPlaceholder');
-    var panel = document.getElementById('carouselPanel');
-    if(!ph||!panel) return;
+  // ── Pointer/Mouse drag ──
+  function onPointerDown(e){
+    if(e.touches) return; // handled by touch events
+    isDragging = true; hasDragged = false;
+    startX = e.clientX;
+    var track = getTrack();
+    startTranslate = centerOffset(curIdx);
+    track.classList.add('no-transition');
+    getOuter().classList.add('dragging');
+    e.preventDefault();
+  }
+  function onPointerMove(e){
+    if(!isDragging || e.touches) return;
+    var dx = e.clientX - startX;
+    if(Math.abs(dx) > 4) hasDragged = true;
+    getTrack().style.transform = 'translateX('+(startTranslate+dx)+'px)';
+  }
+  function onPointerUp(e){
+    if(!isDragging || e.touches) return;
+    isDragging = false;
+    getOuter().classList.remove('dragging');
+    var dx = e.clientX - startX;
+    var threshold = 50;
+    var next = curIdx;
+    if(dx < -threshold) next = Math.min(CARDS-1, curIdx+1);
+    else if(dx > threshold) next = Math.max(0, curIdx-1);
+    window.goToCard(next);
+  }
 
-    var phRect    = ph.getBoundingClientRect();
-    var phH       = ph.offsetHeight;          // 500vh
-    var vh        = window.innerHeight;
-    var scrollRoom = phH - vh;                // 400vh — the part beyond first screen
-    var scrolledIn = -phRect.top;             // px scrolled past top of placeholder
-
-    if(phRect.top > 1){
-      // Not yet reached — normal flow at top of placeholder
-      panel.style.cssText = 'position:relative;top:0;left:0;right:0;width:100%;height:'+vh+'px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;padding:32px 0 24px;background:var(--d2)';
-      window.goToCard(0);
-    } else if(scrolledIn >= scrollRoom){
-      // Past the end — pin at bottom
-      panel.style.cssText = 'position:absolute;bottom:0;top:auto;left:0;right:0;width:100%;height:'+vh+'px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;padding:32px 0 24px;background:var(--d2)';
-      window.goToCard(CARDS-1);
-    } else {
-      // In range — fix to viewport
-      panel.style.cssText = 'position:fixed;top:0;bottom:auto;left:0;right:0;width:100%;height:'+vh+'px;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;padding:32px 0 24px;background:var(--d2)';
-      // Each 100vh of scroll = advance one card
-      var idx = Math.min(CARDS-1, Math.floor(scrolledIn / (scrollRoom/CARDS)));
-      window.goToCard(idx);
+  // ── Touch swipe ──
+  var touchStartX = 0, touchStartY = 0, touchDx = 0;
+  function onTouchStart(e){
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchDx = 0;
+    startTranslate = centerOffset(curIdx);
+    getTrack().classList.add('no-transition');
+  }
+  function onTouchMove(e){
+    touchDx = e.touches[0].clientX - touchStartX;
+    var dy = e.touches[0].clientY - touchStartY;
+    // Only handle horizontal swipes (prevent stealing vertical scroll)
+    if(Math.abs(touchDx) > Math.abs(dy) && Math.abs(touchDx) > 5){
+      e.preventDefault();
+      getTrack().style.transform = 'translateX('+(startTranslate+touchDx)+'px)';
     }
+  }
+  function onTouchEnd(){
+    var threshold = 50;
+    var next = curIdx;
+    if(touchDx < -threshold) next = Math.min(CARDS-1, curIdx+1);
+    else if(touchDx > threshold) next = Math.max(0, curIdx-1);
+    window.goToCard(next);
   }
 
   function init(){
-    centerTrack(0); curIdx=0; updatePanel();
+    var outer = getOuter();
+    if(!outer) return;
+    outer.addEventListener('mousedown',  onPointerDown, {passive:false});
+    window.addEventListener('mousemove', onPointerMove, {passive:true});
+    window.addEventListener('mouseup',   onPointerUp,   {passive:true});
+    outer.addEventListener('touchstart', onTouchStart,  {passive:true});
+    outer.addEventListener('touchmove',  onTouchMove,   {passive:false});
+    outer.addEventListener('touchend',   onTouchEnd,    {passive:true});
+    window.goToCard(0);
   }
 
-  window.addEventListener('scroll', updatePanel, {passive:true});
-  window.addEventListener('resize', function(){ curIdx=-1; setTimeout(init,50); }, {passive:true});
+  window.addEventListener('resize', function(){ setTimeout(function(){ window.goToCard(curIdx, false); }, 50); }, {passive:true});
 
   if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded', function(){ setTimeout(init,150); });
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 100); });
   } else {
-    setTimeout(init,150);
+    setTimeout(init, 100);
   }
 })();
 if(document.readyState==='loading'){
