@@ -215,7 +215,7 @@ select:focus{outline:2px solid var(--green)}
 .sc .sv2{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--light)}
 .sc .ss{font-size:12px;color:var(--muted);margin-top:1px}
 .cw{background:var(--d2);border:1px solid var(--d4);border-radius:8px;padding:16px;margin-bottom:16px}
-.cw h3{font-family:'DM Sans',sans-serif;font-weight:700;font-size:17px;color:#9ca3af;margin-bottom:12px;letter-spacing:-.01em}
+.cw h3{font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:17px;color:var(--light);letter-spacing:.04em;margin-bottom:12px}
 .ht{width:100%;border-collapse:collapse;font-size:13px}
 .ht th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--d4);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .ht td{padding:8px 10px;border-bottom:1px solid var(--d3)}
@@ -265,7 +265,8 @@ select:focus{outline:2px solid var(--green)}
 .amsg{font-size:13px;text-align:center;margin-top:7px;min-height:18px}
 .amsg.ok{color:var(--green)}.amsg.err{color:#f87171}
 .asw{background:var(--d2);border:1px solid var(--d4);border-radius:8px;padding:18px;margin-bottom:14px}
-.asw h3{font-family:'DM Sans',sans-serif;font-weight:700;font-size:22px;color:var(--green);margin-bottom:12px;letter-spacing:-.01em}
+.asw > h3{font-family:'DM Sans',sans-serif;font-weight:700;font-size:22px;color:var(--green);margin-bottom:12px;letter-spacing:-.01em}
+.asw .cw h3{font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:17px;color:var(--light);letter-spacing:.04em;margin-bottom:12px}
 .asm{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:7px}
 .asc{background:var(--d3);border-radius:6px;padding:10px;text-align:center}
 .asc .asv{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--light)}
@@ -588,14 +589,14 @@ select:focus{outline:2px solid var(--green)}
 
   <!-- STATS -->
   <div class="tab-body" id="tab-stats">
-    <h2 style="font-size:26px;color:var(--green);margin-bottom:20px;letter-spacing:.05em">STATISTICHE ALLENAMENTI</h2>
+    <h2 style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:22px;color:var(--green);margin-bottom:20px;letter-spacing:-.01em">STATISTICHE ALLENAMENTI</h2>
     <div id="statsContainer"></div>
   </div>
 
   <!-- PLAY 501 -->
   <div class="tab-body" id="tab-play501">
     <div class="pc">
-      <h3>Gioca a 501</h3>
+      <h3>GIOCA A 501</h3>
       <p style="font-size:13px;color:var(--mu2);margin-bottom:20px;line-height:1.65">Seleziona quanti legs vuoi giocare e premi Inizia. Al termine, i risultati verranno salvati nelle statistiche.</p>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
         <div class="sel-group"><label>Numero di legs</label>
@@ -611,7 +612,7 @@ select:focus{outline:2px solid var(--green)}
       </div>
     </div>
     <div class="pc" style="margin-top:12px">
-      <h3>Sessioni precedenti</h3>
+      <h3>SESSIONI PRECEDENTI</h3>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
         <div class="sel-group"><label>Seleziona sessione</label>
           <select id="prevSessSelect" onchange="showPrev501Sess()">
@@ -631,7 +632,7 @@ select:focus{outline:2px solid var(--green)}
   <!-- CHECKOUT -->
   <div class="tab-body" id="tab-checkout">
     <div class="pc" style="margin-bottom:12px">
-      <h2 style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--green);letter-spacing:.06em;margin-bottom:16px">BEST CHECKOUT</h2>
+      <h2 style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:22px;color:var(--green);letter-spacing:-.01em;margin-bottom:16px">BEST CHECKOUT</h2>
       <p style="font-size:13px;color:var(--mu2);line-height:1.8;margin-bottom:12px">La guida matematica per sbagliare meno in chiusura, studiata analizzando le migliori combinazioni dei professionisti in PDC e le migliori strategie per sprecare meno frecce così da avere un margine di errore maggiore per vincere.</p>
       <p style="font-size:13px;color:var(--mu2);line-height:1.8;margin-bottom:12px">Lo sport delle freccette è suddiviso in 2 obiettivi: il primo è quello di <strong style="color:var(--light)">andare più velocemente in chiusura</strong>; il secondo è quello di <strong style="color:var(--light)">chiudere</strong>. Non si tratta di fare più punti possibili, ma di arrivare in chiusura velocemente.</p>
       <p style="font-size:13px;color:var(--mu2);line-height:1.8;margin-bottom:12px">Il <strong style="color:var(--green)">D20 per chiudere è sempre la strada migliore</strong>: basta tirare più alto rispetto al T20. Il D12 è un'ottima alternativa. Il <strong style="color:var(--green)">Bull è il tuo più grande amico</strong> per preparare molte chiusure — sia singolo che doppio, è un grande alleato per scalare punti.</p>
@@ -677,7 +678,7 @@ select:focus{outline:2px solid var(--green)}
   <div class="tab-body" id="tab-profile">
     <div class="profile-grid">
       <div class="pc">
-        <h3>I tuoi dati</h3>
+        <h3>I TUOI DATI</h3>
         <div class="pf">
           <div class="pf-row"><label>Nome</label><input type="text" id="pFn"></div>
           <div class="pf-row"><label>Cognome</label><input type="text" id="pLn"></div>
@@ -688,7 +689,7 @@ select:focus{outline:2px solid var(--green)}
         </div>
       </div>
       <div class="pc">
-        <h3>Cambia password</h3>
+        <h3>CAMBIA PASSWORD</h3>
         <div class="pf">
           <div class="pf-row"><label>Nuova password</label>
             <div class="pw-wrap"><input type="password" id="pNew" placeholder="Minimo 6 caratteri"><button type="button" class="pw-eye" onclick="togglePwVis('pNew')">👁</button></div>
@@ -710,19 +711,19 @@ select:focus{outline:2px solid var(--green)}
     <!-- 1. AGGIUNGI UTENTE + UTENTI REGISTRATI -->
     <div class="ag">
       <div class="ac">
-        <h3>Aggiungi utente</h3>
+        <h3>AGGIUNGI UTENTE</h3>
         <div class="af">
           <div class="r2"><input type="text" id="aFn" placeholder="Nome"><input type="text" id="aLn" placeholder="Cognome"></div>
           <input type="email" id="aEm" placeholder="E-mail">
           <input type="tel" id="aPh" placeholder="Telefono">
           <div class="pw-wrap" style="margin-bottom:9px"><input type="password" id="aPw" placeholder="Password provvisoria" style="margin-bottom:0"><button type="button" class="pw-eye" onclick="togglePwVis('aPw')">👁</button></div>
-          <select id="aRole"><option value="user">Utente</option><option value="admin">Amministratore</option></select>
+          <select id="aRole" style="height:42px;padding:0 12px"><option value="user">Utente</option><option value="admin">Amministratore</option></select>
           <button class="a-sub" onclick="addUser()">AGGIUNGI UTENTE</button>
           <div class="amsg" id="adminMsg"></div>
         </div>
       </div>
       <div class="ac">
-        <h3>Utenti registrati</h3>
+        <h3>UTENTI REGISTRATI</h3>
         <div style="margin-bottom:10px;position:relative">
           <input type="text" id="adminSearch" placeholder="🔍 Cerca per nome o cognome..." oninput="adminSearchUser()" autocomplete="off"
             style="width:100%;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:9px 12px;border-radius:6px;font-size:14px">
@@ -734,31 +735,31 @@ select:focus{outline:2px solid var(--green)}
 
     <!-- 3. MODIFICA DATI UTENTE -->
     <div class="pc" id="adminEditUser" style="display:none;margin-top:8px">
-      <h3 id="aeTitle" style="font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:14px">Modifica dati utente</h3>
+      <h3 id="aeTitle" style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:22px;color:var(--green);margin-bottom:14px;letter-spacing:-.01em">MODIFICA DATI UTENTE</h3>
       <div class="af" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <input type="text" id="aeFn" placeholder="Nome">
         <input type="text" id="aeLn" placeholder="Cognome">
         <input type="email" id="aeEm" placeholder="E-mail">
         <input type="tel" id="aePh" placeholder="Telefono">
         <div class="pw-wrap"><input type="password" id="aePwNew" placeholder="Nuova password provvisoria (opz.)" style="margin-bottom:0"><button type="button" class="pw-eye" onclick="togglePwVis('aePwNew')">👁</button></div>
-        <select id="aeRole"><option value="user">Utente</option><option value="admin">Amministratore</option></select>
+        <select id="aeRole" style="height:42px;padding:0 12px"><option value="user">Utente</option><option value="admin">Amministratore</option></select>
       </div>
       <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
-        <button class="a-sub" style="flex:1" onclick="saveAdminEdit()">SALVA MODIFICHE</button>
-        <button id="aeBlockBtn" style="flex:1;padding:10px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.05em;border:none;transition:background .2s;cursor:pointer" onclick="toggleBlockUser()">BLOCCA UTENTE</button>
+        <button class="a-sub" style="flex:1" onclick="confirmSaveAdminEdit()">SALVA MODIFICHE</button>
+        <button id="aeBlockBtn" style="flex:1;padding:10px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.05em;border:none;transition:background .2s;cursor:pointer" onclick="confirmToggleBlockUser()">BLOCCA UTENTE</button>
       </div>
       <div class="amsg" id="aeMsg"></div>
     </div>
 
     <!-- 4. STATISTICHE UTENTE -->
     <div class="asw" id="adminUserStats" style="margin-top:8px">
-      <h3 id="astTitle">Seleziona un utente per vederne le statistiche</h3>
+      <h3 id="astTitle">SELEZIONA UN UTENTE PER VEDERNE LE STATISTICHE</h3>
       <div id="astContent"><p style="color:var(--muted);font-size:13px">Clicca su un utente nella lista.</p></div>
     </div>
 
     <!-- 5. DATABASE CLOUD -->
     <div class="pc" style="margin-top:8px">
-      <h3>☁ Database Cloud</h3>
+      <h3>☁ DATABASE CLOUD</h3>
       <div id="cloudStatus" style="font-size:13px;margin-bottom:8px"></div>
       <p style="font-size:12px;color:var(--muted);line-height:1.6">Database: <strong style="color:var(--light)">Firebase Realtime Database</strong> — I dati vengono sincronizzati automaticamente tra tutti i dispositivi.</p>
     </div>
@@ -1051,6 +1052,9 @@ function doLogin(){
     const cred=new PasswordCredential({id:em, password:pw});
     navigator.credentials.store(cred).catch(()=>{});
   }
+  // Clear login fields
+  document.getElementById('lemail').value='';
+  document.getElementById('lpw').value='';
   if(u.mustChangePw){
     document.getElementById('lv').classList.add('off');
     document.getElementById('cpv').classList.add('on');
@@ -1782,7 +1786,7 @@ function selAdmin(uid){
   selAU=getUsers().find(u=>u.id===uid);
   if(!selAU) return;
   renderAdmin();
-  document.getElementById('astTitle').textContent=`Statistiche — ${selAU.firstName} ${selAU.lastName}`;
+  document.getElementById('astTitle').textContent=`STATISTICHE — ${selAU.firstName.toUpperCase()} ${selAU.lastName.toUpperCase()}`;
   // Reset admin 501 session selections for this user
   if(!_adminSelected501[selAU.id]) _adminSelected501[selAU.id]=[];
   // Render full stats + 501 sessions for this user
@@ -1795,7 +1799,7 @@ function selAdmin(uid){
   renderStatsInto(document.getElementById('adminStatsContainer'), selAU.id);
   const ed=document.getElementById('adminEditUser');
   ed.style.display='block';
-  document.getElementById('aeTitle').textContent=`Modifica — ${selAU.firstName} ${selAU.lastName}`;
+  document.getElementById('aeTitle').textContent=`MODIFICA — ${selAU.firstName.toUpperCase()} ${selAU.lastName.toUpperCase()}`;
   document.getElementById('aeFn').value=selAU.firstName||'';
   document.getElementById('aeLn').value=selAU.lastName||'';
   document.getElementById('aeEm').value=selAU.email||'';
@@ -1960,6 +1964,43 @@ function renderStatsInto(container, uid){
   if(!html) html='<p style="color:var(--muted);font-size:13px;padding:12px 0">Nessun dato salvato per questo utente.</p>';
   container.innerHTML=html;
   setTimeout(initPendingCharts,50);
+}
+
+function confirmToggleBlockUser(){
+  if(!selAU||selAU.id===CU.id) return;
+  const isBlocked=selAU.blocked===true;
+  const name=`${selAU.firstName.toUpperCase()} ${selAU.lastName.toUpperCase()}`;
+  if(isBlocked){
+    showConfirmPopup(
+      'Sblocca utente',
+      `Vuoi sbloccare l'accesso a ${selAU.firstName} ${selAU.lastName}? L'utente potrà tornare ad accedere all'app.`,
+      ()=>toggleBlockUser(),
+      {okLabel:'SBLOCCA', okBg:'#16a34a', okColor:'#fff'}
+    );
+  } else {
+    showConfirmPopup(
+      'Blocca utente',
+      `Vuoi bloccare l'accesso a ${selAU.firstName} ${selAU.lastName}? L'utente non potrà più accedere all'app.`,
+      ()=>toggleBlockUser(),
+      {okLabel:'BLOCCA', okBg:'#dc2626', okColor:'#fff'}
+    );
+  }
+}
+
+function confirmSaveAdminEdit(){
+  if(!selAU) return;
+  const fn=document.getElementById('aeFn').value.trim();
+  const em=document.getElementById('aeEm').value.trim();
+  if(!fn||!em){
+    const msg=document.getElementById('aeMsg');
+    msg.className='amsg err';msg.textContent='Nome ed email obbligatori.';return;
+  }
+  showConfirmPopup(
+    'Salva modifiche',
+    `Vuoi salvare le modifiche per ${fn}?`,
+    ()=>saveAdminEdit(),
+    {okLabel:'MODIFICA', okBg:'#16a34a', okColor:'#fff'}
+  );
 }
 
 function toggleBlockUser(){
@@ -2275,7 +2316,11 @@ function normalizePart(s){
 }
 function isDoubleOut(s){
   const n=normalizePart(s);
-  return n.startsWith('D')||n==='DBULL';
+  if(n.startsWith('D')||n==='DBULL') return true;
+  // Also accept numeric equivalents: even numbers 2-40 = D1-D20, 50 = DBull
+  const num=parseInt(n);
+  if(!isNaN(num)&&num>0&&(num===50||(num%2===0&&num>=2&&num<=40))) return true;
+  return false;
 }
 
 function checkCOGame(){
@@ -2326,11 +2371,17 @@ function checkCOGame(){
   result.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 let _confirmCallback = null;
-function showConfirmPopup(title, msg, onConfirm){
+function showConfirmPopup(title, msg, onConfirm, opts={}){
   _confirmCallback = onConfirm;
   document.getElementById('confirmTitle').textContent = title;
   document.getElementById('confirmMsg').textContent = msg;
-  document.getElementById('confirmOkBtn').onclick = ()=>{ closeConfirmPopup(); onConfirm(); };
+  const okBtn = document.getElementById('confirmOkBtn');
+  okBtn.textContent = opts.okLabel || 'ELIMINA';
+  // Base style always the same as ELIMINA button; only background changes
+  okBtn.style.cssText = 'border:none;padding:12px;border-radius:6px;font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:.05em;cursor:pointer';
+  okBtn.style.background = opts.okBg || '#dc2626';
+  okBtn.style.color = opts.okColor || '#fff';
+  okBtn.onclick = ()=>{ closeConfirmPopup(); onConfirm(); };
   document.getElementById('confirmPopup').style.display = 'flex';
 }
 function closeConfirmPopup(){
