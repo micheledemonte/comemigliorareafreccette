@@ -1366,7 +1366,7 @@ function r201(gid,sv){
       <span class="sl">Completati</span><span class="sv" id="tot_${gid}">${numVals.length}</span>
       <span class="sl" style="margin-left:8px">Media frecce</span><span class="sv sm" id="avg_${gid}">${avg||'—'}</span>
     </div>`;
-  const playBtn=`<button class="playbtn" style="padding:9px 22px" onclick="open201Game('${gid}')" title="Apri gioco">INIZIA GIOCO</button>`;
+  const playBtn=`<button class="playbtn" style="padding:6px 16px;font-size:14px" onclick="open201Game('${gid}')" title="Apri gioco">INIZIA GIOCO</button>`;
   return gcrd(gid,'201 IN 9 FRECCE','10 legs — max 9 frecce per leg',
     'Parti da 201 e prova a chiudere in massimo 9 frecce. Clicca su "INIZIA GIOCO" per giocare questa modalità.',body,playBtn);
 }
@@ -1396,7 +1396,7 @@ function r501card(gid,sv){
       <span class="sl">Totale chiusure</span><span class="sv" id="tot_${gid}">${tot}</span>
       <span class="sv sm" style="font-size:14px">/&nbsp;15&nbsp;max</span>
     </div>`;
-  const playBtn=`<button class="playbtn" style="padding:9px 22px" onclick="open501Training('${gid}')" title="Apri gioco">INIZIA GIOCO</button>`;
+  const playBtn=`<button class="playbtn" style="padding:6px 16px;font-size:14px" onclick="open501Training('${gid}')" title="Apri gioco">INIZIA GIOCO</button>`;
   return gcrd(gid,'501 CON CHIUSURA OGNI 100 PUNTI','Clicca su "INIZIA GIOCO" per avviare questa modalità.',
     'Clicca su "INIZIA GIOCO" per avviare questa modalità.\n\nFUNZIONAMENTO: 3 Legs di 501. Il gioco è un normale 501 ma con la condizione che dobbiamo arrivare esattamente ai numeri "00" per allenare più volte la chiusura nello stesso leg. La prima chiusura è arrivare a 400. La seconda chiusura è arrivare a 300. Poi 200. Poi 100 e infine a 0. Il gioco consiste in un totale di 5 chiusure possibili ad ogni leg. Superare il punteggio esatto di "00" comporta l\'aver sbagliato la chiusura e si procede alla successiva.',
     body,playBtn);
