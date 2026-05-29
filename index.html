@@ -114,16 +114,10 @@ button{cursor:pointer}
 .l-foot{padding:20px 24px;text-align:center;font-size:12px;color:var(--muted);border-top:1px solid var(--d4)}
 
 /* ═══ APP SHELL ═══ */
-.app-hdr{background:var(--dark);border-bottom:2px solid var(--green);padding:10px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:50;flex-shrink:0}
-.app-logo{font-family:'Bebas Neue',sans-serif;font-size:clamp(12px,2vw,18px);color:var(--green);letter-spacing:.06em;white-space:nowrap}
-.app-sub{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap}
-.hdr-r{margin-left:auto;display:flex;align-items:center;gap:10px}
-.ubadge{font-size:13px;color:var(--mu2)}
-.logout-btn{background:transparent;border:1px solid var(--d5);color:var(--mu2);padding:6px 12px;border-radius:4px;font-size:12px;transition:all .2s}
-.logout-btn:hover{border-color:var(--red);color:var(--red)}
-.nav-tabs{display:flex;padding:0 20px;background:var(--dark);border-bottom:1px solid var(--d4);overflow-x:auto;flex-shrink:0}
+.nav-tabs{display:flex;padding:0 20px;background:var(--dark);border-bottom:2px solid var(--green);overflow-x:auto;flex-shrink:0;position:sticky;top:0;z-index:50}
 .nav-tab{font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;letter-spacing:.01em;padding:10px 20px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .2s}
 .nav-tab:hover{color:var(--light)}
+#logoutTabBtn:hover{color:var(--red)!important}
 .nav-tab.active{color:var(--green);border-bottom-color:var(--green)}
 /* ─── CHECKOUT TAB ─── */
 .co-filter-btn{background:var(--d3);border:1px solid var(--d5);color:var(--muted);padding:8px 18px;border-radius:20px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;cursor:pointer;transition:all .2s}
@@ -540,16 +534,7 @@ select:focus{outline:2px solid var(--green)}
 
 <!-- ═══════════════════════ APP LAYER ═══════════════════════ -->
 <div id="appLayer">
-  <div class="app-hdr">
-    <div>
-      <div class="app-logo">COME MIGLIORARE A FRECCETTE</div>
-      <div class="app-sub">PIANO DI ALLENAMENTO SPECIALE</div>
-    </div>
-    <div class="hdr-r">
-      <span class="ubadge" id="hdrUser"></span>
-      <button class="logout-btn" onclick="doLogout()">Esci</button>
-    </div>
-  </div>
+
   <div class="nav-tabs" id="mainNav">
     <button class="nav-tab active" onclick="showTab('training')">ALLENAMENTO</button>
     <button class="nav-tab" onclick="showTab('stats')">STATISTICHE</button>
@@ -557,6 +542,7 @@ select:focus{outline:2px solid var(--green)}
     <button class="nav-tab" onclick="showTab('checkout')">CHECKOUT</button>
     <button class="nav-tab" onclick="showTab('profile')">PROFILO</button>
     <button class="nav-tab" id="adminTabBtn" style="display:none" onclick="showTab('admin')">ADMIN</button>
+    <button class="nav-tab" id="logoutTabBtn" onclick="confirmLogout()" style="margin-left:auto;color:var(--mu2)">LOGOUT</button>
   </div>
 
   <!-- TRAINING -->
@@ -1082,7 +1068,6 @@ function doChangePw(){
 
 function enterApp(){
   closeLogin();
-  document.getElementById('hdrUser').textContent=CU.firstName+' '+CU.lastName;
   document.getElementById('adminTabBtn').style.display=CU.role==='admin'?'':'none';
   loadProfileForm();
   document.getElementById('appLayer').classList.add('visible');
@@ -1114,6 +1099,15 @@ function autoLoadNextSession(){
     document.getElementById('sessSel').value='1';
   }
   renderSession();
+}
+
+function confirmLogout(){
+  showConfirmPopup(
+    "Uscire dall'app?",
+    "Vuoi effettuare il logout e tornare alla schermata principale?",
+    ()=>doLogout(),
+    {okLabel:'ESCI', okBg:'#dc2626', okColor:'#fff'}
+  );
 }
 
 function doLogout(){
