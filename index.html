@@ -1021,10 +1021,63 @@ function hideSetupModal(){ document.getElementById('setupModal').style.display='
 function initUsers(){ /* no-op */ }
 
 async function bootApp(){
-  // Don't load DB here — Firebase rules require auth.
-  // DB is loaded in onAuthStateChanged after user is authenticated.
+  // Check if URL contains a Firebase action code (e.g. password reset link)
+  const params = new URLSearchParams(window.location.search);
+  const mode = params.get('mode');
+  const oobCode = params.get('oobCode');
+  if(mode === 'resetPassword' && oobCode && _fbAuth){
+    handlePasswordResetLink(oobCode);
+    return;
+  }
+  // Normal boot: landing page only — DB loads after auth
   const btns = document.querySelectorAll('.l-cta');
   btns.forEach(b=>b.textContent='CLICCA QUI PER ACCEDERE');
+}
+
+let _resetOobCode = null;
+
+async function handlePasswordResetLink(oobCode){
+  _resetOobCode = oobCode;
+  const modal = document.getElementById('resetPwModal');
+  const emailEl = document.getElementById('resetPwEmail');
+  const errEl = document.getElementById('resetPwErr');
+  try{
+    const email = await _fbAuth.verifyPasswordResetCode(oobCode);
+    emailEl.textContent = 'Account: ' + email;
+    modal.style.display = 'flex';
+    // Clean URL without reloading
+    window.history.replaceState({}, document.title, window.location.pathname);
+  } catch(e){
+    // Code invalid/expired — show landing with error message
+    const btns = document.querySelectorAll('.l-cta');
+    btns.forEach(b=>b.textContent='CLICCA QUI PER ACCEDERE');
+    const banner = document.createElement('div');
+    banner.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#7f1d1d;color:#fca5a5;font-size:13px;padding:12px 24px;border-radius:8px;text-align:center;z-index:9999;max-width:90vw';
+    banner.textContent='⚠ Il link di reset password è scaduto o già utilizzato. Richiedi un nuovo link.';
+    document.body.appendChild(banner);
+    setTimeout(()=>banner.remove(), 6000);
+  }
+}
+
+async function completePasswordReset(){
+  const pw = document.getElementById('resetPwNew').value;
+  const cf = document.getElementById('resetPwConf').value;
+  const err = document.getElementById('resetPwErr');
+  err.textContent = '';
+  if(pw.length < 6){ err.textContent = '⚠ La password deve avere almeno 6 caratteri.'; return; }
+  if(pw !== cf){ err.textContent = '⚠ Le due password non coincidono.'; return; }
+  try{
+    await _fbAuth.confirmPasswordReset(_resetOobCode, pw);
+    document.getElementById('resetPwModal').style.display = 'none';
+    // Show success and redirect to login
+    const banner = document.createElement('div');
+    banner.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#14532d;color:#86efac;font-size:13px;padding:12px 24px;border-radius:8px;text-align:center;z-index:9999';
+    banner.textContent='✓ Password aggiornata con successo! Accedi con la nuova password.';
+    document.body.appendChild(banner);
+    setTimeout(()=>{ banner.remove(); openLogin(); }, 2500);
+  } catch(e){
+    err.textContent = '⚠ Errore: ' + (e.message || e);
+  }
 }
 
 function initApp(){ /* no-op */ }
@@ -2100,7 +2153,11 @@ async function saveAdminEdit(){
   if(pw && _fbAuth && selAU.id !== CU.id){
     // Send password reset email — only for OTHER users (not self)
     try{
-      await _fbAuth.sendPasswordResetEmail(em);
+      const actionCodeSettings = {
+        url: window.location.origin || 'https://comemigliorareafreccette.vercel.app',
+        handleCodeInApp: false
+      };
+      await _fbAuth.sendPasswordResetEmail(em, actionCodeSettings);
       users[idx].mustChangePw=true;
       msg.textContent='Dati salvati. Email di reset password inviata a '+em;msg.classList.add('ok');
     } catch(e){
@@ -3414,6 +3471,21 @@ if(document.readyState==='loading'){
       Bin ID: <code style="background:var(--d3);padding:2px 6px;border-radius:3px;font-size:12px">6a133e926877513b27c70717</code>
     </p>
     <button onclick="hideSetupModal()" style="background:var(--green);color:#000;border:none;padding:12px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;cursor:pointer;width:100%">CHIUDI</button>
+  </div>
+</div>
+<!-- Password Reset Modal (handles ?mode=resetPassword&oobCode=xxx) -->
+<div id="resetPwModal" style="position:fixed;inset:0;z-index:1900;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;padding:20px">
+  <div class="modal-box">
+    <div class="modal-title">Nuova password</div>
+    <p id="resetPwEmail" style="font-size:13px;color:var(--mu2);margin-bottom:18px;text-align:center"></p>
+    <div class="fg"><label>Nuova password</label>
+      <div class="pw-wrap"><input type="password" id="resetPwNew" placeholder="Minimo 6 caratteri" style="margin-bottom:0"><button type="button" class="pw-eye" onclick="togglePwVis('resetPwNew')">👁</button></div>
+    </div>
+    <div class="fg"><label>Conferma password</label>
+      <div class="pw-wrap"><input type="password" id="resetPwConf" placeholder="Ripeti la password" style="margin-bottom:0" onkeydown="if(event.key==='Enter')completePasswordReset()"><button type="button" class="pw-eye" onclick="togglePwVis('resetPwConf')">👁</button></div>
+    </div>
+    <button class="btn-g" onclick="completePasswordReset()">SALVA NUOVA PASSWORD</button>
+    <div class="ferr" id="resetPwErr" style="margin-top:10px"></div>
   </div>
 </div>
 <!-- Delete confirmation popup -->
