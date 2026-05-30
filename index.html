@@ -940,6 +940,7 @@ if(_fbAuth){
         if(idx>=0){ users[idx].firebaseUid=firebaseUser.uid; saveUsers(users); CU=users[idx]; }
       }
       if(u.mustChangePw && !_justResetPassword){
+        document.getElementById('loadingOverlay').style.display='none';
         openLogin();
         document.getElementById('lv').classList.add('off');
         document.getElementById('cpv').classList.add('on');
