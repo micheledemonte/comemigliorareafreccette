@@ -2182,12 +2182,26 @@ function toggleBlockUser(){
   const idx=users.findIndex(u=>u.id===selAU.id);
   if(idx<0) return;
   users[idx].blocked=!users[idx].blocked;
-  saveUsers(users);selAU=users[idx];
+  saveUsers(users);
+  selAU=users[idx];
+  // Update button directly — avoids double-render issue
+  const bb=document.getElementById('aeBlockBtn');
+  if(bb){
+    if(selAU.blocked){
+      bb.textContent='SBLOCCA UTENTE';
+      bb.style.background='#16a34a';
+      bb.style.color='#000';
+    } else {
+      bb.textContent='BLOCCA UTENTE';
+      bb.style.background='#dc2626';
+      bb.style.color='#fff';
+    }
+  }
   const msg=document.getElementById('aeMsg');
   msg.className='amsg ok';
   msg.textContent=users[idx].blocked?'Utente bloccato.':'Utente sbloccato.';
   setTimeout(()=>msg.textContent='',2500);
-  renderAdmin();selAdmin(selAU.id);
+  renderAdmin(); // refresh user list only
 }
 
 async function saveAdminEdit(){
