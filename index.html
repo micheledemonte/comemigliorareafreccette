@@ -2634,12 +2634,27 @@ function delUser(uid){
   showConfirmPopup(
     'Elimina utente',
     `Vuoi eliminare definitivamente l'utente ${u.firstName} ${u.lastName} e tutti i suoi dati? Questa operazione non può essere annullata.`,
-    ()=>{
+    async ()=>{
+      // 1. Remove from DB
       saveUsers(getUsers().filter(u=>u.id!==uid));
       if(_dbCache?.userData) delete _dbCache.userData[uid];
       saveDBToCloud();
       if(selAU?.id===uid){selAU=null;document.getElementById('adminEditUser').style.display='none';}
       renderAdmin();
+      // 2. Remove from Firebase Auth via serverless function
+      if(_fbAuth&&_fbAuth.currentUser){
+        try{
+          const idToken = await _fbAuth.currentUser.getIdToken();
+          const res = await fetch('/api/delete-user',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({email:u.email, idToken})
+          });
+          const data = await res.json();
+          if(!data.success) console.warn('Firebase Auth delete failed:', data.error);
+          else console.log('✓ Utente eliminato anche da Firebase Auth');
+        } catch(e){ console.warn('Auth delete error:', e.message); }
+      }
     }
   );
 }
