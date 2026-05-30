@@ -744,13 +744,13 @@ select:focus{outline:2px solid var(--green)}
         <input type="text" id="aeLn" placeholder="Cognome">
         <input type="email" id="aeEm" placeholder="E-mail">
         <input type="tel" id="aePh" placeholder="Telefono">
-        <div class="pw-wrap"><input type="password" id="aePwNew" placeholder="Nuova password → invia email di reset" style="margin-bottom:0"><button type="button" class="pw-eye" onclick="togglePwVis('aePwNew')">👁</button></div>
-        <select id="aeRole" style="height:42px;padding:0 12px"><option value="user">Utente</option><option value="admin">Amministratore</option></select>
+        <select id="aeRole" style="height:42px;padding:0 12px;grid-column:1/-1"><option value="user">Utente</option><option value="admin">Amministratore</option></select>
       </div>
       <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
         <button class="a-sub" style="flex:1" onclick="confirmSaveAdminEdit()">SALVA MODIFICHE</button>
         <button id="aeBlockBtn" style="flex:1;padding:10px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;border:none;transition:background .2s;cursor:pointer" onclick="confirmToggleBlockUser()">BLOCCA UTENTE</button>
       </div>
+      <button onclick="confirmResetUserPassword()" style="width:100%;margin-top:10px;padding:11px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;background:transparent;border:1.5px solid var(--green);color:var(--green);cursor:pointer;transition:all .2s" onmouseover="this.style.background='var(--gdim)'" onmouseout="this.style.background='transparent'">📧 INVIA RESET PASSWORD</button>
       <div class="amsg" id="aeMsg"></div>
     </div>
 
@@ -923,15 +923,7 @@ try {
 // ── Auth state: auto-login on page load / session restore ──
 if(_fbAuth){
   _fbAuth.onAuthStateChanged(async (firebaseUser)=>{
-    if(!firebaseUser) return; // not logged in, landing page stays
-    // Show loading state inside login modal (if open)
-    const lv=document.getElementById('lv');
-    const loadv=document.getElementById('loadv');
-    if(lv&&loadv){
-      lv.style.display='none';
-      loadv.style.display='block';
-      if(!document.getElementById('loginModal').classList.contains('open')) openLogin();
-    }
+    if(!firebaseUser) return;
     try{
       if(!_dbCache) await loadDBFromCloud();
       const u = getUsers().find(u=>u.email.toLowerCase()===firebaseUser.email.toLowerCase());
@@ -969,11 +961,9 @@ if(_fbAuth){
 }
 
 function _restoreLoginView(){
-  const lv=document.getElementById('lv');
-  const loadv=document.getElementById('loadv');
+  document.getElementById('loadingOverlay').style.display='none';
+  openLogin();
   const loginBtn=document.getElementById('loginSubmitBtn');
-  if(lv){ lv.style.display=''; lv.style.opacity=''; lv.style.pointerEvents=''; }
-  if(loadv) loadv.style.display='none';
   if(loginBtn){ loginBtn.textContent='ENTRA'; loginBtn.disabled=false; }
 }
 
@@ -1140,8 +1130,16 @@ function togglePwVis(inputId, btnId){
 }
 
 function openLogin(){
+  // Always reset modal to clean default state
+  const lv=document.getElementById('lv');
+  const loadv=document.getElementById('loadv');
+  const cpv=document.getElementById('cpv');
+  if(lv){ lv.classList.remove('off'); lv.style.display=''; lv.style.opacity=''; lv.style.pointerEvents=''; }
+  if(loadv) loadv.style.display='none';
+  if(cpv) cpv.classList.remove('on');
+  document.getElementById('lerr').textContent='';
   document.getElementById('loginModal').classList.add('open');
-  setTimeout(()=>document.getElementById('lemail').focus(),200);
+  setTimeout(()=>{ try{document.getElementById('lemail').focus();}catch(e){} },200);
 }
 function closeLogin(){
   document.getElementById('loginModal').classList.remove('open');
@@ -1157,33 +1155,32 @@ async function doLogin(){
   const err=document.getElementById('lerr');
   err.textContent='';
   if(!em||!pw){err.textContent='Compila tutti i campi.';return;}
-  // Clear fields immediately
+  // Clear fields and show full-screen overlay immediately
   document.getElementById('lemail').value='';
   document.getElementById('lpw').value='';
+  document.getElementById('loadingOverlay').style.display='flex';
+  closeLogin();
   // Signal credential manager
   if(window.PasswordCredential){
     try{ navigator.credentials.store(new PasswordCredential({id:em,password:pw})).catch(()=>{}); }catch(e){}
   }
   if(!_fbAuth){
-    // Sandbox fallback: match by email+password in DB (dev only)
     if(!_dbCache) try{ await loadDBFromCloud(); }catch(e){}
     const u=(getUsers()||[]).find(u=>u.email.toLowerCase()===em&&u.password===pw);
-    if(!u){err.textContent='Email o password errati.';return;}
-    if(u.blocked){err.textContent='Il tuo accesso è stato temporaneamente bloccato.';return;}
+    document.getElementById('loadingOverlay').style.display='none';
+    if(!u){openLogin();err.textContent='Email o password errati.';return;}
+    if(u.blocked){openLogin();err.textContent='Il tuo accesso è stato temporaneamente bloccato.';return;}
     CU=u;
-    if(u.mustChangePw){ document.getElementById('lv').classList.add('off');document.getElementById('cpv').classList.add('on'); }
+    if(u.mustChangePw){ document.getElementById('lv').classList.add('off');document.getElementById('cpv').classList.add('on');openLogin(); }
     else enterApp();
     return;
   }
   try{
-    // Show loading state while onAuthStateChanged loads DB
-    const loginBtn=document.getElementById('loginSubmitBtn');
-    if(loginBtn){loginBtn.textContent='CARICAMENTO...';loginBtn.disabled=true;}
-    document.getElementById('lv').style.opacity='0.6';
-    document.getElementById('lv').style.pointerEvents='none';
     await _fbAuth.signInWithEmailAndPassword(em,pw);
     // onAuthStateChanged handles the rest
   } catch(e){
+    document.getElementById('loadingOverlay').style.display='none';
+    openLogin();
     const code=e.code||'';
     if(code==='auth/user-not-found'||code==='auth/wrong-password'||code==='auth/invalid-credential'||code==='auth/invalid-email'){
       err.textContent='Email o password errati.';
@@ -1192,11 +1189,6 @@ async function doLogin(){
     } else {
       err.textContent='Errore di accesso. Riprova.';
     }
-    // Restore login form on error
-    const loginBtn=document.getElementById('loginSubmitBtn');
-    if(loginBtn){loginBtn.textContent='ENTRA';loginBtn.disabled=false;}
-    const lv=document.getElementById('lv');
-    if(lv){lv.style.opacity='';lv.style.pointerEvents='';}
   }
 }
 
@@ -1227,6 +1219,7 @@ async function doChangePw(){
 }
 
 function enterApp(){
+  document.getElementById('loadingOverlay').style.display='none';
   closeLogin();
   document.getElementById('adminTabBtn').style.display=CU.role==='admin'?'':'none';
   loadProfileForm();
@@ -1272,8 +1265,10 @@ function confirmLogout(){
 
 async function doLogout(){
   CU=null;
+  _dbCache=null; // clear cached data so next login loads fresh
   reset501Sessions();
   if(_fbAuth) try{ await _fbAuth.signOut(); }catch(e){}
+  document.getElementById('loadingOverlay').style.display='none';
   document.getElementById('appLayer').classList.remove('visible');
   showTab('training',true);
 }
@@ -1970,15 +1965,11 @@ function selAdmin(uid){
   document.getElementById('aeLn').value=selAU.lastName||'';
   document.getElementById('aeEm').value=selAU.email||'';
   document.getElementById('aePh').value=selAU.phone||'';
-  document.getElementById('aePwNew').value='';
   // If editing self: disable password field (use PROFILO section instead)
   const pwWrap = document.getElementById('aePwNew').closest('.pw-wrap') || document.getElementById('aePwNew').parentElement;
   const isSelf = selAU.id === CU.id;
-  document.getElementById('aePwNew').disabled = isSelf;
-  document.getElementById('aePwNew').placeholder = isSelf
-    ? 'Usa la sezione PROFILO per cambiare la tua password'
-    : 'Nuova password → invia email di reset';
-  document.getElementById('aePwNew').style.opacity = isSelf ? '0.4' : '1';
+  // password field removed
+
   document.getElementById('aeMsg').textContent='';
   const bb=document.getElementById('aeBlockBtn');
   if(selAU.id===CU.id){bb.style.display='none';}
@@ -2196,7 +2187,6 @@ async function saveAdminEdit(){
   const ln=document.getElementById('aeLn').value.trim();
   const em=document.getElementById('aeEm').value.trim().toLowerCase();
   const ph=document.getElementById('aePh').value.trim();
-  const pw=document.getElementById('aePwNew').value;
   const role=document.getElementById('aeRole').value;
   const msg=document.getElementById('aeMsg');
   msg.className='amsg';
@@ -2205,30 +2195,37 @@ async function saveAdminEdit(){
   const idx=users.findIndex(u=>u.id===selAU.id);
   if(idx<0) return;
   users[idx].firstName=fn;users[idx].lastName=ln;users[idx].email=em;users[idx].phone=ph;users[idx].role=role;
-  delete users[idx].password; // remove legacy password if present
-  if(pw && _fbAuth && selAU.id !== CU.id){
-    // Send password reset email — only for OTHER users (not self)
-    try{
-      // Firebase Console → Auth Templates → Password reset has custom action URL set to the app domain.
-      // This ensures the reset link opens the app directly (not firebaseapp.com).
-      await _fbAuth.sendPasswordResetEmail(em, {
-        url: 'https://comemigliorareafreccette.vercel.app',
-        handleCodeInApp: true
-      });
-      // Don't set mustChangePw=true: Firebase handles the PW change, no in-app prompt needed
-      msg.textContent='Dati salvati. Email di reset password inviata a '+em;msg.classList.add('ok');
-    } catch(e){
-      msg.textContent='Dati salvati, ma errore invio email reset: '+e.message;msg.classList.add('err');
-    }
-  } else if(pw && selAU.id === CU.id){
-    msg.textContent='Per cambiare la tua password usa la sezione PROFILO.';msg.classList.add('err');
-    return;
-  } else {
-    msg.textContent='Modifiche salvate!';msg.classList.add('ok');
-  }
+  delete users[idx].password;
   saveUsers(users);selAU=users[idx];
-  setTimeout(()=>msg.textContent='',3000);
+  msg.textContent='Modifiche salvate!';msg.classList.add('ok');
+  setTimeout(()=>msg.textContent='',2500);
   renderAdmin();
+}
+
+function confirmResetUserPassword(){
+  if(!selAU) return;
+  showConfirmPopup(
+    'Invia reset password',
+    `Inviare un'email di reset password a ${selAU.firstName} ${selAU.lastName} (${selAU.email})?`,
+    ()=>sendResetEmailToUser(),
+    {okLabel:'INVIA RESET', okBg:'#16a34a', okColor:'#fff'}
+  );
+}
+
+async function sendResetEmailToUser(){
+  if(!selAU||!_fbAuth) return;
+  const msg=document.getElementById('aeMsg');
+  msg.className='amsg';
+  try{
+    await _fbAuth.sendPasswordResetEmail(selAU.email, {
+      url: 'https://comemigliorareafreccette.vercel.app',
+      handleCodeInApp: true
+    });
+    msg.textContent='✓ Email di reset inviata a '+selAU.email;msg.classList.add('ok');
+  } catch(e){
+    msg.textContent='Errore invio email: '+e.message;msg.classList.add('err');
+  }
+  setTimeout(()=>msg.textContent='',3500);
 }
 
 async function addUser(){
@@ -3529,6 +3526,12 @@ if(document.readyState==='loading'){
     </p>
     <button onclick="hideSetupModal()" style="background:var(--green);color:#000;border:none;padding:12px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;cursor:pointer;width:100%">CHIUDI</button>
   </div>
+</div>
+<!-- Full-screen loading overlay -->
+<div id="loadingOverlay" style="position:fixed;inset:0;z-index:9999;background:#000;display:none;align-items:center;justify-content:center;flex-direction:column;gap:18px">
+  <div style="width:56px;height:56px;border:3px solid #1a1a1a;border-top-color:var(--green);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+  <div style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:20px;color:var(--light);letter-spacing:.01em">CARICAMENTO</div>
+  <div style="font-size:13px;color:var(--muted);letter-spacing:.05em">Sincronizzazione in corso...</div>
 </div>
 <!-- Password Reset Modal (handles ?mode=resetPassword&oobCode=xxx) -->
 <div id="resetPwModal" style="position:fixed;inset:0;z-index:1900;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;padding:20px">
