@@ -902,6 +902,7 @@ const firebaseConfig = {
 let _fbDB = null;
 let _fbAuth = null;
 let _firebaseOK = false;
+let _justResetPassword = false; // set true after email-link password reset
 try {
   firebase.initializeApp(firebaseConfig);
   _fbDB = firebase.database();
@@ -928,11 +929,18 @@ if(_fbAuth){
         const idx=users.findIndex(x=>x.id===u.id);
         if(idx>=0){ users[idx].firebaseUid=firebaseUser.uid; saveUsers(users); CU=users[idx]; }
       }
-      if(u.mustChangePw){
+      if(u.mustChangePw && !_justResetPassword){
         openLogin();
         document.getElementById('lv').classList.add('off');
         document.getElementById('cpv').classList.add('on');
       } else {
+        if(_justResetPassword){
+          // Clear mustChangePw — user just set a definitive password via email reset
+          const users=getUsers();
+          const idx=users.findIndex(x=>x.id===u.id);
+          if(idx>=0){ users[idx].mustChangePw=false; saveUsers(users); CU=users[idx]; }
+          _justResetPassword=false;
+        }
         enterApp();
       }
     } catch(e){ console.warn('Auth state error:', e.message); }
@@ -1044,6 +1052,12 @@ async function handlePasswordResetLink(oobCode){
   try{
     const email = await _fbAuth.verifyPasswordResetCode(oobCode);
     emailEl.textContent = 'Account: ' + email;
+    // Ensure form view is shown (reset from any previous success state)
+    document.getElementById('resetPwForm').style.display = 'block';
+    document.getElementById('resetPwSuccess').style.display = 'none';
+    document.getElementById('resetPwNew').value = '';
+    document.getElementById('resetPwConf').value = '';
+    document.getElementById('resetPwErr').textContent = '';
     modal.style.display = 'flex';
     // Clean URL without reloading
     window.history.replaceState({}, document.title, window.location.pathname);
@@ -1066,17 +1080,19 @@ async function completePasswordReset(){
   err.textContent = '';
   if(pw.length < 6){ err.textContent = '⚠ La password deve avere almeno 6 caratteri.'; return; }
   if(pw !== cf){ err.textContent = '⚠ Le due password non coincidono.'; return; }
+  const emailText = document.getElementById('resetPwEmail').textContent.replace('Account: ','').trim();
   try{
     await _fbAuth.confirmPasswordReset(_resetOobCode, pw);
-    document.getElementById('resetPwModal').style.display = 'none';
-    // Show success and redirect to login
-    const banner = document.createElement('div');
-    banner.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#14532d;color:#86efac;font-size:13px;padding:12px 24px;border-radius:8px;text-align:center;z-index:9999';
-    banner.textContent='✓ Password aggiornata con successo! Accedi con la nuova password.';
-    document.body.appendChild(banner);
-    setTimeout(()=>{ banner.remove(); openLogin(); }, 2500);
+    // Show inline success view
+    document.getElementById('resetPwForm').style.display = 'none';
+    document.getElementById('resetPwSuccess').style.display = 'block';
+    // Auto sign-in silently so onAuthStateChanged clears mustChangePw
+    _justResetPassword = true;
+    try{ await _fbAuth.signInWithEmailAndPassword(emailText, pw); }catch(e){}
   } catch(e){
-    err.textContent = '⚠ Errore: ' + (e.message || e);
+    err.textContent = '⚠ ' + (e.code === 'auth/invalid-action-code'
+      ? 'Link scaduto o già utilizzato. Richiedi un nuovo reset.'
+      : (e.message || e));
   }
 }
 
@@ -3472,18 +3488,28 @@ if(document.readyState==='loading'){
   </div>
 </div>
 <!-- Password Reset Modal (handles ?mode=resetPassword&oobCode=xxx) -->
-<div id="resetPwModal" style="position:fixed;inset:0;z-index:1900;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;padding:20px">
+<div id="resetPwModal" style="position:fixed;inset:0;z-index:1900;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;padding:20px">
   <div class="modal-box">
-    <div class="modal-title">Nuova password</div>
-    <p id="resetPwEmail" style="font-size:13px;color:var(--mu2);margin-bottom:18px;text-align:center"></p>
-    <div class="fg"><label>Nuova password</label>
-      <div class="pw-wrap"><input type="password" id="resetPwNew" placeholder="Minimo 6 caratteri" style="margin-bottom:0"><button type="button" class="pw-eye" onclick="togglePwVis('resetPwNew')">👁</button></div>
+    <!-- Form view -->
+    <div id="resetPwForm">
+      <div class="modal-title">Nuova password</div>
+      <p id="resetPwEmail" style="font-size:13px;color:var(--mu2);margin-bottom:22px;text-align:center"></p>
+      <div class="fg"><label>Nuova password</label>
+        <div class="pw-wrap"><input type="password" id="resetPwNew" placeholder="Minimo 6 caratteri" style="margin-bottom:0"><button type="button" class="pw-eye" onclick="togglePwVis('resetPwNew')">👁</button></div>
+      </div>
+      <div class="fg"><label>Conferma password</label>
+        <div class="pw-wrap"><input type="password" id="resetPwConf" placeholder="Ripeti la password" style="margin-bottom:0" onkeydown="if(event.key==='Enter')completePasswordReset()"><button type="button" class="pw-eye" onclick="togglePwVis('resetPwConf')">👁</button></div>
+      </div>
+      <button class="btn-g" onclick="completePasswordReset()">SALVA NUOVA PASSWORD</button>
+      <div class="ferr" id="resetPwErr" style="margin-top:10px"></div>
     </div>
-    <div class="fg"><label>Conferma password</label>
-      <div class="pw-wrap"><input type="password" id="resetPwConf" placeholder="Ripeti la password" style="margin-bottom:0" onkeydown="if(event.key==='Enter')completePasswordReset()"><button type="button" class="pw-eye" onclick="togglePwVis('resetPwConf')">👁</button></div>
+    <!-- Success view -->
+    <div id="resetPwSuccess" style="display:none;text-align:center">
+      <div style="font-size:52px;margin-bottom:16px">✅</div>
+      <div class="modal-title" style="margin-bottom:12px">Password aggiornata!</div>
+      <p style="font-size:14px;color:var(--mu2);margin-bottom:28px;line-height:1.7">La tua password è stata salvata correttamente.<br>Accedi ora con le tue nuove credenziali.</p>
+      <button class="btn-g" onclick="document.getElementById('resetPwModal').style.display='none';openLogin()">ACCEDI ALL'APP</button>
     </div>
-    <button class="btn-g" onclick="completePasswordReset()">SALVA NUOVA PASSWORD</button>
-    <div class="ferr" id="resetPwErr" style="margin-top:10px"></div>
   </div>
 </div>
 <!-- Delete confirmation popup -->
