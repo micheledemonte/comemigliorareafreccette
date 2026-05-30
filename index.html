@@ -928,7 +928,17 @@ if(_fbAuth){
       if(!_dbCache) await loadDBFromCloud();
       const u = getUsers().find(u=>u.email.toLowerCase()===firebaseUser.email.toLowerCase());
       if(!u){ await _fbAuth.signOut(); _restoreLoginView(); return; }
-      if(u.blocked){ await _fbAuth.signOut(); _restoreLoginView(); return; }
+      if(u.blocked){
+        await _fbAuth.signOut();
+        document.getElementById('loadingOverlay').style.display='none';
+        // Build personalized mailto
+        const name=encodeURIComponent(u.firstName+' '+u.lastName);
+        const body=`Ciao%2C%20sono%20${name}%20e%20chiedo%20lo%20sblocco%20del%20profilo%20per%20l'app%20COME%20MIGLIORARE%20A%20FRECCETTE.%0D%0A%0D%0AGrazie`;
+        const mailto=`mailto:michele.demonte1992@gmail.com?subject=Sblocco%20Utente%20COME%20MIGLIORARE%20A%20FRECCETTE&body=${body}`;
+        document.getElementById('blockedContactBtn').onclick=()=>window.location.href=mailto;
+        document.getElementById('blockedPopup').style.display='flex';
+        return;
+      }
       CU = u;
       // Hide loading spinner
       const loadv=document.getElementById('loadv');
@@ -3564,6 +3574,18 @@ if(document.readyState==='loading'){
       Bin ID: <code style="background:var(--d3);padding:2px 6px;border-radius:3px;font-size:12px">6a133e926877513b27c70717</code>
     </p>
     <button onclick="hideSetupModal()" style="background:var(--green);color:#000;border:none;padding:12px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;cursor:pointer;width:100%">CHIUDI</button>
+  </div>
+</div>
+<!-- Blocked user popup -->
+<div id="blockedPopup" style="position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;padding:20px">
+  <div class="modal-box" style="text-align:center">
+    <div style="font-size:44px;margin-bottom:14px">🔒</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--light);margin-bottom:12px">ACCESSO BLOCCATO</div>
+    <p style="font-size:14px;color:var(--mu2);line-height:1.7;margin-bottom:28px">Il tuo profilo è stato temporaneamente bloccato.<br>Contatta un amministratore per richiedere lo sblocco.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button onclick="document.getElementById('blockedPopup').style.display='none'" style="background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:12px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em;cursor:pointer">CHIUDI</button>
+      <button id="blockedContactBtn" style="background:var(--green);border:none;color:#000;padding:12px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em;cursor:pointer">CONTATTA</button>
+    </div>
   </div>
 </div>
 <!-- Full-screen loading overlay -->
