@@ -1854,14 +1854,20 @@ function saveProfile(){
   const msg=document.getElementById('profMsg');
   msg.className='pmsg';
   if(!fn||!em){msg.textContent='Nome ed email obbligatori.';msg.classList.add('err');return;}
-  const users=getUsers();
-  const idx=users.findIndex(u=>u.id===CU.id);
-  if(idx<0) return;
-  users[idx].firstName=fn;users[idx].lastName=ln;users[idx].email=em;users[idx].phone=ph;
-  saveUsers(users);CU=users[idx];
-  document.getElementById('hdrUser').textContent=fn+' '+ln;
-  msg.textContent='Dati salvati!';msg.classList.add('ok');
-  setTimeout(()=>msg.textContent='',2500);
+  showConfirmPopup(
+    'Salva dati',
+    `Confermi il salvataggio dei seguenti dati?\n\nNome: ${fn}\nCognome: ${ln}\nE-mail: ${em}\nTelefono: ${ph||'—'}`,
+    ()=>{
+      const users=getUsers();
+      const idx=users.findIndex(u=>u.id===CU.id);
+      if(idx<0) return;
+      users[idx].firstName=fn;users[idx].lastName=ln;users[idx].email=em;users[idx].phone=ph;
+      saveUsers(users);CU=users[idx];
+      msg.textContent='Dati salvati correttamente!';msg.classList.add('ok');
+      setTimeout(()=>msg.textContent='',3000);
+    },
+    {okLabel:'SALVA', okBg:'#16a34a', okColor:'#fff'}
+  );
 }
 
 async function changePwProfile(){
@@ -1873,24 +1879,31 @@ async function changePwProfile(){
   if(nw!==cf){msg.textContent='⚠ Le due password non coincidono. Controlla e riprova.';msg.classList.add('err');
     document.getElementById('pConf').style.borderColor='var(--red)';return;}
   document.getElementById('pConf').style.borderColor='';
-  try{
-    if(_fbAuth&&_fbAuth.currentUser){
-      await _fbAuth.currentUser.updatePassword(nw);
-    }
-    const users=getUsers();
-    const idx=users.findIndex(u=>u.id===CU.id);
-    if(idx>=0){ delete users[idx].password; saveUsers(users); CU=users[idx]; }
-    msg.textContent='✓ Password cambiata con successo!';msg.classList.add('ok');
-    document.getElementById('pNew').value='';document.getElementById('pConf').value='';
-    setTimeout(()=>msg.textContent='',3000);
-  } catch(e){
-    msg.classList.add('err');
-    if(e.code==='auth/requires-recent-login'){
-      msg.textContent='⚠ Sessione scaduta. Effettua nuovamente il login e riprova.';
-    } else {
-      msg.textContent='⚠ Errore: '+(e.message||e);
-    }
-  }
+  showConfirmPopup(
+    'Cambia password',
+    'Confermi il cambio della tua password? Dovrai usare la nuova password al prossimo accesso.',
+    async ()=>{
+      try{
+        if(_fbAuth&&_fbAuth.currentUser){
+          await _fbAuth.currentUser.updatePassword(nw);
+        }
+        const users=getUsers();
+        const idx=users.findIndex(u=>u.id===CU.id);
+        if(idx>=0){ delete users[idx].password; saveUsers(users); CU=users[idx]; }
+        msg.textContent='Password cambiata con successo!';msg.classList.add('ok');
+        document.getElementById('pNew').value='';document.getElementById('pConf').value='';
+        setTimeout(()=>msg.textContent='',3000);
+      } catch(e){
+        msg.classList.add('err');
+        if(e.code==='auth/requires-recent-login'){
+          msg.textContent='⚠ Sessione scaduta. Effettua nuovamente il login e riprova.';
+        } else {
+          msg.textContent='⚠ Errore: '+(e.message||e);
+        }
+      }
+    },
+    {okLabel:'CONFERMA', okBg:'#16a34a', okColor:'#fff'}
+  );
 }
 
 // ══════════════════════════════════════════════════
@@ -2269,44 +2282,51 @@ async function addUser(){
   const ph=document.getElementById('aPh').value.trim();
   const pw=document.getElementById('aPw').value;
   const role=document.getElementById('aRole').value;
+  const roleLabel=role==='admin'?'Amministratore':'Utente';
   const msg=document.getElementById('adminMsg');
   msg.className='amsg';
   if(!fn||!ln||!em||!pw){msg.textContent='Compila tutti i campi.';msg.classList.add('err');return;}
   const users=getUsers();
   if(users.find(u=>u.email.toLowerCase()===em)){msg.textContent='Email già esistente.';msg.classList.add('err');return;}
-  msg.textContent='Creazione in corso…';
-  if(!_fbAuth){
-    // Sandbox fallback
-    users.push({id:'u_'+Date.now(),firstName:fn,lastName:ln,email:em,phone:ph,password:pw,role,mustChangePw:true});
-    saveUsers(users);
-    ['aFn','aLn','aEm','aPh','aPw'].forEach(id=>document.getElementById(id).value='');
-    msg.textContent='Utente aggiunto!';msg.classList.add('ok');
-    setTimeout(()=>msg.textContent='',2500);
-    renderAdmin();
-    return;
-  }
-  // Use secondary app to create user without logging out current admin
-  const appName='secondary_'+Date.now();
-  let secondaryApp=null;
-  try{
-    secondaryApp=firebase.initializeApp(firebaseConfig,appName);
-    const result=await secondaryApp.auth().createUserWithEmailAndPassword(em,pw);
-    const uid=result.user.uid;
-    await secondaryApp.auth().signOut();
-    users.push({id:uid,firebaseUid:uid,firstName:fn,lastName:ln,email:em,phone:ph,role,mustChangePw:true});
-    saveUsers(users);
-    ['aFn','aLn','aEm','aPh','aPw'].forEach(id=>document.getElementById(id).value='');
-    msg.textContent='Utente creato con successo!';msg.classList.add('ok');
-    setTimeout(()=>msg.textContent='',2500);
-    renderAdmin();
-  } catch(e){
-    msg.classList.add('err');
-    if(e.code==='auth/email-already-in-use') msg.textContent='Email già registrata.';
-    else if(e.code==='auth/weak-password') msg.textContent='Password troppo debole (min. 6 caratteri).';
-    else msg.textContent='Errore: '+e.message;
-  } finally {
-    if(secondaryApp) secondaryApp.delete().catch(()=>{});
-  }
+  showConfirmPopup(
+    'Aggiungi utente',
+    `Confermi la creazione del seguente utente?\n\nNome: ${fn} ${ln}\nE-mail: ${em}\nTelefono: ${ph||'—'}\nRuolo: ${roleLabel}`,
+    async ()=>{
+      msg.className='amsg';
+      msg.textContent='Creazione in corso…';
+      if(!_fbAuth){
+        users.push({id:'u_'+Date.now(),firstName:fn,lastName:ln,email:em,phone:ph,password:pw,role,mustChangePw:true});
+        saveUsers(users);
+        ['aFn','aLn','aEm','aPh','aPw'].forEach(id=>document.getElementById(id).value='');
+        msg.textContent='Utente creato con successo!';msg.classList.add('ok');
+        setTimeout(()=>msg.textContent='',3000);
+        renderAdmin();
+        return;
+      }
+      const appName='secondary_'+Date.now();
+      let secondaryApp=null;
+      try{
+        secondaryApp=firebase.initializeApp(firebaseConfig,appName);
+        const result=await secondaryApp.auth().createUserWithEmailAndPassword(em,pw);
+        const uid=result.user.uid;
+        await secondaryApp.auth().signOut();
+        users.push({id:uid,firebaseUid:uid,firstName:fn,lastName:ln,email:em,phone:ph,role,mustChangePw:true});
+        saveUsers(users);
+        ['aFn','aLn','aEm','aPh','aPw'].forEach(id=>document.getElementById(id).value='');
+        msg.textContent='Utente creato con successo!';msg.classList.add('ok');
+        setTimeout(()=>msg.textContent='',3000);
+        renderAdmin();
+      } catch(e){
+        msg.classList.add('err');
+        if(e.code==='auth/email-already-in-use') msg.textContent='Email già registrata.';
+        else if(e.code==='auth/weak-password') msg.textContent='Password troppo debole (min. 6 caratteri).';
+        else msg.textContent='Errore: '+e.message;
+      } finally {
+        if(secondaryApp) secondaryApp.delete().catch(()=>{});
+      }
+    },
+    {okLabel:'AGGIUNGI', okBg:'#16a34a', okColor:'#fff'}
+  );
 }
 
 // ══════════════════════════════════════════════════
