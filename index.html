@@ -748,7 +748,7 @@ select:focus{outline:2px solid var(--green)}
       </div>
       <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
         <button class="a-sub" style="flex:1" onclick="confirmSaveAdminEdit()">SALVA MODIFICHE</button>
-        <button id="aeBlockBtn" style="flex:1;padding:10px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;border:1.5px solid;transition:all .2s;cursor:pointer;background:transparent" onclick="confirmToggleBlockUser()">BLOCCA UTENTE</button>
+        <button id="aeBlockBtn" style="flex:1;padding:10px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;border:none;transition:all .2s;cursor:pointer;background:#dc2626;color:#fff" onclick="confirmToggleBlockUser()">BLOCCA UTENTE</button>
       </div>
       <button onclick="confirmResetUserPassword()" style="width:100%;margin-top:10px;padding:11px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;background:transparent;border:1.5px solid var(--green);color:var(--green);cursor:pointer;transition:all .2s" onmouseover="this.style.background='var(--gdim)'" onmouseout="this.style.background='transparent'">📧 INVIA RESET PASSWORD</button>
       <div class="amsg" id="aeMsg"></div>
@@ -1978,13 +1978,13 @@ function selAdmin(uid){
     if(selAU.blocked){
       bb.textContent='SBLOCCA UTENTE';
       bb.style.background='#16a34a';
-      bb.style.color='#fff';
-      bb.style.borderColor='#16a34a';
+      bb.style.color='#000';
+      bb.style.borderColor='';
     } else {
       bb.textContent='BLOCCA UTENTE';
       bb.style.background='#dc2626';
       bb.style.color='#fff';
-      bb.style.borderColor='#dc2626';
+      bb.style.borderColor='';
     }
   }
 }
