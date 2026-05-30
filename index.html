@@ -10,6 +10,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<!-- Vercel Web Analytics -->
+<script defer src="/_vercel/insights/script.js"></script>
+<!-- Vercel Speed Insights -->
+<script defer src="/_vercel/speed-insights/script.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -732,7 +737,7 @@ select:focus{outline:2px solid var(--green)}
         <input type="text" id="aeLn" placeholder="Cognome">
         <input type="email" id="aeEm" placeholder="E-mail">
         <input type="tel" id="aePh" placeholder="Telefono">
-        <div class="pw-wrap"><input type="password" id="aePwNew" placeholder="Nuova password provvisoria (opz.)" style="margin-bottom:0"><button type="button" class="pw-eye" onclick="togglePwVis('aePwNew')">👁</button></div>
+        <div class="pw-wrap"><input type="password" id="aePwNew" placeholder="Nuova password → invia email di reset" style="margin-bottom:0"><button type="button" class="pw-eye" onclick="togglePwVis('aePwNew')">👁</button></div>
         <select id="aeRole" style="height:42px;padding:0 12px"><option value="user">Utente</option><option value="admin">Amministratore</option></select>
       </div>
       <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
@@ -895,13 +900,43 @@ const firebaseConfig = {
 };
 
 let _fbDB = null;
+let _fbAuth = null;
 let _firebaseOK = false;
 try {
   firebase.initializeApp(firebaseConfig);
   _fbDB = firebase.database();
+  _fbAuth = firebase.auth();
+  _fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
   _firebaseOK = true;
 } catch(e) {
   console.warn('Firebase SDK not available (Claude sandbox mode):', e.message);
+}
+
+// ── Auth state: auto-login on page load / session restore ──
+if(_fbAuth){
+  _fbAuth.onAuthStateChanged(async (firebaseUser)=>{
+    if(!firebaseUser) return; // not logged in, landing page stays
+    try{
+      if(!_dbCache) await loadDBFromCloud();
+      const u = getUsers().find(u=>u.email.toLowerCase()===firebaseUser.email.toLowerCase());
+      if(!u){ await _fbAuth.signOut(); return; }
+      if(u.blocked){ await _fbAuth.signOut(); return; }
+      CU = u;
+      // Sync Firebase UID into profile if not already stored
+      if(!u.firebaseUid){
+        const users=getUsers();
+        const idx=users.findIndex(x=>x.id===u.id);
+        if(idx>=0){ users[idx].firebaseUid=firebaseUser.uid; saveUsers(users); CU=users[idx]; }
+      }
+      if(u.mustChangePw){
+        openLogin();
+        document.getElementById('lv').classList.add('off');
+        document.getElementById('cpv').classList.add('on');
+      } else {
+        enterApp();
+      }
+    } catch(e){ console.warn('Auth state error:', e.message); }
+  });
 }
 
 let _dbCache = null;
@@ -911,7 +946,7 @@ function emptyDB(){
     users:[{
       id:'admin_michele',firstName:'Michele',lastName:'De Monte',
       email:'michele.demonte1992@gmail.com',phone:'3453450324',
-      password:'Tikibrinki1958.',role:'admin',mustChangePw:false
+      role:'admin',mustChangePw:false
     }],
     userData:{}
   };
@@ -1028,33 +1063,46 @@ function closeLogin(){
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLogin()});
 
-function doLogin(){
+async function doLogin(){
   const em=document.getElementById('lemail').value.trim().toLowerCase();
   const pw=document.getElementById('lpw').value;
   const err=document.getElementById('lerr');
   err.textContent='';
   if(!em||!pw){err.textContent='Compila tutti i campi.';return;}
-  const u=getUsers().find(u=>u.email.toLowerCase()===em&&u.password===pw);
-  if(!u){err.textContent='Email o password errati.';return;}
-  if(u.blocked){err.textContent='Il tuo accesso è stato temporaneamente bloccato. Contatta un amministratore.';return;}
-  CU=u;
-  // Signal the browser credential manager to offer saving credentials
-  if(window.PasswordCredential){
-    const cred=new PasswordCredential({id:em, password:pw});
-    navigator.credentials.store(cred).catch(()=>{});
-  }
-  // Clear login fields
+  // Clear fields immediately
   document.getElementById('lemail').value='';
   document.getElementById('lpw').value='';
-  if(u.mustChangePw){
-    document.getElementById('lv').classList.add('off');
-    document.getElementById('cpv').classList.add('on');
-  } else {
-    enterApp();
+  // Signal credential manager
+  if(window.PasswordCredential){
+    try{ navigator.credentials.store(new PasswordCredential({id:em,password:pw})).catch(()=>{}); }catch(e){}
+  }
+  if(!_fbAuth){
+    // Sandbox fallback: match by email+password in DB (dev only)
+    if(!_dbCache) try{ await loadDBFromCloud(); }catch(e){}
+    const u=(getUsers()||[]).find(u=>u.email.toLowerCase()===em&&u.password===pw);
+    if(!u){err.textContent='Email o password errati.';return;}
+    if(u.blocked){err.textContent='Il tuo accesso è stato temporaneamente bloccato.';return;}
+    CU=u;
+    if(u.mustChangePw){ document.getElementById('lv').classList.add('off');document.getElementById('cpv').classList.add('on'); }
+    else enterApp();
+    return;
+  }
+  try{
+    await _fbAuth.signInWithEmailAndPassword(em,pw);
+    // onAuthStateChanged handles the rest
+  } catch(e){
+    const code=e.code||'';
+    if(code==='auth/user-not-found'||code==='auth/wrong-password'||code==='auth/invalid-credential'||code==='auth/invalid-email'){
+      err.textContent='Email o password errati.';
+    } else if(code==='auth/too-many-requests'){
+      err.textContent='Troppi tentativi. Riprova tra qualche minuto.';
+    } else {
+      err.textContent='Errore di accesso. Riprova.';
+    }
   }
 }
 
-function doChangePw(){
+async function doChangePw(){
   const n=document.getElementById('cpn').value;
   const c=document.getElementById('cpc').value;
   const err=document.getElementById('cperr');
@@ -1063,12 +1111,21 @@ function doChangePw(){
   if(n!==c){err.textContent='⚠ Le due password non coincidono. Controlla e riprova.';
     document.getElementById('cpc').style.borderColor='var(--red)';return;}
   document.getElementById('cpc').style.borderColor='';
-  const users=getUsers();
-  const idx=users.findIndex(u=>u.id===CU.id);
-  if(idx<0)return;
-  users[idx].password=n;users[idx].mustChangePw=false;
-  saveUsers(users);CU=users[idx];
-  enterApp();
+  try{
+    if(_fbAuth&&_fbAuth.currentUser){
+      await _fbAuth.currentUser.updatePassword(n);
+    }
+    const users=getUsers();
+    const idx=users.findIndex(u=>u.id===CU.id);
+    if(idx>=0){ users[idx].mustChangePw=false; delete users[idx].password; saveUsers(users); CU=users[idx]; }
+    enterApp();
+  } catch(e){
+    if(e.code==='auth/requires-recent-login'){
+      err.textContent='⚠ Sessione scaduta. Effettua nuovamente il login.';
+    } else {
+      err.textContent='⚠ Errore: '+(e.message||e);
+    }
+  }
 }
 
 function enterApp(){
@@ -1115,9 +1172,10 @@ function confirmLogout(){
   );
 }
 
-function doLogout(){
+async function doLogout(){
   CU=null;
   reset501Sessions();
+  if(_fbAuth) try{ await _fbAuth.signOut(); }catch(e){}
   document.getElementById('appLayer').classList.remove('visible');
   showTab('training',true);
 }
@@ -1702,22 +1760,33 @@ function saveProfile(){
   setTimeout(()=>msg.textContent='',2500);
 }
 
-function changePwProfile(){
+async function changePwProfile(){
   const nw=document.getElementById('pNew').value;
   const cf=document.getElementById('pConf').value;
   const msg=document.getElementById('pwMsg');
   msg.className='pmsg';
-  if(nw.length<6){msg.textContent='⚠ La password deve avere almeno 6 caratteri.';msg.classList.add('err');
-    document.getElementById('pConf').style.borderColor='';return;}
+  if(nw.length<6){msg.textContent='⚠ La password deve avere almeno 6 caratteri.';msg.classList.add('err');return;}
   if(nw!==cf){msg.textContent='⚠ Le due password non coincidono. Controlla e riprova.';msg.classList.add('err');
     document.getElementById('pConf').style.borderColor='var(--red)';return;}
   document.getElementById('pConf').style.borderColor='';
-  const users=getUsers();
-  const idx=users.findIndex(u=>u.id===CU.id);
-  users[idx].password=nw;saveUsers(users);CU=users[idx];
-  msg.textContent='✓ Password cambiata con successo!';msg.classList.add('ok');
-  document.getElementById('pNew').value='';document.getElementById('pConf').value='';
-  setTimeout(()=>msg.textContent='',3000);
+  try{
+    if(_fbAuth&&_fbAuth.currentUser){
+      await _fbAuth.currentUser.updatePassword(nw);
+    }
+    const users=getUsers();
+    const idx=users.findIndex(u=>u.id===CU.id);
+    if(idx>=0){ delete users[idx].password; saveUsers(users); CU=users[idx]; }
+    msg.textContent='✓ Password cambiata con successo!';msg.classList.add('ok');
+    document.getElementById('pNew').value='';document.getElementById('pConf').value='';
+    setTimeout(()=>msg.textContent='',3000);
+  } catch(e){
+    msg.classList.add('err');
+    if(e.code==='auth/requires-recent-login'){
+      msg.textContent='⚠ Sessione scaduta. Effettua nuovamente il login e riprova.';
+    } else {
+      msg.textContent='⚠ Errore: '+(e.message||e);
+    }
+  }
 }
 
 // ══════════════════════════════════════════════════
@@ -2016,7 +2085,7 @@ function toggleBlockUser(){
   renderAdmin();selAdmin(selAU.id);
 }
 
-function saveAdminEdit(){
+async function saveAdminEdit(){
   if(!selAU) return;
   const fn=document.getElementById('aeFn').value.trim();
   const ln=document.getElementById('aeLn').value.trim();
@@ -2031,14 +2100,25 @@ function saveAdminEdit(){
   const idx=users.findIndex(u=>u.id===selAU.id);
   if(idx<0) return;
   users[idx].firstName=fn;users[idx].lastName=ln;users[idx].email=em;users[idx].phone=ph;users[idx].role=role;
-  if(pw) {users[idx].password=pw;users[idx].mustChangePw=true;}
+  delete users[idx].password; // remove legacy password if present
+  if(pw&&_fbAuth){
+    // Send password reset email — client SDK cannot set another user's password directly
+    try{
+      await _fbAuth.sendPasswordResetEmail(em);
+      users[idx].mustChangePw=true;
+      msg.textContent='Dati salvati. Email di reset password inviata a '+em;msg.classList.add('ok');
+    } catch(e){
+      msg.textContent='Dati salvati, ma errore invio email reset: '+e.message;msg.classList.add('err');
+    }
+  } else {
+    msg.textContent='Modifiche salvate!';msg.classList.add('ok');
+  }
   saveUsers(users);selAU=users[idx];
-  msg.textContent='Modifiche salvate!';msg.classList.add('ok');
-  setTimeout(()=>msg.textContent='',2500);
+  setTimeout(()=>msg.textContent='',3000);
   renderAdmin();
 }
 
-function addUser(){
+async function addUser(){
   const fn=document.getElementById('aFn').value.trim();
   const ln=document.getElementById('aLn').value.trim();
   const em=document.getElementById('aEm').value.trim().toLowerCase();
@@ -2050,12 +2130,39 @@ function addUser(){
   if(!fn||!ln||!em||!pw){msg.textContent='Compila tutti i campi.';msg.classList.add('err');return;}
   const users=getUsers();
   if(users.find(u=>u.email.toLowerCase()===em)){msg.textContent='Email già esistente.';msg.classList.add('err');return;}
-  users.push({id:'u_'+Date.now(),firstName:fn,lastName:ln,email:em,phone:ph,password:pw,role,mustChangePw:true});
-  saveUsers(users);
-  ['aFn','aLn','aEm','aPh','aPw'].forEach(id=>document.getElementById(id).value='');
-  msg.textContent='Utente aggiunto!';msg.classList.add('ok');
-  setTimeout(()=>msg.textContent='',2500);
-  renderAdmin();
+  msg.textContent='Creazione in corso…';
+  if(!_fbAuth){
+    // Sandbox fallback
+    users.push({id:'u_'+Date.now(),firstName:fn,lastName:ln,email:em,phone:ph,password:pw,role,mustChangePw:true});
+    saveUsers(users);
+    ['aFn','aLn','aEm','aPh','aPw'].forEach(id=>document.getElementById(id).value='');
+    msg.textContent='Utente aggiunto!';msg.classList.add('ok');
+    setTimeout(()=>msg.textContent='',2500);
+    renderAdmin();
+    return;
+  }
+  // Use secondary app to create user without logging out current admin
+  const appName='secondary_'+Date.now();
+  let secondaryApp=null;
+  try{
+    secondaryApp=firebase.initializeApp(firebaseConfig,appName);
+    const result=await secondaryApp.auth().createUserWithEmailAndPassword(em,pw);
+    const uid=result.user.uid;
+    await secondaryApp.auth().signOut();
+    users.push({id:uid,firebaseUid:uid,firstName:fn,lastName:ln,email:em,phone:ph,role,mustChangePw:true});
+    saveUsers(users);
+    ['aFn','aLn','aEm','aPh','aPw'].forEach(id=>document.getElementById(id).value='');
+    msg.textContent='Utente creato con successo!';msg.classList.add('ok');
+    setTimeout(()=>msg.textContent='',2500);
+    renderAdmin();
+  } catch(e){
+    msg.classList.add('err');
+    if(e.code==='auth/email-already-in-use') msg.textContent='Email già registrata.';
+    else if(e.code==='auth/weak-password') msg.textContent='Password troppo debole (min. 6 caratteri).';
+    else msg.textContent='Errore: '+e.message;
+  } finally {
+    if(secondaryApp) secondaryApp.delete().catch(()=>{});
+  }
 }
 
 // ══════════════════════════════════════════════════
