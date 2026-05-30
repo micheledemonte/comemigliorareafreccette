@@ -96,6 +96,7 @@ button{cursor:pointer}
 .l-dot:hover{background:var(--mu2);transform:scale(1.15)}
 .l-dot.on{background:var(--green);width:36px;border-radius:7px}
 .l-swipe-hint{margin-top:24px;margin-bottom:8px;font-size:12px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;text-align:center;animation:swipeHint 2s infinite}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 @keyframes swipeHint{0%,100%{transform:translateX(0)}50%{transform:translateX(-10px)}}
 
 /* ─── JOURNEY SECTION ─── */
@@ -522,10 +523,16 @@ select:focus{outline:2px solid var(--green)}
           <button type="button" onclick="togglePwVis('lpw','lpwEye')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0;line-height:1" id="lpwEye" title="Mostra/nascondi password">👁</button>
         </div>
       </div>
-      <button type="submit" class="btn-g">ENTRA</button>
+      <button type="submit" class="btn-g" id="loginSubmitBtn">ENTRA</button>
       </form>
       <div class="ferr" id="lerr"></div>
       <div class="modal-back" onclick="closeLogin()">← Torna alla home</div>
+    </div>
+    <!-- Loading view shown while DB loads after auth -->
+    <div id="loadv" style="display:none;text-align:center;padding:20px 0">
+      <div style="width:48px;height:48px;border:3px solid var(--d5);border-top-color:var(--green);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 20px"></div>
+      <div style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;color:var(--light)">CARICAMENTO...</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px">Sincronizzazione dati in corso</div>
     </div>
     <div class="cpw-view" id="cpv">
       <div class="modal-title">Crea la tua password</div>
@@ -917,12 +924,23 @@ try {
 if(_fbAuth){
   _fbAuth.onAuthStateChanged(async (firebaseUser)=>{
     if(!firebaseUser) return; // not logged in, landing page stays
+    // Show loading state inside login modal (if open)
+    const lv=document.getElementById('lv');
+    const loadv=document.getElementById('loadv');
+    if(lv&&loadv){
+      lv.style.display='none';
+      loadv.style.display='block';
+      if(!document.getElementById('loginModal').classList.contains('open')) openLogin();
+    }
     try{
       if(!_dbCache) await loadDBFromCloud();
       const u = getUsers().find(u=>u.email.toLowerCase()===firebaseUser.email.toLowerCase());
-      if(!u){ await _fbAuth.signOut(); return; }
-      if(u.blocked){ await _fbAuth.signOut(); return; }
+      if(!u){ await _fbAuth.signOut(); _restoreLoginView(); return; }
+      if(u.blocked){ await _fbAuth.signOut(); _restoreLoginView(); return; }
       CU = u;
+      // Hide loading spinner
+      const loadv=document.getElementById('loadv');
+      if(loadv) loadv.style.display='none';
       // Sync Firebase UID into profile if not already stored
       if(!u.firebaseUid){
         const users=getUsers();
@@ -943,8 +961,20 @@ if(_fbAuth){
         }
         enterApp();
       }
-    } catch(e){ console.warn('Auth state error:', e.message); }
+    } catch(e){
+      console.warn('Auth state error:', e.message);
+      _restoreLoginView();
+    }
   });
+}
+
+function _restoreLoginView(){
+  const lv=document.getElementById('lv');
+  const loadv=document.getElementById('loadv');
+  const loginBtn=document.getElementById('loginSubmitBtn');
+  if(lv){ lv.style.display=''; lv.style.opacity=''; lv.style.pointerEvents=''; }
+  if(loadv) loadv.style.display='none';
+  if(loginBtn){ loginBtn.textContent='ENTRA'; loginBtn.disabled=false; }
 }
 
 let _dbCache = null;
@@ -1146,6 +1176,11 @@ async function doLogin(){
     return;
   }
   try{
+    // Show loading state while onAuthStateChanged loads DB
+    const loginBtn=document.getElementById('loginSubmitBtn');
+    if(loginBtn){loginBtn.textContent='CARICAMENTO...';loginBtn.disabled=true;}
+    document.getElementById('lv').style.opacity='0.6';
+    document.getElementById('lv').style.pointerEvents='none';
     await _fbAuth.signInWithEmailAndPassword(em,pw);
     // onAuthStateChanged handles the rest
   } catch(e){
@@ -1157,6 +1192,11 @@ async function doLogin(){
     } else {
       err.textContent='Errore di accesso. Riprova.';
     }
+    // Restore login form on error
+    const loginBtn=document.getElementById('loginSubmitBtn');
+    if(loginBtn){loginBtn.textContent='ENTRA';loginBtn.disabled=false;}
+    const lv=document.getElementById('lv');
+    if(lv){lv.style.opacity='';lv.style.pointerEvents='';}
   }
 }
 
@@ -2171,8 +2211,11 @@ async function saveAdminEdit(){
     try{
       // Firebase Console → Auth Templates → Password reset has custom action URL set to the app domain.
       // This ensures the reset link opens the app directly (not firebaseapp.com).
-      await _fbAuth.sendPasswordResetEmail(em);
-      users[idx].mustChangePw=true;
+      await _fbAuth.sendPasswordResetEmail(em, {
+        url: 'https://comemigliorareafreccette.vercel.app',
+        handleCodeInApp: true
+      });
+      // Don't set mustChangePw=true: Firebase handles the PW change, no in-app prompt needed
       msg.textContent='Dati salvati. Email di reset password inviata a '+em;msg.classList.add('ok');
     } catch(e){
       msg.textContent='Dati salvati, ma errore invio email reset: '+e.message;msg.classList.add('err');
