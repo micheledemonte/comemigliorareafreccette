@@ -1021,21 +1021,10 @@ function hideSetupModal(){ document.getElementById('setupModal').style.display='
 function initUsers(){ /* no-op */ }
 
 async function bootApp(){
+  // Don't load DB here — Firebase rules require auth.
+  // DB is loaded in onAuthStateChanged after user is authenticated.
   const btns = document.querySelectorAll('.l-cta');
-  btns.forEach(b=>b.textContent='CARICAMENTO...');
-  try{
-    await loadDBFromCloud();
-    btns.forEach((b,i)=>{ b.textContent = 'CLICCA QUI PER ACCEDERE'; });
-  } catch(e){
-    console.warn('Firebase unavailable:', e.message);
-    _dbCache = emptyDB();
-    btns.forEach((b,i)=>{ b.textContent = 'CLICCA QUI PER ACCEDERE'; });
-    const banner = document.createElement('div');
-    banner.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#7f1d1d;color:#fca5a5;font-size:12px;padding:8px 16px;text-align:center;z-index:999';
-    banner.textContent='⚠ Database non raggiungibile — i dati non verranno salvati in questa sessione';
-    document.body.appendChild(banner);
-    setTimeout(()=>banner.remove(), 8000);
-  }
+  btns.forEach(b=>b.textContent='CLICCA QUI PER ACCEDERE');
 }
 
 function initApp(){ /* no-op */ }
