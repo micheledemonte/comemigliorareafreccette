@@ -1862,7 +1862,14 @@ function selAdmin(uid){
   document.getElementById('aeEm').value=selAU.email||'';
   document.getElementById('aePh').value=selAU.phone||'';
   document.getElementById('aePwNew').value='';
-  document.getElementById('aeRole').value=selAU.role||'user';
+  // If editing self: disable password field (use PROFILO section instead)
+  const pwWrap = document.getElementById('aePwNew').closest('.pw-wrap') || document.getElementById('aePwNew').parentElement;
+  const isSelf = selAU.id === CU.id;
+  document.getElementById('aePwNew').disabled = isSelf;
+  document.getElementById('aePwNew').placeholder = isSelf
+    ? 'Usa la sezione PROFILO per cambiare la tua password'
+    : 'Nuova password → invia email di reset';
+  document.getElementById('aePwNew').style.opacity = isSelf ? '0.4' : '1';
   document.getElementById('aeMsg').textContent='';
   const bb=document.getElementById('aeBlockBtn');
   if(selAU.id===CU.id){bb.style.display='none';}
@@ -2090,8 +2097,8 @@ async function saveAdminEdit(){
   if(idx<0) return;
   users[idx].firstName=fn;users[idx].lastName=ln;users[idx].email=em;users[idx].phone=ph;users[idx].role=role;
   delete users[idx].password; // remove legacy password if present
-  if(pw&&_fbAuth){
-    // Send password reset email — client SDK cannot set another user's password directly
+  if(pw && _fbAuth && selAU.id !== CU.id){
+    // Send password reset email — only for OTHER users (not self)
     try{
       await _fbAuth.sendPasswordResetEmail(em);
       users[idx].mustChangePw=true;
@@ -2099,6 +2106,9 @@ async function saveAdminEdit(){
     } catch(e){
       msg.textContent='Dati salvati, ma errore invio email reset: '+e.message;msg.classList.add('err');
     }
+  } else if(pw && selAU.id === CU.id){
+    msg.textContent='Per cambiare la tua password usa la sezione PROFILO.';msg.classList.add('err');
+    return;
   } else {
     msg.textContent='Modifiche salvate!';msg.classList.add('ok');
   }
