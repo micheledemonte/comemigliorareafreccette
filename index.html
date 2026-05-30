@@ -2153,11 +2153,9 @@ async function saveAdminEdit(){
   if(pw && _fbAuth && selAU.id !== CU.id){
     // Send password reset email — only for OTHER users (not self)
     try{
-      const actionCodeSettings = {
-        url: window.location.origin || 'https://comemigliorareafreccette.vercel.app',
-        handleCodeInApp: false
-      };
-      await _fbAuth.sendPasswordResetEmail(em, actionCodeSettings);
+      // Firebase Console → Auth Templates → Password reset has custom action URL set to the app domain.
+      // This ensures the reset link opens the app directly (not firebaseapp.com).
+      await _fbAuth.sendPasswordResetEmail(em);
       users[idx].mustChangePw=true;
       msg.textContent='Dati salvati. Email di reset password inviata a '+em;msg.classList.add('ok');
     } catch(e){
