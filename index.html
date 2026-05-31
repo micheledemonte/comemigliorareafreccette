@@ -448,7 +448,7 @@ select:hover{border-color:var(--green)}
 #g501overlay.open{display:flex}
 #g201overlay.open{display:flex}
 
-/* Inner wrapper — always flex column filling the overlay */
+/* Inner wrapper */
 .g501-inner{
   display:flex;
   flex-direction:column;
@@ -460,7 +460,7 @@ select:hover{border-color:var(--green)}
   position:relative;
 }
 
-/* Desktop: center a narrower column */
+/* Desktop: center a fixed-width column, natural height, centered vertically */
 @media(min-width:769px){
   #g501overlay,#g201overlay{
     background:#000!important;
@@ -468,11 +468,21 @@ select:hover{border-color:var(--green)}
     justify-content:center;
   }
   .g501-inner{
-    width:min(480px,calc(100vw - 48px));
-    height:100vh;
-    max-height:100vh;
-    padding:8px;
-    gap:6px;
+    width:min(400px,calc(100vw - 48px));
+    height:auto;          /* natural height — no stretching */
+    max-height:96vh;
+    flex-shrink:0;
+    padding:10px;
+    gap:7px;
+    overflow:hidden;
+  }
+  /* Keypad on desktop: fixed square-ish size, not stretching */
+  .g501-pad{
+    /* Override flex:1 on desktop — use fixed calc instead */
+    flex:0 0 auto!important;
+    /* 3 cols × item + gaps, 4 rows — compute from width */
+    aspect-ratio:3/4;
+    max-height:55vh;
   }
 }
 
@@ -531,27 +541,28 @@ select:hover{border-color:var(--green)}
   color:#fff;min-width:60px;padding:3px 8px;
 }
 
-/* Block 4: Keypad — takes remaining space, NO aspect-ratio on keys */
+/* Block 4: Keypad — takes remaining space on mobile */
 .g501-pad{
   display:grid;
   grid-template-columns:repeat(3,1fr);
-  grid-template-rows:repeat(4,1fr);  /* 4 rows, each equal */
-  gap:clamp(5px,1.2vh,10px);
+  grid-template-rows:repeat(4,1fr);
+  gap:clamp(5px,1.5vw,10px);
   background:#000;
-  flex:1 1 0;            /* fills remaining vertical space */
-  min-height:0;          /* critical: lets flex shrink below content */
+  flex:1 1 0;
+  min-height:0;
   padding:2px 1px 4px;
 }
 
-/* Keys: fill their grid cell, round, NO aspect-ratio */
+/* Keys: square via aspect-ratio, font scales with container width */
 .g501-key{
   background:#1c1c1c;border:none;color:#fff;
   font-family:'Bebas Neue',sans-serif;
-  font-size:clamp(20px,5vh,40px);
+  font-size:clamp(18px,6vw,36px);
   letter-spacing:.01em;
   border-radius:999px!important;
   display:flex;align-items:center;justify-content:center;
-  width:100%;height:100%;   /* fill cell */
+  width:100%;
+  aspect-ratio:1;        /* square — works because grid columns are equal */
   cursor:pointer;
   transition:background .08s,transform .08s,box-shadow .08s;
   box-shadow:0 2px 6px rgba(0,0,0,0.5);
@@ -1927,6 +1938,8 @@ const LD = {
   dragStartOffset:  0,
   isDragging:       false,
   didDrag:          false,
+  _stepIdx:         0,
+  _stepAccum:       0,
   SWIPE_AMPLIFY:    2.8,
   // desktop pill-drag state
   hlDragActive:     false,
@@ -2079,7 +2092,13 @@ function ldDesktopHlLive(hlCenterPx){
   return nearest;
 }
 
-// ═══ MOBILE MODE — track scrolls, highlight follows ═══
+// ═══ MOBILE MODE — step-based navigation ═══
+// Each STEP_PX pixels of swipe advances by 1 tab position.
+// The track scrolls smoothly; pill highlights the current step target.
+// LD._stepIdx tracks the "in-flight" index during drag.
+
+const LD_STEP_PX = 38; // pixels of swipe per step (1 tab)
+
 function ldMobileSnapToIdx(idx, animate=true){
   const all = ldAllTabs();
   if(idx<0||idx>=all.length||!LD.itemRects.length) return;
@@ -2094,28 +2113,12 @@ function ldMobileSnapToIdx(idx, animate=true){
   ldUpdateHighlight(idx, animate);
 }
 
-function ldMobileLiveUpdate(rawOffset){
-  const b   = ldOffsetBounds();
+function ldMobileStepUpdate(targetIdx){
+  // Snap track to targetIdx position and update highlight
   const all = ldAllTabs();
-
-  // Clamp offset to hard stops (no rubber-band, no override)
-  let off = Math.max(b.min, Math.min(b.max, rawOffset));
-  LD.trackOffset = off;
-
-  const track = document.getElementById('ldTrack');
-  track.style.transition = 'none';
-  track.style.transform  = `translateX(${off}px)`;
-
-  // Find which item is nearest to pill center and update highlight
-  const n = ldNearestIdx(off);
-  ldUpdateActive(n);
-  const hl = document.getElementById('ldHighlight');
-  const r  = LD.itemRects[n];
-  if(r){
-    hl.style.transition = 'none';
-    hl.style.left  = (r.left + off + LD.PILL_PAD) + 'px';
-    hl.style.width = (r.width + 4) + 'px';
-  }
+  const n = Math.max(0, Math.min(all.length-1, targetIdx));
+  LD._stepIdx = n;
+  ldMobileSnapToIdx(n, false); // no CSS transition during live drag
 }
 
 // ═══ POINTER EVENTS ═══
@@ -2134,8 +2137,8 @@ function ldPointerDown(e){
     LD.didDrag         = false;
     LD.dragStartX      = x;
     LD.dragStartY      = e.touches ? e.touches[0].clientY : 0;
-    LD.dragStartOffset = LD.trackOffset;
-    LD._mobileScale    = null; // recalculate scale fresh each drag
+    LD._stepIdx        = LD.currentIdx; // start from current tab
+    LD._stepAccum      = 0;             // accumulated sub-step pixels
   }
 }
 
@@ -2156,19 +2159,24 @@ function ldPointerMove(e){
     const dx = x - LD.dragStartX;
     const dy = y - (LD.dragStartY||0);
     if(!LD.didDrag && Math.abs(dx) < 5) return;
-    if(!LD.didDrag && Math.abs(dy) > Math.abs(dx) * 1.5) { LD.isDragging=false; return; }
+    if(!LD.didDrag && Math.abs(dy) > Math.abs(dx) * 1.5){ LD.isDragging=false; return; }
     LD.didDrag = true;
     e.preventDefault();
-    // Linear full-range mapping: total track range / pill width = scale factor
-    // Computed once per drag for consistent feel across all menu sizes
-    if(!LD._mobileScale){
-      const b = ldOffsetBounds();
-      const pillW = document.getElementById('ldPill').getBoundingClientRect().width || 360;
-      // Full range reachable with one full-width swipe (80% of pill)
-      LD._mobileScale = Math.abs(b.min - b.max) / (pillW * 0.8);
-      LD._mobileScale = Math.max(LD._mobileScale, 1.0); // minimum 1:1
+
+    // Step-based: every LD_STEP_PX pixels moves 1 tab
+    // dx is total displacement from dragStart; _stepAccum is remainder
+    const totalDx = x - LD.dragStartX;  // total from drag start
+    const all = ldAllTabs();
+    const maxIdx = all.length - 1;
+
+    // Direction: negative dx = swipe left = move right (higher index)
+    const stepsRaw = -totalDx / LD_STEP_PX;  // negative = rightward tabs
+    const stepsInt = Math.round(stepsRaw);
+    const targetIdx = Math.max(0, Math.min(maxIdx, LD.currentIdx + stepsInt));
+
+    if(targetIdx !== LD._stepIdx){
+      ldMobileStepUpdate(targetIdx);
     }
-    ldMobileLiveUpdate(LD.dragStartOffset + dx * LD._mobileScale);
   }
 }
 
@@ -2198,7 +2206,8 @@ function ldPointerUp(){
   if(!ldIsDesktop() && LD.isDragging){
     LD.isDragging = false;
     if(!LD.didDrag) return;
-    const n   = ldNearestIdx(LD.trackOffset);
+    // Commit to the step index reached during drag
+    const n   = LD._stepIdx !== undefined ? LD._stepIdx : ldNearestIdx(LD.trackOffset);
     const tgt = ldAllTabs()[n];
     LD.current    = tgt.id;
     LD.currentIdx = n;
