@@ -144,23 +144,28 @@ button{cursor:pointer}
   padding:0 8px;
   border-radius:999px;
   border:1.5px solid var(--green);
-  /* Very transparent frosted glass */
   background:rgba(4,8,4,0.22);
-  backdrop-filter:blur(8px) saturate(1.4);
-  -webkit-backdrop-filter:blur(8px) saturate(1.4);
+  backdrop-filter:blur(4px) saturate(1.2);
+  -webkit-backdrop-filter:blur(4px) saturate(1.2);
   box-shadow:
     0 8px 40px rgba(0,0,0,0.40),
     0 1px 0 rgba(255,255,255,0.05) inset,
     0 0 0 1px rgba(34,197,94,0.12);
   overflow:hidden;
-  cursor:grab;
-  /* Desktop wider */
-  width:min(700px, calc(100vw - 48px));
+  /* Desktop: auto-size to fit all items, no gap */
+  width:max-content;
+  max-width:calc(100vw - 48px);
+  cursor:default;
 }
-@media(max-width:600px){
-  .ld-pill{ width:min(430px, calc(100vw - 36px)); height:58px; }
+/* Mobile/tablet: fixed window, track scrolls */
+@media(max-width:768px){
+  .ld-pill{
+    width:min(430px, calc(100vw - 36px));
+    height:58px;
+    cursor:grab;
+  }
+  .ld-pill:active{ cursor:grabbing; }
 }
-.ld-pill:active{cursor:grabbing}
 
 /* Highlight pill — JS sets left + width in real time */
 .ld-highlight{
@@ -560,8 +565,8 @@ select:focus{outline:2px solid var(--green)}
 .legal-close-btn{
   pointer-events:all;
   background:rgba(10,15,10,0.60);
-  backdrop-filter:blur(22px) saturate(1.6);
-  -webkit-backdrop-filter:blur(22px) saturate(1.6);
+  backdrop-filter:blur(6px) saturate(1.3);
+  -webkit-backdrop-filter:blur(6px) saturate(1.3);
   color:var(--green);
   border:1.5px solid var(--green);
   padding:13px 52px;
@@ -1709,7 +1714,7 @@ async function doLogout(){
 }
 
 // ══════════════════════════════════════════════════
-// LIQUID GLASS DOCK — v3 (click + amplified swipe + hard stops)
+// LIQUID GLASS DOCK — v4 (desktop=pill moves, mobile=track scrolls)
 // ══════════════════════════════════════════════════
 const LD = {
   tabs: [
@@ -1721,22 +1726,30 @@ const LD = {
     {id:'profile',     icon:'👤', label:'Profilo'},
   ],
   adminTab:{id:'admin', icon:'⚙️', label:'Admin'},
-  showAdmin: false,
-  current: 'training',
+  showAdmin:  false,
+  current:    'training',
   currentIdx: 0,
-  trackOffset: 0,
-  dragStartX: 0,
-  dragStartOffset: 0,
-  isDragging: false,
-  didDrag: false,
-  itemRects: [],
+  // shared state
+  itemRects:  [],   // [{left,width,center}] at trackOffset=0
   pillInnerW: 0,
-  PILL_PAD: 8,
-  SWIPE_AMPLIFY: 2.8,
+  PILL_PAD:   8,
+  // mobile swipe state
+  trackOffset:      0,
+  dragStartX:       0,
+  dragStartOffset:  0,
+  isDragging:       false,
+  didDrag:          false,
+  SWIPE_AMPLIFY:    2.8,
+  // desktop pill-drag state
+  hlDragActive:     false,
+  hlDragStartX:     0,
+  hlDragStartIdx:   0,
 };
 
+function ldIsDesktop(){ return window.innerWidth > 768; }
 function ldAllTabs(){ return LD.showAdmin ? [...LD.tabs, LD.adminTab] : [...LD.tabs]; }
 
+// ═══ BUILD ═══
 function ldBuildDock(showAdmin){
   LD.showAdmin  = showAdmin;
   LD.current    = 'training';
@@ -1750,17 +1763,20 @@ function ldBuildDock(showAdmin){
   ).join('');
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     ldMeasure();
-    ldSnapToIdx(0, false);
+    ldApplyMode(false);
   }));
 }
 
+// ═══ MEASURE ═══
 function ldMeasure(){
   const pill  = document.getElementById('ldPill');
   const track = document.getElementById('ldTrack');
   const items = track.querySelectorAll('.ld-item');
   if(!items.length) return;
+  // Reset track before measuring
   track.style.transition = 'none';
   track.style.transform  = 'translateX(0)';
+  LD.trackOffset = 0;
   const pillRect = pill.getBoundingClientRect();
   LD.pillInnerW  = pillRect.width - LD.PILL_PAD * 2;
   LD.itemRects   = [];
@@ -1771,32 +1787,28 @@ function ldMeasure(){
   });
 }
 
+// Apply correct mode after resize / init
+function ldApplyMode(animate){
+  if(ldIsDesktop()){
+    // Desktop: track stays at 0, highlight moves to currentIdx
+    const track = document.getElementById('ldTrack');
+    track.style.transition = 'none';
+    track.style.transform  = 'translateX(0)';
+    LD.trackOffset = 0;
+    ldUpdateActive(LD.currentIdx);
+    ldUpdateHighlight(LD.currentIdx, animate);
+  } else {
+    // Mobile: center current item under pill center
+    ldMobileSnapToIdx(LD.currentIdx, animate);
+  }
+}
+
+// ═══ SHARED HELPERS ═══
 function ldOffsetBounds(){
   const n = ldAllTabs().length;
   if(!LD.itemRects.length||n===0) return {min:0,max:0};
   const lastRight = LD.itemRects[n-1].left + LD.itemRects[n-1].width;
   return {max:0, min: LD.pillInnerW - lastRight};
-}
-
-function ldSnapToIdx(idx, animate=true){
-  const all = ldAllTabs();
-  if(idx<0||idx>=all.length||!LD.itemRects.length) return;
-  const bounds = ldOffsetBounds();
-  let offset   = LD.pillInnerW/2 - LD.itemRects[idx].center;
-  offset = Math.max(bounds.min, Math.min(bounds.max, offset));
-  LD.trackOffset = offset;
-  LD.current     = all[idx].id;
-  LD.currentIdx  = idx;
-  const track = document.getElementById('ldTrack');
-  track.style.transition = animate ? 'transform .26s cubic-bezier(.4,0,.2,1)' : 'none';
-  track.style.transform  = `translateX(${offset}px)`;
-  ldUpdateActive(idx);
-  ldUpdateHighlight(idx, animate);
-}
-
-function ldSnapTo(tabId, animate=true){
-  const idx = ldAllTabs().findIndex(t=>t.id===tabId);
-  if(idx>=0) ldSnapToIdx(idx, animate);
 }
 
 function ldUpdateActive(idx){
@@ -1805,89 +1817,209 @@ function ldUpdateActive(idx){
   });
 }
 
+// Highlight: left/width in pill-space (accounts for trackOffset on mobile)
 function ldUpdateHighlight(idx, animate=true){
   if(!LD.itemRects[idx]) return;
   const hl   = document.getElementById('ldHighlight');
   const rect = LD.itemRects[idx];
+  // On desktop trackOffset=0 always; on mobile it changes
+  const hlLeft = rect.left + LD.trackOffset + LD.PILL_PAD;
   hl.style.transition = animate
-    ? 'left .26s cubic-bezier(.4,0,.2,1),width .16s cubic-bezier(.4,0,.2,1)'
+    ? 'left .24s cubic-bezier(.4,0,.2,1),width .14s cubic-bezier(.4,0,.2,1)'
     : 'none';
-  hl.style.left  = (rect.left + LD.trackOffset + LD.PILL_PAD) + 'px';
+  hl.style.left  = hlLeft + 'px';
   hl.style.width = (rect.width + 4) + 'px';
 }
 
-function ldNearestIdx(off){
-  const c = LD.pillInnerW/2;
+function ldNearestIdx(trackOff){
+  const c = LD.pillInnerW / 2;
   let nearest=0, best=Infinity;
   LD.itemRects.forEach((r,i)=>{
-    const d = Math.abs(r.center+off-c);
-    if(d<best){best=d;nearest=i;}
+    const d = Math.abs(r.center + trackOff - c);
+    if(d < best){ best=d; nearest=i; }
   });
   return nearest;
 }
 
-function ldLiveUpdate(rawOffset){
+function ldSnapTo(tabId, animate=true){
+  const idx = ldAllTabs().findIndex(t=>t.id===tabId);
+  if(idx >= 0){
+    LD.current    = tabId;
+    LD.currentIdx = idx;
+    ldApplyMode(animate);
+  }
+}
+
+// ═══ DESKTOP MODE — only highlight pill moves ═══
+// Returns the highlight's current center in pill-space (trackOffset=0)
+function ldHlCenterFromIdx(idx){
+  if(!LD.itemRects[idx]) return 0;
+  const r = LD.itemRects[idx];
+  return r.left + LD.PILL_PAD + r.width/2;
+}
+
+// Move highlight to raw left position, find nearest item, update active
+function ldDesktopHlLive(hlCenterPx){
+  // Clamp to first/last item center
+  const first = ldHlCenterFromIdx(0);
+  const last  = ldHlCenterFromIdx(ldAllTabs().length-1);
+  const clamped = Math.max(first, Math.min(last, hlCenterPx));
+  // Find nearest item
+  let nearest=0, best=Infinity;
+  LD.itemRects.forEach((r,i)=>{
+    const itemCtr = r.left + LD.PILL_PAD + r.width/2;
+    const d = Math.abs(itemCtr - clamped);
+    if(d < best){ best=d; nearest=i; }
+  });
+  ldUpdateActive(nearest);
+  // Move highlight without snapping
+  const hl   = document.getElementById('ldHighlight');
+  const rect = LD.itemRects[nearest];
+  hl.style.transition = 'none';
+  hl.style.left  = (rect.left + LD.PILL_PAD) + 'px';
+  hl.style.width = (rect.width + 4) + 'px';
+  return nearest;
+}
+
+// ═══ MOBILE MODE — track scrolls, highlight follows ═══
+function ldMobileSnapToIdx(idx, animate=true){
+  const all = ldAllTabs();
+  if(idx<0||idx>=all.length||!LD.itemRects.length) return;
+  const bounds = ldOffsetBounds();
+  let offset   = LD.pillInnerW/2 - LD.itemRects[idx].center;
+  offset = Math.max(bounds.min, Math.min(bounds.max, offset));
+  LD.trackOffset = offset;
+  const track = document.getElementById('ldTrack');
+  track.style.transition = animate ? 'transform .26s cubic-bezier(.4,0,.2,1)' : 'none';
+  track.style.transform  = `translateX(${offset}px)`;
+  ldUpdateActive(idx);
+  ldUpdateHighlight(idx, animate);
+}
+
+function ldMobileLiveUpdate(rawOffset){
   const b = ldOffsetBounds();
   let off = rawOffset;
-  if(off>b.max) off = b.max+(off-b.max)*0.15;
-  if(off<b.min) off = b.min+(off-b.min)*0.15;
+  if(off > b.max) off = b.max + (off-b.max)*0.15;
+  if(off < b.min) off = b.min + (off-b.min)*0.15;
   LD.trackOffset = off;
   const track = document.getElementById('ldTrack');
-  track.style.transition='none';
-  track.style.transform=`translateX(${off}px)`;
-  const n = ldNearestIdx(off);
+  track.style.transition = 'none';
+  track.style.transform  = `translateX(${off}px)`;
+  const n   = ldNearestIdx(off);
   ldUpdateActive(n);
-  const hl=document.getElementById('ldHighlight');
-  const r=LD.itemRects[n];
+  const hl  = document.getElementById('ldHighlight');
+  const r   = LD.itemRects[n];
   if(r){ hl.style.transition='none'; hl.style.left=(r.left+off+LD.PILL_PAD)+'px'; hl.style.width=(r.width+4)+'px'; }
 }
 
+// ═══ POINTER EVENTS ═══
 function ldPointerDown(e){
   if(e.target.closest('#ldLogout')) return;
-  LD.isDragging=true; LD.didDrag=false;
-  LD.dragStartX=e.touches?e.touches[0].clientX:e.clientX;
-  LD.dragStartOffset=LD.trackOffset;
+  const x = e.touches ? e.touches[0].clientX : e.clientX;
+
+  if(ldIsDesktop()){
+    // Desktop: drag the highlight pill
+    LD.hlDragActive   = true;
+    LD.didDrag        = false;
+    LD.hlDragStartX   = x;
+    LD.hlDragStartIdx = LD.currentIdx;
+  } else {
+    // Mobile: drag the track
+    LD.isDragging       = true;
+    LD.didDrag          = false;
+    LD.dragStartX       = x;
+    // IMPORTANT: start from current trackOffset (not item position)
+    LD.dragStartOffset  = LD.trackOffset;
+  }
   e.preventDefault();
 }
+
 function ldPointerMove(e){
-  if(!LD.isDragging) return;
-  const x=e.touches?e.touches[0].clientX:e.clientX;
-  const dx=(x-LD.dragStartX)*LD.SWIPE_AMPLIFY;
-  if(Math.abs(dx)>6) LD.didDrag=true;
-  ldLiveUpdate(LD.dragStartOffset+dx);
-  e.preventDefault();
+  const x = e.touches ? e.touches[0].clientX : e.clientX;
+
+  if(ldIsDesktop() && LD.hlDragActive){
+    const dx = x - LD.hlDragStartX;
+    if(Math.abs(dx) > 4) LD.didDrag = true;
+    // Move highlight from its start center by dx
+    const startCenter = ldHlCenterFromIdx(LD.hlDragStartIdx);
+    ldDesktopHlLive(startCenter + dx);
+    e.preventDefault();
+    return;
+  }
+
+  if(!ldIsDesktop() && LD.isDragging){
+    const dx = (x - LD.dragStartX) * LD.SWIPE_AMPLIFY;
+    if(Math.abs(dx) > 6) LD.didDrag = true;
+    ldMobileLiveUpdate(LD.dragStartOffset + dx);
+    e.preventDefault();
+  }
 }
+
 function ldPointerUp(){
-  if(!LD.isDragging) return;
-  LD.isDragging=false;
-  if(!LD.didDrag) return;
-  const n=ldNearestIdx(LD.trackOffset);
-  ldSnapToIdx(n,true);
-  showTab(ldAllTabs()[n].id);
+  if(ldIsDesktop() && LD.hlDragActive){
+    LD.hlDragActive = false;
+    if(!LD.didDrag) return; // pure click handled by ldItemClick
+    // Snap to nearest
+    const hl     = document.getElementById('ldHighlight');
+    const hlRect = hl.getBoundingClientRect();
+    const pill   = document.getElementById('ldPill');
+    const pRect  = pill.getBoundingClientRect();
+    const hlCtr  = hlRect.left - pRect.left - LD.PILL_PAD + hlRect.width/2;
+    let nearest=0, best=Infinity;
+    LD.itemRects.forEach((r,i)=>{
+      const d = Math.abs(r.center - hlCtr);
+      if(d < best){ best=d; nearest=i; }
+    });
+    LD.current    = ldAllTabs()[nearest].id;
+    LD.currentIdx = nearest;
+    ldUpdateHighlight(nearest, true);
+    ldUpdateActive(nearest);
+    showTab(ldAllTabs()[nearest].id);
+    return;
+  }
+
+  if(!ldIsDesktop() && LD.isDragging){
+    LD.isDragging = false;
+    if(!LD.didDrag) return;
+    const n = ldNearestIdx(LD.trackOffset);
+    LD.current    = ldAllTabs()[n].id;
+    LD.currentIdx = n;
+    ldMobileSnapToIdx(n, true);
+    showTab(ldAllTabs()[n].id);
+  }
 }
 
+// Direct click on any item (both desktop and mobile short tap)
 function ldItemClick(e){
-  const item=e.target.closest('.ld-item');
+  if(LD.didDrag){ LD.didDrag=false; return; }
+  const item = e.target.closest('.ld-item');
   if(!item) return;
-  if(LD.didDrag){LD.didDrag=false;return;}
   e.stopPropagation();
-  const tabId=item.dataset.tab;
+  const tabId = item.dataset.tab;
   if(!tabId) return;
-  const idx=ldAllTabs().findIndex(t=>t.id===tabId);
-  if(idx>=0){ ldSnapToIdx(idx,true); showTab(tabId); }
+  const idx = ldAllTabs().findIndex(t=>t.id===tabId);
+  if(idx < 0) return;
+  LD.current    = tabId;
+  LD.currentIdx = idx;
+  ldApplyMode(true);
+  showTab(tabId);
 }
 
+// ═══ INIT ═══
 function ldInitEvents(){
   const pill  = document.getElementById('ldPill');
   const track = document.getElementById('ldTrack');
-  pill.addEventListener('touchstart', ldPointerDown,{passive:false});
-  pill.addEventListener('touchmove',  ldPointerMove,{passive:false});
-  pill.addEventListener('touchend',   ldPointerUp,  {passive:true});
-  pill.addEventListener('mousedown',  ldPointerDown,{passive:false});
-  window.addEventListener('mousemove',ldPointerMove,{passive:false});
-  window.addEventListener('mouseup',  ldPointerUp,  {passive:true});
+  pill.addEventListener('touchstart', ldPointerDown, {passive:false});
+  pill.addEventListener('touchmove',  ldPointerMove, {passive:false});
+  pill.addEventListener('touchend',   ldPointerUp,   {passive:true});
+  pill.addEventListener('mousedown',  ldPointerDown, {passive:false});
+  window.addEventListener('mousemove',ldPointerMove, {passive:false});
+  window.addEventListener('mouseup',  ldPointerUp,   {passive:true});
   track.addEventListener('click',     ldItemClick);
-  window.addEventListener('resize',()=>{ldMeasure();ldSnapTo(LD.current,false);});
+  window.addEventListener('resize', ()=>{
+    ldMeasure();
+    ldApplyMode(false);
+  });
 }
 
 function ldShow(showAdminTab){
@@ -1910,7 +2042,7 @@ function showTab(name,silent=false){
   const legacyMap={training:0,stats:1,play501:2,checkout:3,shotanalysis:4,profile:5,admin:6};
   const tabs=document.querySelectorAll('.nav-tab');
   if(legacyMap[name]!==undefined) tabs[legacyMap[name]]?.classList.add('active');
-  if(LD.current!==name) ldSnapTo(name,true);
+  if(LD.current!==name){ ldSnapTo(name,true); }
   if(!silent){
     if(name==='stats')    renderStats();
     if(name==='admin')    renderAdmin();
