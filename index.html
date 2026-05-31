@@ -445,14 +445,14 @@ select:hover{border-color:var(--green)}
 .pw-eye:hover{color:var(--light)}
 /* ═══ GAME OVERLAY LAYOUT ═══ */
 /* Mobile/tablet: fullscreen */
-#g501overlay{position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden;gap:5px;padding:6px 6px 4px}
+#g501overlay{position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden;gap:4px;padding:4px 4px 2px}
 #g501overlay.open{display:flex}
 #g201overlay.open{display:flex}
 
-/* Desktop (>768px): transparent wrapper centered, game-width container */
+/* Desktop (>768px): full black overlay, game container centered */
 @media(min-width:769px){
   #g501overlay,#g201overlay{
-    background:rgba(0,0,0,0.55)!important; /* dim overlay behind box */
+    background:#000!important;
     align-items:center;
     justify-content:center;
     padding:0;
@@ -460,22 +460,38 @@ select:hover{border-color:var(--green)}
   .g501-inner{
     background:transparent;
     border:none;
-    border-radius:20px;
-    width:min(620px,calc(100vw - 48px));
-    height:calc(100vh - 80px);
-    max-height:860px;
+    position:relative; /* so close btn is relative to this */
+    width:min(560px,calc(100vw - 48px));
+    height:calc(100vh - 60px);
+    max-height:820px;
     display:flex;
     flex-direction:column;
-    gap:5px;
-    padding:6px;
+    gap:4px;
+    padding:4px;
     overflow:hidden;
   }
+  /* Close button: inside the container, top-right corner */
+  .g501-inner > .g501-close{
+    position:absolute;
+    top:6px;
+    right:6px;
+    z-index:520;
+  }
 }
-/* Mobile: inner wrapper fills overlay */
+
+/* Mobile: inner wrapper is transparent passthrough */
 @media(max-width:768px){
   .g501-inner{
-    display:contents; /* flat — children go directly into overlay flex */
+    display:contents;
   }
+  /* Compact all blocks on small screens */
+  .g501-score-area{padding:8px 16px 6px}
+  .g501-pts{font-size:clamp(44px,11vw,72px)}
+  .g501-stat{padding:5px 4px}
+  .g501-stat .gsv{font-size:17px}
+  .g501-display-row{padding:3px 6px;gap:6px}
+  .g501-prev-btn,.g501-clr-btn{padding:9px 6px;font-size:clamp(11px,2.8vw,14px)}
+  .g501-pad{gap:6px;padding:3px 2px 4px}
 }
 
 /* Block 1: Score — green bg rounded */
@@ -533,8 +549,8 @@ select:hover{border-color:var(--green)}
 .g501-key.bust-btn{background:#3d0c0c;color:#ff7070;font-size:clamp(18px,4.5vw,27px)!important}
 .g501-key.bust-btn:active{background:#7a1515;color:#ffaaaa;transform:scale(1.13)}
 
-/* Close button */
-.g501-close{position:fixed;top:10px;right:12px;z-index:510;background:rgba(0,0,0,.60);border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 16px;border-radius:999px!important;font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;letter-spacing:.04em;cursor:pointer;transition:all .2s;white-space:nowrap}
+/* Close button — mobile: fixed top-right of screen; desktop: absolute inside .g501-inner */
+.g501-close{position:fixed;top:10px;right:12px;z-index:520;background:rgba(0,0,0,.70);border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 16px;border-radius:999px!important;font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;letter-spacing:.04em;cursor:pointer;transition:all .2s;white-space:nowrap}
 
 /* Key press animation via JS class */
 @keyframes keyPressGlow{
@@ -1329,8 +1345,8 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 
 </div>
 <div id="g501overlay">
-  <button class="g501-close" onclick="close501()">ESCI ×</button>
   <div class="g501-inner">
+  <button class="g501-close" onclick="close501()">ESCI ×</button>
   <div class="g501-score-area">
     <div id="g501pts" class="g501-pts">501</div>
     <div id="g501co" class="g501-checkout"></div>
@@ -1401,9 +1417,9 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 </div>
 
 <!-- ═══════════════════════ 201 IN 9 GAME OVERLAY ═══════════════════════ -->
-<div id="g201overlay" style="position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden;gap:5px;padding:6px 6px 4px">
-  <button onclick="close201()" class="g501-close" style="position:fixed;top:10px;right:12px;z-index:501">ESCI ×</button>
+<div id="g201overlay" style="position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden;gap:4px;padding:4px 4px 2px">
   <div class="g501-inner">
+  <button onclick="close201()" class="g501-close">ESCI ×</button>
   <!-- Block 1: Score -->
   <div class="g501-score-area">
     <div id="g201pts" class="g501-pts">201</div>
@@ -2051,30 +2067,32 @@ function ldMobileLiveUpdate(rawOffset){
   const all = ldAllTabs();
   let off   = rawOffset;
 
-  // When beyond hard stops: track stays clamped but highlight pill
-  // slides toward the extreme item, giving visual feedback
+  // When beyond hard stops: track stays clamped, highlight pill
+  // slides slowly toward the extreme item, proportional to finger movement
   let hlOverride = null;
 
   if(off > b.max){
     // Swiping right past ALLENAMENTO (first item)
-    const excess = off - b.max; // positive: how far beyond
+    const excess = off - b.max; // how far beyond the hard stop
     off = b.max; // clamp track
-    // Slide highlight toward item 0
     const firstRect = LD.itemRects[0];
     if(firstRect){
-      // Interpolate highlight leftward based on excess (max 40px travel)
-      const travel = Math.min(excess * 0.4, 40);
+      // Highlight moves left slowly: 1px of travel per 8px of excess finger drag
+      // Capped at item width/2 so it never goes off screen
+      const maxTravel = firstRect.width * 0.45;
+      const travel = Math.min(excess / 8, maxTravel);
       const hlLeft = (firstRect.left + b.max + LD.PILL_PAD) - travel;
       hlOverride = {left: hlLeft, width: firstRect.width + 4, idx: 0};
     }
   } else if(off < b.min){
     // Swiping left past LOGOUT (last item)
-    const excess = b.min - off; // positive: how far beyond
+    const excess = b.min - off; // how far beyond
     off = b.min; // clamp track
     const lastIdx = all.length - 1;
     const lastRect = LD.itemRects[lastIdx];
     if(lastRect){
-      const travel = Math.min(excess * 0.4, 40);
+      const maxTravel = lastRect.width * 0.45;
+      const travel = Math.min(excess / 8, maxTravel);
       const hlLeft = (lastRect.left + b.min + LD.PILL_PAD) + travel;
       hlOverride = {left: hlLeft, width: lastRect.width + 4, idx: lastIdx};
     }
@@ -2087,7 +2105,6 @@ function ldMobileLiveUpdate(rawOffset){
 
   const hl = document.getElementById('ldHighlight');
   if(hlOverride){
-    // Active item = the extreme one
     ldUpdateActive(hlOverride.idx);
     hl.style.transition = 'none';
     hl.style.left  = hlOverride.left + 'px';
