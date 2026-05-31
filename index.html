@@ -443,35 +443,68 @@ select:hover{border-color:var(--green)}
 .pw-wrap input{padding-right:40px!important}
 .pw-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0;line-height:1;transition:color .2s}
 .pw-eye:hover{color:var(--light)}
-#g501overlay{position:fixed;inset:0;z-index:500;background:var(--dark);display:none;flex-direction:column;overflow:hidden}
+/* ═══ GAME OVERLAY LAYOUT ═══ */
+#g501overlay{position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden;gap:5px;padding:6px 6px 4px}
 #g501overlay.open{display:flex}
-.g501-score-area{background:#1a3a1a;flex-shrink:0;padding:16px 20px 12px;text-align:center;position:relative}
-.g501-pts{font-family:'Bebas Neue',sans-serif;font-size:clamp(60px,15vw,100px);color:#fff;line-height:1;letter-spacing:-.02em}
-.g501-checkout{font-size:clamp(14px,3vw,20px);color:#7fffb5;font-weight:600;min-height:28px;margin-top:4px}
-.g501-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#166534;flex-shrink:0}
-.g501-stat{background:#1a3a1a;padding:8px 4px;text-align:center}
+#g201overlay.open{display:flex}
+
+/* Block 1: Score — green bg rounded */
+.g501-score-area{background:#1a3a1a;border-radius:20px;flex-shrink:0;padding:12px 20px 8px;text-align:center;position:relative}
+.g501-pts{font-family:'Bebas Neue',sans-serif;font-size:clamp(54px,13vw,90px);color:#fff;line-height:1;letter-spacing:-.02em}
+.g501-checkout{font-size:clamp(12px,2.8vw,18px);color:#7fffb5;font-weight:600;min-height:22px;margin-top:2px}
+
+/* Block 2: Stats — dark bg, green border */
+.g501-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;background:var(--d2);border:1.5px solid var(--green);border-radius:16px;flex-shrink:0;overflow:hidden}
+.g501-stat{background:transparent;padding:7px 4px;text-align:center}
+.g501-stat+.g501-stat{border-left:1px solid #166534}
 .g501-stat .gsl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#86efac;margin-bottom:2px}
 .g501-stat .gsv{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#fff}
-.g501-display-row{display:grid;grid-template-columns:1fr auto 1fr;gap:2px;flex-shrink:0;background:var(--d4)}
-.g501-prev-btn{background:#3a3a3a;border:none;color:var(--light);padding:12px;font-size:13px;font-weight:500;transition:background .2s}
-.g501-prev-btn:hover{background:#484848}
-.g501-display{background:#000;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:32px;color:#fff;min-width:100px;padding:12px 16px}
-.g501-clr-btn{background:#3a3a3a;border:none;color:var(--light);padding:12px;font-size:13px;font-weight:500;transition:background .2s}
-.g501-clr-btn:hover{background:#484848}
-.g501-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--d4);flex:1}
-.g501-key{background:var(--d3);border:none;color:var(--light);font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,6vw,38px);letter-spacing:.02em;transition:background .2s;display:flex;align-items:center;justify-content:center;min-height:60px}
-.g501-key:hover{background:var(--d4)}
-.g501-key:active{background:var(--d5)}
-.g501-key.noscore-left{background:#7f1d1d;color:#fff;font-size:clamp(12px,3vw,16px)}
-.g501-key.noscore-left:hover{background:#991b1b}
-.g501-key.ok-btn{background:#1a3a1a;color:#fff;font-size:clamp(16px,4vw,22px)}
-.g501-key.ok-btn:hover{background:#1f4a1f}
-.g501-key.checkout-btn{background:var(--green);color:#000;font-size:clamp(13px,3vw,17px)}
-.g501-key.checkout-btn:hover{background:var(--green2)}
-.g501-key.bust-btn{background:#7f1d1d;color:#fff;font-size:clamp(16px,4vw,22px)}
-.g501-key.bust-btn:hover{background:#991b1b}
-.g501-close{position:fixed;top:10px;right:12px;z-index:501;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.35);color:#fff;padding:7px 16px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.06em;cursor:pointer;transition:all .2s;white-space:nowrap}
-.g501-close:hover{background:var(--red);border-color:var(--red)}
+
+/* Block 3: Display row — black bg, green border */
+.g501-display-row{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;flex-shrink:0;background:#000;border:1.5px solid var(--green);border-radius:16px;padding:5px 7px;align-items:center}
+.g501-prev-btn{background:#1c1c1c;border:none;color:#e5e5e5;padding:11px 8px;font-size:clamp(12px,3vw,15px);font-weight:700;font-family:'DM Sans',sans-serif;letter-spacing:.02em;border-radius:999px!important;transition:background .1s,transform .08s;cursor:pointer}
+.g501-prev-btn:active{background:#333;transform:scale(0.93)}
+.g501-clr-btn{background:#1c1c1c;border:none;color:#e5e5e5;padding:11px 8px;font-size:clamp(12px,3vw,15px);font-weight:700;font-family:'DM Sans',sans-serif;letter-spacing:.02em;border-radius:999px!important;transition:background .1s,transform .08s;cursor:pointer}
+.g501-clr-btn:active{background:#333;transform:scale(0.93)}
+.g501-display{background:#000;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:clamp(26px,6.5vw,38px);color:#fff;min-width:70px;padding:4px 10px}
+
+/* Block 4: Keypad — black no border */
+.g501-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:#000;border-radius:18px;flex:1;padding:4px 2px 6px;align-content:stretch}
+
+/* iOS-style round keys */
+.g501-key{
+  background:#1c1c1c;border:none;color:#fff;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(26px,7vw,42px);
+  letter-spacing:.01em;
+  border-radius:999px!important;
+  display:flex;align-items:center;justify-content:center;
+  min-height:0;aspect-ratio:1;width:100%;cursor:pointer;
+  transition:background .08s,transform .08s,box-shadow .08s;
+  box-shadow:0 2px 6px rgba(0,0,0,0.5);
+  -webkit-tap-highlight-color:transparent;
+}
+.g501-key:hover{background:#2a2a2a}
+.g501-key:active{background:#3d3d3d;transform:scale(1.13);box-shadow:0 4px 20px rgba(255,255,255,0.09)}
+
+/* NO SCORE */
+.g501-key.noscore-left{background:#3d0c0c;color:#ff7070;font-size:clamp(13px,3vw,17px)!important}
+.g501-key.noscore-left:active{background:#7a1515;color:#ffaaaa;transform:scale(1.13)}
+
+/* OK */
+.g501-key.ok-btn{background:#0d2e1c;color:#4ade80;font-size:clamp(18px,4.5vw,27px)!important}
+.g501-key.ok-btn:active{background:#175c35;color:#86efac;transform:scale(1.13)}
+
+/* CHECKOUT */
+.g501-key.checkout-btn{background:var(--green);color:#000;font-size:clamp(14px,3.5vw,20px)!important}
+.g501-key.checkout-btn:active{background:#4ade80;transform:scale(1.13)}
+
+/* BUST */
+.g501-key.bust-btn{background:#3d0c0c;color:#ff7070;font-size:clamp(18px,4.5vw,27px)!important}
+.g501-key.bust-btn:active{background:#7a1515;color:#ffaaaa;transform:scale(1.13)}
+
+/* Close button */
+.g501-close{position:fixed;top:10px;right:12px;z-index:510;background:rgba(0,0,0,.60);border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 16px;border-radius:999px!important;font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;letter-spacing:.04em;cursor:pointer;transition:all .2s;white-space:nowrap}
 
 /* Miss doubles screen */
 .g501-miss-screen{position:fixed;inset:0;z-index:510;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
@@ -1246,7 +1279,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 
 </div>
 <div id="g501overlay">
-  <button class="g501-close" onclick="close501()" title="Esci dal gioco" style="width:auto;padding:6px 14px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px">ESCI ×</button>
+  <button class="g501-close" onclick="close501()">ESCI ×</button>
   <div class="g501-score-area">
     <div id="g501pts" class="g501-pts">501</div>
     <div id="g501co" class="g501-checkout"></div>
@@ -1257,9 +1290,9 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <div class="g501-stat"><div class="gsl" id="g501third_lbl">Chiusure</div><div class="gsv" id="g501closures">0</div></div>
   </div>
   <div class="g501-display-row">
-    <button class="g501-prev-btn" onclick="g501Prev()">◀ TURNO PREC.</button>
+    <button class="g501-prev-btn" onclick="g501Prev()">TURNO PREC.</button>
     <div class="g501-display" id="g501display">—</div>
-    <button class="g501-clr-btn" onclick="g501Clear()">CANCELLA ✕</button>
+    <button class="g501-clr-btn" onclick="g501Clear()">CANCELLA</button>
   </div>
   <div class="g501-pad" id="g501pad">
     <button class="g501-key" onclick="g501Digit('1')">1</button>
@@ -1316,27 +1349,27 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 </div>
 
 <!-- ═══════════════════════ 201 IN 9 GAME OVERLAY ═══════════════════════ -->
-<div id="g201overlay" style="position:fixed;inset:0;z-index:500;background:var(--dark);display:none;flex-direction:column;overflow:hidden">
-  <button onclick="close201()" style="position:fixed;top:10px;right:12px;z-index:501;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.35);color:#fff;padding:7px 16px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;cursor:pointer;white-space:nowrap">ESCI ×</button>
-  <!-- Score area -->
-  <div style="background:#1a3a1a;flex-shrink:0;padding:16px 20px 12px;text-align:center;position:relative">
-    <div id="g201pts" style="font-family:'Bebas Neue',sans-serif;font-size:clamp(60px,15vw,100px);color:#fff;line-height:1;letter-spacing:-.02em">201</div>
-    <div id="g201co" style="font-size:clamp(14px,3vw,20px);color:#7fffb5;font-weight:600;min-height:28px;margin-top:4px"></div>
+<div id="g201overlay" style="position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden;gap:5px;padding:6px 6px 4px">
+  <button onclick="close201()" class="g501-close" style="position:fixed;top:10px;right:12px;z-index:501">ESCI ×</button>
+  <!-- Block 1: Score -->
+  <div class="g501-score-area">
+    <div id="g201pts" class="g501-pts">201</div>
+    <div id="g201co" class="g501-checkout"></div>
   </div>
-  <!-- Stats bar -->
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#166534;flex-shrink:0">
-    <div style="background:#1a3a1a;padding:8px 4px;text-align:center"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#86efac;margin-bottom:2px">Leg</div><div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#fff" id="g201legNum">1</div></div>
-    <div style="background:#1a3a1a;padding:8px 4px;text-align:center"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#86efac;margin-bottom:2px">Frecce</div><div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#fff" id="g201darts">0</div></div>
-    <div style="background:#1a3a1a;padding:8px 4px;text-align:center"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#86efac;margin-bottom:2px">Legs vinti</div><div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#fff" id="g201wins">0</div></div>
+  <!-- Block 2: Stats -->
+  <div class="g501-stats">
+    <div class="g501-stat"><div class="gsl">Leg</div><div class="gsv" id="g201legNum">1</div></div>
+    <div class="g501-stat"><div class="gsl">Frecce</div><div class="gsv" id="g201darts">0</div></div>
+    <div class="g501-stat"><div class="gsl">Legs vinti</div><div class="gsv" id="g201wins">0</div></div>
   </div>
-  <!-- Display row -->
-  <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:2px;flex-shrink:0;background:var(--d4)">
-    <button onclick="g201Prev()" style="background:#3a3a3a;border:none;color:var(--light);padding:12px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;transition:background .2s">◀ TURNO PREC.</button>
-    <div id="g201display" style="background:#000;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:32px;color:#fff;min-width:100px;padding:12px 16px">—</div>
-    <button onclick="g201Clear()" style="background:#3a3a3a;border:none;color:var(--light);padding:12px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;transition:background .2s">CANCELLA ✕</button>
+  <!-- Block 3: Display row -->
+  <div class="g501-display-row">
+    <button onclick="g201Prev()" class="g501-prev-btn">TURNO PREC.</button>
+    <div id="g201display" class="g501-display">—</div>
+    <button onclick="g201Clear()" class="g501-clr-btn">CANCELLA</button>
   </div>
-  <!-- Keypad -->
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--d4);flex:1">
+  <!-- Block 4: Keypad -->
+  <div class="g501-pad">
     <button class="g501-key" onclick="g201Digit('1')">1</button>
     <button class="g501-key" onclick="g201Digit('2')">2</button>
     <button class="g501-key" onclick="g201Digit('3')">3</button>
@@ -1962,8 +1995,9 @@ function ldMobileSnapToIdx(idx, animate=true){
 function ldMobileLiveUpdate(rawOffset){
   const b = ldOffsetBounds();
   let off = rawOffset;
-  if(off > b.max) off = b.max + (off-b.max)*0.15;
-  if(off < b.min) off = b.min + (off-b.min)*0.15;
+  // Very soft rubber-band at edges — makes first/last items easy to reach
+  if(off > b.max) off = b.max + (off-b.max)*0.06;
+  if(off < b.min) off = b.min + (off-b.min)*0.06;
   LD.trackOffset = off;
   const track = document.getElementById('ldTrack');
   track.style.transition = 'none';
@@ -1987,13 +2021,12 @@ function ldPointerDown(e){
     LD.hlDragStartIdx = LD.currentIdx;
     e.preventDefault();
   } else {
-    // Mobile: record start but DO NOT preventDefault yet
-    // (let touchend fire for tap; block scroll only on confirmed horizontal drag)
     LD.isDragging      = true;
     LD.didDrag         = false;
     LD.dragStartX      = x;
     LD.dragStartY      = e.touches ? e.touches[0].clientY : 0;
-    LD.dragStartOffset = LD.trackOffset; // start from current position always
+    LD.dragStartOffset = LD.trackOffset;
+    LD._mobileScale    = null; // recalculate scale fresh each drag
   }
 }
 
@@ -2013,19 +2046,20 @@ function ldPointerMove(e){
     const y  = e.touches ? e.touches[0].clientY : 0;
     const dx = x - LD.dragStartX;
     const dy = y - (LD.dragStartY||0);
-    // Confirm horizontal drag (ignore vertical scroll)
     if(!LD.didDrag && Math.abs(dx) < 5) return;
     if(!LD.didDrag && Math.abs(dy) > Math.abs(dx) * 1.5) { LD.isDragging=false; return; }
     LD.didDrag = true;
     e.preventDefault();
-    // Map finger travel to full track range linearly:
-    // pillInnerW pixels of finger movement = full track range
-    const b     = ldOffsetBounds();
-    const range = Math.max(1, b.max - b.min); // total scrollable range (negative number → abs)
-    const pillW = document.getElementById('ldPill').getBoundingClientRect().width;
-    // Scale: full pill width of drag covers full range, clamped softly at edges
-    const scale = Math.abs(b.min - b.max) / Math.max(pillW * 0.7, 1);
-    ldMobileLiveUpdate(LD.dragStartOffset + dx * Math.max(1.2, scale));
+    // Linear full-range mapping: total track range / pill width = scale factor
+    // Computed once per drag for consistent feel across all menu sizes
+    if(!LD._mobileScale){
+      const b = ldOffsetBounds();
+      const pillW = document.getElementById('ldPill').getBoundingClientRect().width || 360;
+      // Full range reachable with one full-width swipe (80% of pill)
+      LD._mobileScale = Math.abs(b.min - b.max) / (pillW * 0.8);
+      LD._mobileScale = Math.max(LD._mobileScale, 1.0); // minimum 1:1
+    }
+    ldMobileLiveUpdate(LD.dragStartOffset + dx * LD._mobileScale);
   }
 }
 
