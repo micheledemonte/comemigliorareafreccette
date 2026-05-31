@@ -146,8 +146,8 @@ button{cursor:pointer}
   border:1.5px solid var(--green);
   /* Very transparent frosted glass */
   background:rgba(4,8,4,0.22);
-  backdrop-filter:blur(32px) saturate(2.2);
-  -webkit-backdrop-filter:blur(32px) saturate(2.2);
+  backdrop-filter:blur(8px) saturate(1.4);
+  -webkit-backdrop-filter:blur(8px) saturate(1.4);
   box-shadow:
     0 8px 40px rgba(0,0,0,0.40),
     0 1px 0 rgba(255,255,255,0.05) inset,
@@ -202,7 +202,7 @@ button{cursor:pointer}
   cursor:pointer;
   flex-shrink:0;
   -webkit-tap-highlight-color:transparent;
-  pointer-events:none;
+  /* pointer-events enabled: direct tap/click works */
 }
 @media(max-width:600px){.ld-item{padding:0 10px}}
 
@@ -288,10 +288,10 @@ button{cursor:pointer}
 .co-q-sep{font-size:16px;color:var(--muted)}
 .co-correction{font-size:12px;color:#f87171;margin-top:8px;padding:6px 10px;background:#1c0404;border-radius:5px}
 
-.tab-body{display:none;padding:28px 20px 130px;max-width:960px;width:100%;margin:0 auto}
+.tab-body{display:none;padding:100px 20px 130px;max-width:960px;width:100%;margin:0 auto}
 .tab-body.active{display:block}
 @media(max-width:768px){
-  .tab-body{padding:20px 20px 130px}
+  .tab-body{padding:100px 20px 130px}
   .nav-tabs{scrollbar-width:none;-ms-overflow-style:none}
   .nav-tabs::-webkit-scrollbar{display:none}
 }
@@ -955,7 +955,7 @@ input[type="text"],input[type="password"],input[type="number"],input[type="email
 
   <!-- Checkout Game Overlay -->
   <div id="coGameOverlay" style="position:fixed;inset:0;z-index:500;background:var(--dark);display:none;flex-direction:column;overflow-y:auto">
-    <div style="max-width:620px;margin:0 auto;padding:24px 16px 60px;width:100%">
+    <div style="max-width:620px;margin:0 auto;padding:100px 16px 130px;width:100%">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;position:sticky;top:0;background:var(--dark);padding:16px 0;z-index:10;border-bottom:1px solid var(--d4)">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--green)">GIOCO CHECKOUT</div>
         <button onclick="closeCOGame()" style="background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 16px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;cursor:pointer">ESCI ×</button>
@@ -1709,7 +1709,7 @@ async function doLogout(){
 }
 
 // ══════════════════════════════════════════════════
-// LIQUID GLASS DOCK — v2 (precise snap, dynamic pill, hard stops)
+// LIQUID GLASS DOCK — v3 (click + amplified swipe + hard stops)
 // ══════════════════════════════════════════════════
 const LD = {
   tabs: [
@@ -1723,23 +1723,24 @@ const LD = {
   adminTab:{id:'admin', icon:'⚙️', label:'Admin'},
   showAdmin: false,
   current: 'training',
+  currentIdx: 0,
   trackOffset: 0,
   dragStartX: 0,
   dragStartOffset: 0,
   isDragging: false,
   didDrag: false,
-  // measured per-item data: [{left, width, center}]
   itemRects: [],
-  pillInnerW: 0,  // pill inner width (excluding padding)
-  PILL_PAD: 8,    // pill left/right padding
+  pillInnerW: 0,
+  PILL_PAD: 8,
+  SWIPE_AMPLIFY: 2.8,
 };
 
 function ldAllTabs(){ return LD.showAdmin ? [...LD.tabs, LD.adminTab] : [...LD.tabs]; }
 
-// ── Build DOM ──
 function ldBuildDock(showAdmin){
-  LD.showAdmin = showAdmin;
-  LD.current = 'training';
+  LD.showAdmin  = showAdmin;
+  LD.current    = 'training';
+  LD.currentIdx = 0;
   const track = document.getElementById('ldTrack');
   track.innerHTML = ldAllTabs().map(t=>
     `<div class="ld-item${t.id==='training'?' active':''}" data-tab="${t.id}">
@@ -1747,182 +1748,146 @@ function ldBuildDock(showAdmin){
       <span class="ld-label">${t.label}</span>
     </div>`
   ).join('');
-  // Wait two frames so DOM is measured after render
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     ldMeasure();
     ldSnapToIdx(0, false);
   }));
 }
 
-// ── Measure item rects relative to track origin ──
 function ldMeasure(){
   const pill  = document.getElementById('ldPill');
   const track = document.getElementById('ldTrack');
   const items = track.querySelectorAll('.ld-item');
   if(!items.length) return;
-
-  // Temporarily set track to translateX(0) so we can measure
   track.style.transition = 'none';
   track.style.transform  = 'translateX(0)';
-
-  const pillRect  = pill.getBoundingClientRect();
-  LD.pillInnerW   = pillRect.width - LD.PILL_PAD*2;
-
-  LD.itemRects = [];
+  const pillRect = pill.getBoundingClientRect();
+  LD.pillInnerW  = pillRect.width - LD.PILL_PAD * 2;
+  LD.itemRects   = [];
   items.forEach(el=>{
-    const r = el.getBoundingClientRect();
-    const left   = r.left - pillRect.left - LD.PILL_PAD;
-    const width  = r.width;
-    const center = left + width/2;
-    LD.itemRects.push({left, width, center});
+    const r    = el.getBoundingClientRect();
+    const left = r.left - pillRect.left - LD.PILL_PAD;
+    LD.itemRects.push({left, width:r.width, center:left+r.width/2});
   });
 }
 
-// ── Snap so item[idx] is centered in pill ──
-// Hard stop: first item left edge cannot go right of PILL_PAD,
-//            last item right edge cannot go left of pillW - PILL_PAD
+function ldOffsetBounds(){
+  const n = ldAllTabs().length;
+  if(!LD.itemRects.length||n===0) return {min:0,max:0};
+  const lastRight = LD.itemRects[n-1].left + LD.itemRects[n-1].width;
+  return {max:0, min: LD.pillInnerW - lastRight};
+}
+
 function ldSnapToIdx(idx, animate=true){
   const all = ldAllTabs();
-  if(idx < 0 || idx >= all.length) return;
-  if(!LD.itemRects.length) return;
-
-  // Target offset: item center aligns with pill center
-  const pillCenter = LD.pillInnerW / 2;
-  let offset = pillCenter - LD.itemRects[idx].center;
-
-  // Hard stops: first item and last item
-  const firstStop = 0;  // when track is at 0, first item is leftmost
-  const lastStop  = LD.pillInnerW - (LD.itemRects[all.length-1].left + LD.itemRects[all.length-1].width);
-
-  offset = Math.min(firstStop, Math.max(lastStop, offset));
+  if(idx<0||idx>=all.length||!LD.itemRects.length) return;
+  const bounds = ldOffsetBounds();
+  let offset   = LD.pillInnerW/2 - LD.itemRects[idx].center;
+  offset = Math.max(bounds.min, Math.min(bounds.max, offset));
   LD.trackOffset = offset;
-
+  LD.current     = all[idx].id;
+  LD.currentIdx  = idx;
   const track = document.getElementById('ldTrack');
-  track.style.transition = animate ? 'transform .32s cubic-bezier(.4,0,.2,1)' : 'none';
+  track.style.transition = animate ? 'transform .26s cubic-bezier(.4,0,.2,1)' : 'none';
   track.style.transform  = `translateX(${offset}px)`;
-
-  LD.current = all[idx].id;
   ldUpdateActive(idx);
   ldUpdateHighlight(idx, animate);
 }
 
-// Snap by tabId
 function ldSnapTo(tabId, animate=true){
   const idx = ldAllTabs().findIndex(t=>t.id===tabId);
   if(idx>=0) ldSnapToIdx(idx, animate);
 }
 
-// ── Update active class ──
 function ldUpdateActive(idx){
   document.querySelectorAll('.ld-item').forEach((el,i)=>{
     el.classList.toggle('active', i===idx);
   });
 }
 
-// ── Update highlight pill: matches item[idx] size and position ──
 function ldUpdateHighlight(idx, animate=true){
   if(!LD.itemRects[idx]) return;
   const hl   = document.getElementById('ldHighlight');
   const rect = LD.itemRects[idx];
-  // Highlight left = item left + current track offset + pill padding
-  const hlLeft = rect.left + LD.trackOffset + LD.PILL_PAD;
-  const hlW    = rect.width + 4; // slight padding around item
-
-  if(animate){
-    hl.style.transition = 'left .32s cubic-bezier(.4,0,.2,1), width .2s cubic-bezier(.4,0,.2,1)';
-  } else {
-    hl.style.transition = 'none';
-  }
-  hl.style.left  = hlLeft + 'px';
-  hl.style.width = hlW + 'px';
+  hl.style.transition = animate
+    ? 'left .26s cubic-bezier(.4,0,.2,1),width .16s cubic-bezier(.4,0,.2,1)'
+    : 'none';
+  hl.style.left  = (rect.left + LD.trackOffset + LD.PILL_PAD) + 'px';
+  hl.style.width = (rect.width + 4) + 'px';
 }
 
-// ── During drag: find nearest item by center proximity ──
-function ldNearestIdx(){
-  const pillCenter = LD.pillInnerW / 2;
-  let nearest=0, bestDist=Infinity;
+function ldNearestIdx(off){
+  const c = LD.pillInnerW/2;
+  let nearest=0, best=Infinity;
   LD.itemRects.forEach((r,i)=>{
-    const itemCenterInPill = r.center + LD.trackOffset;
-    const dist = Math.abs(itemCenterInPill - pillCenter);
-    if(dist < bestDist){ bestDist=dist; nearest=i; }
+    const d = Math.abs(r.center+off-c);
+    if(d<best){best=d;nearest=i;}
   });
   return nearest;
 }
 
-// ── Live update during drag (no snap, just follow finger) ──
 function ldLiveUpdate(rawOffset){
-  const all = ldAllTabs();
-  const firstStop = 0;
-  const lastStop  = LD.pillInnerW - (LD.itemRects[all.length-1].left + LD.itemRects[all.length-1].width);
-
-  // Hard stops with rubber-band feel
-  let offset = rawOffset;
-  if(offset > firstStop) offset = firstStop + (offset-firstStop)*0.18;
-  if(offset < lastStop)  offset = lastStop  + (offset-lastStop)*0.18;
-
-  LD.trackOffset = offset;
+  const b = ldOffsetBounds();
+  let off = rawOffset;
+  if(off>b.max) off = b.max+(off-b.max)*0.15;
+  if(off<b.min) off = b.min+(off-b.min)*0.15;
+  LD.trackOffset = off;
   const track = document.getElementById('ldTrack');
-  track.style.transition = 'none';
-  track.style.transform  = `translateX(${offset}px)`;
-
-  // Live highlight nearest
-  const nearest = ldNearestIdx();
-  ldUpdateActive(nearest);
-  // Move highlight to follow item in real time
-  const hl = document.getElementById('ldHighlight');
-  hl.style.transition = 'none';
-  const rect = LD.itemRects[nearest];
-  hl.style.left  = (rect.left + offset + LD.PILL_PAD) + 'px';
-  hl.style.width = (rect.width + 4) + 'px';
+  track.style.transition='none';
+  track.style.transform=`translateX(${off}px)`;
+  const n = ldNearestIdx(off);
+  ldUpdateActive(n);
+  const hl=document.getElementById('ldHighlight');
+  const r=LD.itemRects[n];
+  if(r){ hl.style.transition='none'; hl.style.left=(r.left+off+LD.PILL_PAD)+'px'; hl.style.width=(r.width+4)+'px'; }
 }
 
-// ── Pointer events ──
 function ldPointerDown(e){
   if(e.target.closest('#ldLogout')) return;
-  LD.isDragging = true;
-  LD.didDrag    = false;
-  LD.dragStartX = e.touches ? e.touches[0].clientX : e.clientX;
-  LD.dragStartOffset = LD.trackOffset;
+  LD.isDragging=true; LD.didDrag=false;
+  LD.dragStartX=e.touches?e.touches[0].clientX:e.clientX;
+  LD.dragStartOffset=LD.trackOffset;
   e.preventDefault();
 }
-
 function ldPointerMove(e){
   if(!LD.isDragging) return;
-  const x  = e.touches ? e.touches[0].clientX : e.clientX;
-  const dx = x - LD.dragStartX;
-  if(Math.abs(dx) > 3) LD.didDrag = true;
-  ldLiveUpdate(LD.dragStartOffset + dx);
+  const x=e.touches?e.touches[0].clientX:e.clientX;
+  const dx=(x-LD.dragStartX)*LD.SWIPE_AMPLIFY;
+  if(Math.abs(dx)>6) LD.didDrag=true;
+  ldLiveUpdate(LD.dragStartOffset+dx);
   e.preventDefault();
 }
-
 function ldPointerUp(){
   if(!LD.isDragging) return;
-  LD.isDragging = false;
-  const nearest = ldNearestIdx();
-  ldSnapToIdx(nearest, true);
-  showTab(ldAllTabs()[nearest].id);
+  LD.isDragging=false;
+  if(!LD.didDrag) return;
+  const n=ldNearestIdx(LD.trackOffset);
+  ldSnapToIdx(n,true);
+  showTab(ldAllTabs()[n].id);
 }
 
-function ldTap(e){
-  if(LD.didDrag) return; // was a drag, not a tap
-  const item = e.target.closest('.ld-item');
+function ldItemClick(e){
+  const item=e.target.closest('.ld-item');
   if(!item) return;
-  const tabId = item.dataset.tab;
+  if(LD.didDrag){LD.didDrag=false;return;}
+  e.stopPropagation();
+  const tabId=item.dataset.tab;
   if(!tabId) return;
-  ldSnapTo(tabId, true);
-  showTab(tabId);
+  const idx=ldAllTabs().findIndex(t=>t.id===tabId);
+  if(idx>=0){ ldSnapToIdx(idx,true); showTab(tabId); }
 }
 
 function ldInitEvents(){
-  const pill = document.getElementById('ldPill');
-  pill.addEventListener('touchstart', ldPointerDown, {passive:false});
-  pill.addEventListener('touchmove',  ldPointerMove, {passive:false});
-  pill.addEventListener('touchend',   ldPointerUp,   {passive:true});
-  pill.addEventListener('mousedown',  ldPointerDown, {passive:false});
-  window.addEventListener('mousemove',ldPointerMove, {passive:false});
-  window.addEventListener('mouseup',  ldPointerUp,   {passive:true});
-  pill.addEventListener('click',      ldTap);
-  window.addEventListener('resize',()=>{ ldMeasure(); ldSnapTo(LD.current, false); });
+  const pill  = document.getElementById('ldPill');
+  const track = document.getElementById('ldTrack');
+  pill.addEventListener('touchstart', ldPointerDown,{passive:false});
+  pill.addEventListener('touchmove',  ldPointerMove,{passive:false});
+  pill.addEventListener('touchend',   ldPointerUp,  {passive:true});
+  pill.addEventListener('mousedown',  ldPointerDown,{passive:false});
+  window.addEventListener('mousemove',ldPointerMove,{passive:false});
+  window.addEventListener('mouseup',  ldPointerUp,  {passive:true});
+  track.addEventListener('click',     ldItemClick);
+  window.addEventListener('resize',()=>{ldMeasure();ldSnapTo(LD.current,false);});
 }
 
 function ldShow(showAdminTab){
@@ -1937,17 +1902,14 @@ function ldHide(){
   document.getElementById('ldLogout').style.display='none';
 }
 
-// ── showTab — drives dock + content ──
 function showTab(name,silent=false){
   document.querySelectorAll('.tab-body').forEach(t=>t.classList.remove('active'));
   const tb=document.getElementById('tab-'+name);
   if(tb) tb.classList.add('active');
-  // Legacy nav sync
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   const legacyMap={training:0,stats:1,play501:2,checkout:3,shotanalysis:4,profile:5,admin:6};
   const tabs=document.querySelectorAll('.nav-tab');
   if(legacyMap[name]!==undefined) tabs[legacyMap[name]]?.classList.add('active');
-  // Dock sync
   if(LD.current!==name) ldSnapTo(name,true);
   if(!silent){
     if(name==='stats')    renderStats();
@@ -1956,7 +1918,6 @@ function showTab(name,silent=false){
     if(name==='checkout') renderCOTables();
   }
 }
-
 // ══════════════════════════════════════════════════
 // SESSIONS
 // ══════════════════════════════════════════════════
