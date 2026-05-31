@@ -122,12 +122,140 @@ button{cursor:pointer}
 .l-bot p{font-size:14px;color:var(--muted);max-width:440px;margin:0 auto 32px;line-height:1.75}
 .l-foot{padding:20px 24px;text-align:center;font-size:12px;color:var(--muted);border-top:1px solid var(--d4)}
 
-/* ═══ APP SHELL ═══ */
-.nav-tabs{display:flex;padding:16px 20px 0;background:var(--dark);border-bottom:2px solid var(--green);overflow-x:auto;flex-shrink:0;position:sticky;top:0;z-index:50}
-.nav-tab{font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;letter-spacing:.01em;padding:10px 20px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .2s}
-.nav-tab:hover{color:var(--light)}
-#logoutTabBtn:hover{color:var(--red)!important}
-.nav-tab.active{color:var(--green);border-bottom-color:var(--green)}
+/* ═══ APP SHELL — LIQUID GLASS DOCK ═══ */
+
+/* Dock wrapper — fixed floating pill at screen bottom */
+#liquidDock{
+  position:fixed;
+  bottom:22px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:9000;
+  display:none; /* shown only when app is active */
+  touch-action:none;
+  user-select:none;
+  -webkit-user-select:none;
+}
+
+/* Outer glass pill */
+.ld-pill{
+  position:relative;
+  display:flex;
+  align-items:center;
+  height:62px;
+  padding:0 10px;
+  border-radius:999px;
+  border:1.5px solid var(--green);
+  /* frosted glass */
+  background:rgba(10,15,10,0.55);
+  backdrop-filter:blur(22px) saturate(1.6);
+  -webkit-backdrop-filter:blur(22px) saturate(1.6);
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.55),
+    0 1.5px 0 rgba(255,255,255,0.06) inset,
+    0 0 0 1px rgba(34,197,94,0.08);
+  overflow:hidden;
+  cursor:grab;
+}
+.ld-pill:active{cursor:grabbing}
+
+/* The sliding highlight pill (stays centered, the track slides under it) */
+.ld-highlight{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  height:44px;
+  border-radius:999px;
+  background:rgba(255,255,255,0.13);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,0.18);
+  box-shadow:0 2px 12px rgba(0,0,0,0.25);
+  pointer-events:none;
+  z-index:2;
+  transition:width .18s cubic-bezier(.4,0,.2,1);
+}
+
+/* Scrollable track inside the pill */
+.ld-track{
+  display:flex;
+  align-items:center;
+  gap:0;
+  position:relative;
+  z-index:3;
+  transition:transform .0s; /* JS drives this */
+  will-change:transform;
+}
+
+/* Individual tab item */
+.ld-item{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  padding:0 16px;
+  height:54px;
+  border:none;
+  background:transparent;
+  cursor:pointer;
+  flex-shrink:0;
+  transition:color .15s;
+  -webkit-tap-highlight-color:transparent;
+  pointer-events:none; /* swipe handled by dock, tap via JS */
+}
+
+.ld-icon{
+  font-size:20px;
+  line-height:1;
+  transition:transform .15s cubic-bezier(.34,1.56,.64,1);
+}
+.ld-label{
+  font-family:'DM Sans',sans-serif;
+  font-weight:700;
+  font-size:9.5px;
+  letter-spacing:.07em;
+  text-transform:uppercase;
+  color:var(--muted);
+  transition:color .15s;
+  white-space:nowrap;
+}
+
+/* Active item styling */
+.ld-item.active .ld-label{ color:var(--green); }
+.ld-item.active .ld-icon{ transform:scale(1.18); }
+
+/* Logout button — separate pill, right of dock */
+#ldLogout{
+  display:none; /* shown with dock */
+  position:fixed;
+  bottom:22px;
+  right:20px;
+  z-index:9000;
+  height:46px;
+  width:46px;
+  border-radius:999px;
+  border:1.5px solid rgba(239,68,68,0.4);
+  background:rgba(10,15,10,0.55);
+  backdrop-filter:blur(22px);
+  -webkit-backdrop-filter:blur(22px);
+  box-shadow:0 8px 32px rgba(0,0,0,0.45);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  font-size:18px;
+  color:rgba(239,68,68,0.7);
+  transition:all .2s;
+  -webkit-tap-highlight-color:transparent;
+}
+#ldLogout:hover{ border-color:#ef4444; color:#ef4444; background:rgba(60,5,5,0.5); }
+
+/* Keep old .nav-tabs hidden (used by landing — not visible in app) */
+.nav-tabs{ display:none!important; }
+
+/* Tab body bottom padding increased for dock */
 /* ─── CHECKOUT TAB ─── */
 .co-filter-btn{background:var(--d3);border:1px solid var(--d5);color:var(--muted);padding:8px 18px;border-radius:20px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;cursor:pointer;transition:all .2s}
 .co-filter-btn.active{background:var(--gdim);border-color:var(--green);color:var(--green)}
@@ -155,10 +283,10 @@ button{cursor:pointer}
 .co-q-sep{font-size:16px;color:var(--muted)}
 .co-correction{font-size:12px;color:#f87171;margin-top:8px;padding:6px 10px;background:#1c0404;border-radius:5px}
 
-.tab-body{display:none;padding:75px 20px 100px;max-width:960px;width:100%;margin:0 auto}
+.tab-body{display:none;padding:28px 20px 130px;max-width:960px;width:100%;margin:0 auto}
 .tab-body.active{display:block}
 @media(max-width:768px){
-  .tab-body{padding:50px 20px 100px}
+  .tab-body{padding:20px 20px 130px}
   .nav-tabs{scrollbar-width:none;-ms-overflow-style:none}
   .nav-tabs::-webkit-scrollbar{display:none}
 }
@@ -650,7 +778,19 @@ select:focus{outline:2px solid var(--green)}
 <!-- ═══════════════════════ APP LAYER ═══════════════════════ -->
 <div id="appLayer">
 
-  <div class="nav-tabs" id="mainNav">
+<!-- ═══════════════════════ LIQUID GLASS DOCK ═══════════════════════ -->
+<div id="liquidDock" aria-label="Navigazione principale">
+  <div class="ld-pill" id="ldPill">
+    <div class="ld-highlight" id="ldHighlight"></div>
+    <div class="ld-track" id="ldTrack">
+      <!-- items injected by JS (so admin tab is conditional) -->
+    </div>
+  </div>
+</div>
+<button id="ldLogout" title="Logout" onclick="confirmLogout()" aria-label="Logout">⏻</button>
+
+<!-- legacy nav (kept for DOM compatibility, hidden) -->
+<div class="nav-tabs" id="mainNav" aria-hidden="true">
     <button class="nav-tab active" onclick="showTab('training')">ALLENAMENTO</button>
     <button class="nav-tab" onclick="showTab('stats')">STATISTICHE</button>
     <button class="nav-tab" onclick="showTab('play501')">GIOCA A 501</button>
@@ -1463,11 +1603,15 @@ async function doChangePw(){
 function enterApp(){
   document.getElementById('loadingOverlay').style.display='none';
   closeLogin();
-  document.getElementById('adminTabBtn').style.display=CU.role==='admin'?'':'none';
+  const isAdmin = CU.role==='admin';
+  document.getElementById('adminTabBtn').style.display=isAdmin?'':'none';
   loadProfileForm();
   document.getElementById('appLayer').classList.add('visible');
+  // Init Liquid Glass dock
+  ldShow(isAdmin);
+  showTab('training',true);
   autoLoadNextSession();
-  loadPrev501Sessions(); // load saved 501 sessions for this user
+  loadPrev501Sessions();
   checkReset();
 }
 
@@ -1507,29 +1651,214 @@ function confirmLogout(){
 
 async function doLogout(){
   CU=null;
-  _dbCache=null; // clear cached data so next login loads fresh
+  _dbCache=null;
   reset501Sessions();
   if(_fbAuth) try{ await _fbAuth.signOut(); }catch(e){}
   document.getElementById('loadingOverlay').style.display='none';
   document.getElementById('appLayer').classList.remove('visible');
+  ldHide();
   showTab('training',true);
 }
 
 // ══════════════════════════════════════════════════
-// TABS
+// LIQUID GLASS DOCK
 // ══════════════════════════════════════════════════
+const LD = {
+  tabs: [
+    {id:'training',    icon:'🎯', label:'Allenamento'},
+    {id:'stats',       icon:'📊', label:'Statistiche'},
+    {id:'play501',     icon:'🎲', label:'501'},
+    {id:'checkout',    icon:'✅', label:'Checkout'},
+    {id:'shotanalysis',icon:'📹', label:'Analisi'},
+    {id:'profile',     icon:'👤', label:'Profilo'},
+  ],
+  adminTab:{id:'admin', icon:'⚙️', label:'Admin'},
+  showAdmin: false,
+  current: 'training',
+  itemW: 0,       // measured per-item width
+  trackOffset: 0, // current translateX of track
+  dragStartX: 0,
+  dragStartOffset: 0,
+  isDragging: false,
+  pillW: 0,
+};
+
+function ldBuildDock(showAdmin){
+  LD.showAdmin = showAdmin;
+  const track = document.getElementById('ldTrack');
+  const allTabs = showAdmin ? [...LD.tabs, LD.adminTab] : [...LD.tabs];
+  track.innerHTML = allTabs.map(t=>
+    `<div class="ld-item${t.id===LD.current?' active':''}" data-tab="${t.id}">
+      <span class="ld-icon">${t.icon}</span>
+      <span class="ld-label">${t.label}</span>
+    </div>`
+  ).join('');
+  requestAnimationFrame(()=>{ ldMeasure(); ldSnapTo(LD.current, false); });
+}
+
+function ldMeasure(){
+  const items = document.querySelectorAll('.ld-item');
+  if(!items.length) return;
+  // All items same width for clean centering
+  let maxW = 0;
+  items.forEach(el=>{ maxW = Math.max(maxW, el.getBoundingClientRect().width); });
+  LD.itemW = maxW || 72;
+  // Update highlight width
+  document.getElementById('ldHighlight').style.width = (LD.itemW+8)+'px';
+  // Pill width: show up to 5 items on screen, cap to viewport
+  const visible = Math.min(5, items.length);
+  const pillW = Math.min(LD.itemW * visible + 20, window.innerWidth - 36);
+  document.getElementById('ldPill').style.width = pillW+'px';
+  LD.pillW = pillW;
+}
+
+function ldIndexOf(tabId){
+  const all = LD.showAdmin ? [...LD.tabs, LD.adminTab] : [...LD.tabs];
+  return all.findIndex(t=>t.id===tabId);
+}
+
+function ldSnapTo(tabId, animate=true){
+  const idx = ldIndexOf(tabId);
+  if(idx<0) return;
+  const all = LD.showAdmin ? [...LD.tabs, LD.adminTab] : [...LD.tabs];
+  const totalItems = all.length;
+  // Center the active item under the highlight
+  // track offset so item[idx] is centered in pill
+  const centerOfPill = 0; // highlight is at pill center
+  // track translateX: pill center is at LD.pillW/2 from pill left edge
+  // item[idx] center is at (idx+0.5)*LD.itemW from track left
+  const offset = (LD.pillW/2) - (idx + 0.5)*LD.itemW;
+  const minOffset = LD.pillW - totalItems*LD.itemW - 10;
+  const maxOffset = 10;
+  LD.trackOffset = Math.max(minOffset, Math.min(maxOffset, offset));
+  const track = document.getElementById('ldTrack');
+  track.style.transition = animate ? 'transform .32s cubic-bezier(.4,0,.2,1)' : 'none';
+  track.style.transform  = `translateX(${LD.trackOffset}px)`;
+  LD.current = tabId;
+  // Update active classes
+  document.querySelectorAll('.ld-item').forEach(el=>{
+    el.classList.toggle('active', el.dataset.tab===tabId);
+  });
+}
+
+// ── Drag / swipe ──
+function ldPointerDown(e){
+  if(e.target.closest('#ldLogout')) return;
+  LD.isDragging = true;
+  LD.dragStartX = e.touches ? e.touches[0].clientX : e.clientX;
+  LD.dragStartOffset = LD.trackOffset;
+  document.getElementById('ldTrack').style.transition='none';
+  e.preventDefault();
+}
+
+function ldPointerMove(e){
+  if(!LD.isDragging) return;
+  const x = e.touches ? e.touches[0].clientX : e.clientX;
+  const dx = x - LD.dragStartX;
+  const all = LD.showAdmin ? [...LD.tabs, LD.adminTab] : [...LD.tabs];
+  const totalItems = all.length;
+  const minOffset = LD.pillW - totalItems*LD.itemW - 10;
+  const maxOffset = 10;
+  let newOffset = LD.dragStartOffset + dx;
+  // Rubber-band at edges
+  if(newOffset > maxOffset)  newOffset = maxOffset  + (newOffset-maxOffset)*0.3;
+  if(newOffset < minOffset)  newOffset = minOffset  + (newOffset-minOffset)*0.3;
+  LD.trackOffset = newOffset;
+  document.getElementById('ldTrack').style.transform=`translateX(${newOffset}px)`;
+  // Live highlight which item is under center
+  ldHighlightNearest();
+  e.preventDefault();
+}
+
+function ldHighlightNearest(){
+  // Which item is closest to pill center?
+  const centerX = LD.pillW/2;
+  const all = LD.showAdmin ? [...LD.tabs, LD.adminTab] : [...LD.tabs];
+  let nearest=0, bestDist=Infinity;
+  all.forEach((t,i)=>{
+    const itemCenterInPill = LD.trackOffset + (i+0.5)*LD.itemW;
+    const dist = Math.abs(itemCenterInPill - centerX);
+    if(dist<bestDist){ bestDist=dist; nearest=i; }
+  });
+  document.querySelectorAll('.ld-item').forEach((el,i)=>{
+    el.classList.toggle('active', i===nearest);
+  });
+}
+
+function ldPointerUp(e){
+  if(!LD.isDragging) return;
+  LD.isDragging=false;
+  // Find which item is centered → navigate there
+  const centerX = LD.pillW/2;
+  const all = LD.showAdmin ? [...LD.tabs, LD.adminTab] : [...LD.tabs];
+  let nearest=0, bestDist=Infinity;
+  all.forEach((t,i)=>{
+    const itemCenterInPill = LD.trackOffset + (i+0.5)*LD.itemW;
+    const dist = Math.abs(itemCenterInPill - centerX);
+    if(dist<bestDist){ bestDist=dist; nearest=i; }
+  });
+  const target = all[nearest].id;
+  ldSnapTo(target, true);
+  showTab(target);
+}
+
+// Single tap (short press without dragging)
+function ldTap(e){
+  const item = e.target.closest('.ld-item');
+  if(!item) return;
+  const tabId = item.dataset.tab;
+  if(!tabId) return;
+  ldSnapTo(tabId, true);
+  showTab(tabId);
+}
+
+function ldInitEvents(){
+  const pill = document.getElementById('ldPill');
+  // Touch
+  pill.addEventListener('touchstart', ldPointerDown,  {passive:false});
+  pill.addEventListener('touchmove',  ldPointerMove,  {passive:false});
+  pill.addEventListener('touchend',   ldPointerUp,    {passive:true});
+  // Mouse
+  pill.addEventListener('mousedown',  ldPointerDown,  {passive:false});
+  window.addEventListener('mousemove', ldPointerMove, {passive:false});
+  window.addEventListener('mouseup',   ldPointerUp,   {passive:true});
+  // Tap (click without drag)
+  pill.addEventListener('click', ldTap);
+  // Resize
+  window.addEventListener('resize', ()=>{
+    ldMeasure();
+    ldSnapTo(LD.current, false);
+  });
+}
+
+function ldShow(showAdminTab){
+  ldBuildDock(showAdminTab);
+  ldInitEvents();
+  document.getElementById('liquidDock').style.display='block';
+  document.getElementById('ldLogout').style.display='flex';
+}
+
+function ldHide(){
+  document.getElementById('liquidDock').style.display='none';
+  document.getElementById('ldLogout').style.display='none';
+}
+
+// ── Updated showTab — drives dock + content ──
 function showTab(name,silent=false){
   document.querySelectorAll('.tab-body').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   const tb=document.getElementById('tab-'+name);
   if(tb) tb.classList.add('active');
+  // Sync legacy nav (hidden, but used by old code references)
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  const legacyMap={training:0,stats:1,play501:2,checkout:3,shotanalysis:4,profile:5,admin:6};
   const tabs=document.querySelectorAll('.nav-tab');
-  const map={training:0,stats:1,play501:2,checkout:3,shotanalysis:4,profile:5,admin:6};
-  if(map[name]!==undefined) tabs[map[name]]?.classList.add('active');
+  if(legacyMap[name]!==undefined) tabs[legacyMap[name]]?.classList.add('active');
+  // Sync dock
+  if(LD.current!==name) ldSnapTo(name,true);
   if(!silent){
-    if(name==='stats') renderStats();
-    if(name==='admin') renderAdmin();
-    if(name==='profile') loadProfileForm();
+    if(name==='stats')    renderStats();
+    if(name==='admin')    renderAdmin();
+    if(name==='profile')  loadProfileForm();
     if(name==='checkout') renderCOTables();
   }
 }
