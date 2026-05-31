@@ -1484,6 +1484,8 @@ function enterApp(){
   document.getElementById('appLayer').classList.add('visible');
   autoLoadNextSession();
   setTimeout(()=>bnUpdatePill('training'), 80);
+  // Init swipe-to-change-tab on content area
+  initTabSwipe();
   loadPrev501Sessions(); // load saved 501 sessions for this user
   checkReset();
 }
@@ -1536,17 +1538,22 @@ async function doLogout(){
 // TABS
 // ══════════════════════════════════════════════════
 function showTab(name,silent=false){
+  // Track current tab
+  window._bnCurrentTab = name;
+  // Hide all tab bodies
   document.querySelectorAll('.tab-body').forEach(t=>t.classList.remove('active'));
-  // update bottom nav buttons
+  // Deactivate all nav buttons
   document.querySelectorAll('#bnTrack .nav-tab').forEach(t=>t.classList.remove('active'));
+  // Show selected tab
   const tb=document.getElementById('tab-'+name);
   if(tb) tb.classList.add('active');
+  // Activate nav button
   const btn=document.getElementById('bnt-'+name);
   if(btn) btn.classList.add('active');
-  // scroll tabScrollArea to top
+  // Scroll content to top
   const sa=document.getElementById('tabScrollArea');
   if(sa) sa.scrollTop=0;
-  // animate bottom nav pill + scroll to active tab
+  // Update pill position
   bnUpdatePill(name);
   if(!silent){
     if(name==='stats') renderStats();
@@ -1595,76 +1602,42 @@ function bnUpdateThumb(tabName){
   thumb.style.width = pct + '%';
   thumb.style.left = (idx * pct) + '%';
 }
+// ── Tab swipe (left/right on content area) ──
+let _swipeTouchX = 0, _swipeTouchY = 0, _swipeTouchTime = 0;
+const _TAB_ORDER = ['training','stats','play501','checkout','profile','poseanalysis'];
 
-// Swipe gesture on tabScrollArea to switch tabs
-(function initBnSwipe(){
-  const TABS_ORDER = ['training','stats','play501','checkout','profile','poseanalysis'];
-  let _currentTab = 'training';
-  let _touchStartX = 0, _touchStartY = 0, _touchStartTime = 0;
-  let _swipeLocked = false;
-
-  // Override showTab to track current
-  const _origShow = showTab;
-  window._bnCurrentTab = 'training';
-
-  function getVisibleOrder(){
-    return TABS_ORDER.filter(t => {
+function initTabSwipe(){
+  const sa = document.getElementById('tabScrollArea');
+  if(!sa) return;
+  sa.addEventListener('touchstart', function(e){
+    _swipeTouchX = e.touches[0].clientX;
+    _swipeTouchY = e.touches[0].clientY;
+    _swipeTouchTime = Date.now();
+  }, {passive:true});
+  sa.addEventListener('touchend', function(e){
+    const dx = e.changedTouches[0].clientX - _swipeTouchX;
+    const dy = e.changedTouches[0].clientY - _swipeTouchY;
+    const dt = Date.now() - _swipeTouchTime;
+    // Fast horizontal swipe of at least 60px, not too slow
+    if(dt > 350 || Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) * 0.8) return;
+    // Don't swipe if user has scrolled down
+    if(sa.scrollTop > 50) return;
+    const cur = window._bnCurrentTab || 'training';
+    const visOrder = _TAB_ORDER.filter(t => {
       const b = document.getElementById('bnt-'+t);
       return b && b.style.display !== 'none';
     });
-  }
+    const idx = visOrder.indexOf(cur);
+    if(dx < 0 && idx < visOrder.length - 1) showTab(visOrder[idx + 1]);
+    else if(dx > 0 && idx > 0) showTab(visOrder[idx - 1]);
+  }, {passive:true});
+}
 
-  function onTouchStart(e){
-    _touchStartX = e.touches[0].clientX;
-    _touchStartY = e.touches[0].clientY;
-    _touchStartTime = Date.now();
-    _swipeLocked = false;
-  }
 
-  function onTouchEnd(e){
-    if(_swipeLocked) return;
-    const dx = e.changedTouches[0].clientX - _touchStartX;
-    const dy = e.changedTouches[0].clientY - _touchStartY;
-    const dt = Date.now() - _touchStartTime;
-    // Must be fast, horizontal, and at least 60px
-    if(dt > 400 || Math.abs(dy) > Math.abs(dx) || Math.abs(dx) < 60) return;
-    // Only swipe when scroll area is at top (prevent conflict with scrolling)
-    const sa = document.getElementById('tabScrollArea');
-    if(sa && sa.scrollTop > 40) return;
-    const order = getVisibleOrder();
-    const cur = window._bnCurrentTab;
-    const idx = order.indexOf(cur);
-    if(idx < 0) return;
-    if(dx < 0 && idx < order.length-1){
-      showTab(order[idx+1]);
-      window._bnCurrentTab = order[idx+1];
-    } else if(dx > 0 && idx > 0){
-      showTab(order[idx-1]);
-      window._bnCurrentTab = order[idx-1];
-    }
-    _swipeLocked = true;
-  }
+// Swipe handled by inline touch listeners on tabScrollArea
 
-  window.addEventListener('DOMContentLoaded', function(){
-    const sa = document.getElementById('tabScrollArea');
-    if(sa){
-      sa.addEventListener('touchstart', onTouchStart, {passive:true});
-      sa.addEventListener('touchend', onTouchEnd, {passive:true});
-    }
-  });
 
-  // Also update _bnCurrentTab on manual tab clicks
-  const origShowTab = window.showTab;
-  // Wrap after definition — done inline below
-})();
-
-// Track current tab globally for swipe
-window._bnCurrentTab = 'training';
-const _bnOrigShowTab = showTab;
-showTab = function(name, silent){
-  window._bnCurrentTab = name;
-  _bnOrigShowTab(name, silent);
-};
+// _bnCurrentTab tracked inside showTab directly
 
 // ══════════════════════════════════════════════════
 // SESSIONS
