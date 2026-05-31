@@ -545,30 +545,29 @@ select:hover{border-color:var(--green)}
 .g501-pad{
   display:grid;
   grid-template-columns:repeat(3,1fr);
-  /* no grid-template-rows: let aspect-ratio on keys set row heights naturally */
+  grid-template-rows:repeat(4,1fr);
   gap:clamp(8px,2.2vw,14px);
   background:#000;
   flex:1 1 0;
   min-height:0;
+  max-height:100%;   /* never exceed available space */
   padding:4px 4px 6px;
-  align-content:center;
 }
 
-/* Keys: square via aspect-ratio */
+/* Keys: fill their grid cell; border-radius makes them visually round */
 .g501-key{
   background:#1c1c1c;border:none;color:#fff;
   font-family:'Bebas Neue',sans-serif;
-  font-size:clamp(18px,6vw,36px);
+  font-size:clamp(18px,5.5vw,34px);
   letter-spacing:.01em;
   border-radius:999px!important;
   display:flex;align-items:center;justify-content:center;
-  width:100%;
-  aspect-ratio:1;
+  width:100%;height:100%;   /* fill cell completely */
   cursor:pointer;
   transition:background .08s,transform .08s,box-shadow .08s;
   box-shadow:0 2px 6px rgba(0,0,0,0.5);
   -webkit-tap-highlight-color:transparent;
-  min-width:0;
+  min-width:0;min-height:0;
 }
 .g501-key:hover{background:#2a2a2a}
 .g501-key:active{background:#3d3d3d;transform:scale(1.08);box-shadow:0 4px 20px rgba(255,255,255,0.09)}
