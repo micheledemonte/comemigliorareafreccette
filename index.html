@@ -31,7 +31,7 @@ button{cursor:pointer}
 
 /* ═══ LAYER SYSTEM ═══ */
 #landing{position:relative;z-index:1;min-height:100vh}
-#appLayer{position:fixed;inset:0;z-index:10;display:none;flex-direction:column;background:var(--dark);overflow-y:auto}
+#appLayer{position:fixed;inset:0;z-index:10;display:none;flex-direction:column;background:var(--dark);overflow:hidden}
 #appLayer.visible{display:flex}
 #loginModal{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s}
 #loginModal.open{opacity:1;pointer-events:all}
@@ -120,11 +120,92 @@ button{cursor:pointer}
 .l-foot{padding:20px 24px;text-align:center;font-size:12px;color:var(--muted);border-top:1px solid var(--d4)}
 
 /* ═══ APP SHELL ═══ */
-.nav-tabs{display:flex;padding:16px 20px 0;background:var(--dark);border-bottom:2px solid var(--green);overflow-x:auto;flex-shrink:0;position:sticky;top:0;z-index:50}
-.nav-tab{font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;letter-spacing:.01em;padding:10px 20px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .2s}
-.nav-tab:hover{color:var(--light)}
-#logoutTabBtn:hover{color:var(--red)!important}
-.nav-tab.active{color:var(--green);border-bottom-color:var(--green)}
+/* ═══ BOTTOM NAV — Liquid Glass iOS style ═══ */
+#bottomNav{
+  position:fixed;bottom:0;left:0;right:0;z-index:200;
+  padding:0 0 env(safe-area-inset-bottom,0px) 0;
+}
+.bn-glass{
+  margin:10px 14px 10px;
+  background:rgba(22,22,24,0.72);
+  backdrop-filter:blur(28px) saturate(180%);
+  -webkit-backdrop-filter:blur(28px) saturate(180%);
+  border:1px solid rgba(255,255,255,0.10);
+  border-radius:22px;
+  padding:0 4px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.08);
+  overflow:hidden;
+  position:relative;
+}
+/* sliding active pill */
+.bn-pill{
+  position:absolute;
+  top:6px;bottom:6px;
+  background:rgba(34,197,94,0.18);
+  border:1px solid rgba(34,197,94,0.35);
+  border-radius:14px;
+  transition:left .3s cubic-bezier(.4,0,.2,1), width .3s cubic-bezier(.4,0,.2,1);
+  pointer-events:none;
+  box-shadow:0 0 16px rgba(34,197,94,0.15);
+}
+/* scroll track */
+.bn-track{
+  display:flex;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+  scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;
+  position:relative;
+  z-index:1;
+}
+.bn-track::-webkit-scrollbar{display:none}
+.nav-tab{
+  flex:0 0 auto;
+  scroll-snap-align:center;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;
+  padding:10px 16px 10px;
+  border:none;background:transparent;
+  color:rgba(255,255,255,0.45);
+  font-family:'DM Sans',sans-serif;font-weight:600;font-size:10px;
+  letter-spacing:.08em;text-transform:uppercase;
+  cursor:pointer;white-space:nowrap;
+  transition:color .25s;
+  min-width:72px;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+}
+.nav-tab .nt-icon{font-size:20px;line-height:1;transition:transform .25s}
+.nav-tab.active{color:var(--green)}
+.nav-tab.active .nt-icon{transform:scale(1.15)}
+.nav-tab:hover{color:rgba(255,255,255,0.7)}
+#logoutTabBtn{color:rgba(239,68,68,0.55)!important}
+#logoutTabBtn.active,#logoutTabBtn:hover{color:var(--red)!important}
+
+/* scroll content area */
+#tabScrollArea{
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  /* leave room for bottom nav */
+  padding-bottom:calc(84px + env(safe-area-inset-bottom,0px));
+}
+/* nav scroll progress bar */
+.bn-scrollbar{
+  height:2px;
+  background:rgba(255,255,255,0.06);
+  position:relative;
+  overflow:hidden;
+}
+.bn-scrollbar-thumb{
+  position:absolute;left:0;top:0;height:100%;
+  background:linear-gradient(90deg,transparent,var(--green),transparent);
+  border-radius:1px;
+  transition:left .15s,width .15s;
+}
 /* ─── CHECKOUT TAB ─── */
 .co-filter-btn{background:var(--d3);border:1px solid var(--d5);color:var(--muted);padding:8px 18px;border-radius:20px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;cursor:pointer;transition:all .2s}
 .co-filter-btn.active{background:var(--gdim);border-color:var(--green);color:var(--green)}
@@ -152,13 +233,9 @@ button{cursor:pointer}
 .co-q-sep{font-size:16px;color:var(--muted)}
 .co-correction{font-size:12px;color:#f87171;margin-top:8px;padding:6px 10px;background:#1c0404;border-radius:5px}
 
-.tab-body{display:none;padding:75px 20px 100px;max-width:960px;width:100%;margin:0 auto}
+.tab-body{display:none;padding:24px 20px 0;max-width:960px;width:100%;margin:0 auto}
 .tab-body.active{display:block}
-@media(max-width:768px){
-  .tab-body{padding:50px 20px 100px}
-  .nav-tabs{scrollbar-width:none;-ms-overflow-style:none}
-  .nav-tabs::-webkit-scrollbar{display:none}
-}
+@media(max-width:768px){.tab-body{padding:20px 16px 0}}
 
 /* ═══ SELECTOR BAR ═══ */
 .wsbar{display:flex;gap:12px;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap}
@@ -504,7 +581,15 @@ select:focus{outline:2px solid var(--green)}
     <p>Accedi con le credenziali fornite dall'amministratore per iniziare a registrare i tuoi allenamenti e migliorare il tuo gioco.</p>
     <button class="l-cta" onclick="openLogin()">CLICCA QUI PER ACCEDERE</button>
   </div>
-  <div class="l-foot">© 2026 Come Migliorare a Freccette — Tutti i diritti riservati</div>
+  <div class="l-foot">
+    © 2026 Come Migliorare a Freccette — Tutti i diritti riservati<br>
+    Titolare: Michele De Monte · C.F. DMNMHL92M19G489E · Caprino Veronese (VR) · <a href="mailto:michele.demonte1992@gmail.com" style="color:var(--muted);text-decoration:underline">michele.demonte1992@gmail.com</a><br>
+    <span style="display:inline-flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:6px">
+      <a href="#" onclick="openLegal('privacy');return false;" style="color:var(--muted);text-decoration:underline;font-size:11px">Privacy Policy</a>
+      <a href="#" onclick="openLegal('cookies');return false;" style="color:var(--muted);text-decoration:underline;font-size:11px">Cookie Policy</a>
+      <a href="#" onclick="openLegal('terms');return false;" style="color:var(--muted);text-decoration:underline;font-size:11px">Termini e Condizioni</a>
+    </span>
+  </div>
 </div>
 
 <!-- ═══════════════════════ LOGIN MODAL ═══════════════════════ -->
@@ -552,15 +637,8 @@ select:focus{outline:2px solid var(--green)}
 <!-- ═══════════════════════ APP LAYER ═══════════════════════ -->
 <div id="appLayer">
 
-  <div class="nav-tabs" id="mainNav">
-    <button class="nav-tab active" onclick="showTab('training')">ALLENAMENTO</button>
-    <button class="nav-tab" onclick="showTab('stats')">STATISTICHE</button>
-    <button class="nav-tab" onclick="showTab('play501')">GIOCA A 501</button>
-    <button class="nav-tab" onclick="showTab('checkout')">CHECKOUT</button>
-    <button class="nav-tab" onclick="showTab('profile')">PROFILO</button>
-    <button class="nav-tab" id="adminTabBtn" style="display:none" onclick="showTab('admin')">ADMIN</button>
-    <button class="nav-tab" id="logoutTabBtn" onclick="confirmLogout()" style="margin-left:auto;color:var(--mu2)">LOGOUT</button>
-  </div>
+  <!-- Scrollable content area -->
+  <div id="tabScrollArea">
 
   <!-- TRAINING -->
   <div class="tab-body active" id="tab-training">
@@ -708,6 +786,139 @@ select:focus{outline:2px solid var(--green)}
   </div>
 
 
+
+  <!-- ANALISI TIRO -->
+  <div class="tab-body" id="tab-poseanalysis">
+    <div style="max-width:760px;margin:0 auto">
+
+      <!-- Header -->
+      <h2 style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:22px;color:var(--green);margin-bottom:6px;letter-spacing:-.01em">ANALISI TIRO</h2>
+      <p style="font-size:13px;color:var(--mu2);margin-bottom:24px;line-height:1.7">Carica un video del tuo tiro e l'app analizzerà automaticamente la tua postura in tempo reale: scheletro sovrapposto, angoli di gomito e spalla, e linea di tiro evidenziata. La prima volta che apri questa sezione ci vorranno alcuni secondi per caricare il modello AI (~10 MB).</p>
+
+      <!-- Upload card -->
+      <div class="pc" style="margin-bottom:16px">
+        <h3 style="margin-bottom:16px">📹 CARICA VIDEO</h3>
+
+        <div id="poseDropZone" style="border:2px dashed var(--d5);border-radius:12px;padding:36px 20px;text-align:center;cursor:pointer;transition:all .25s;margin-bottom:16px" 
+             onclick="document.getElementById('poseVideoInput').click()"
+             ondragover="event.preventDefault();this.style.borderColor='var(--green)';this.style.background='#052e1610'"
+             ondragleave="this.style.borderColor='var(--d5)';this.style.background=''"
+             ondrop="event.preventDefault();this.style.borderColor='var(--d5)';this.style.background='';handlePoseVideoDrop(event)">
+          <div style="font-size:40px;margin-bottom:10px">🎬</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--light);letter-spacing:.04em;margin-bottom:6px">TRASCINA O CLICCA PER CARICARE</div>
+          <div style="font-size:12px;color:var(--muted)">MP4, MOV, WebM — max 200 MB · Riprendi frontalmente o di lato</div>
+        </div>
+        <input type="file" id="poseVideoInput" accept="video/*" style="display:none" onchange="handlePoseVideoSelect(this)">
+
+        <div id="poseFileName" style="font-size:13px;color:var(--muted);margin-bottom:12px;display:none"></div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+          <div class="sel-group">
+            <label>Velocità playback</label>
+            <select id="poseSpeed" onchange="if(poseVideo)poseVideo.playbackRate=parseFloat(this.value)" style="width:auto">
+              <option value="0.25">0.25×</option>
+              <option value="0.5" selected>0.5×</option>
+              <option value="1">1×</option>
+            </select>
+          </div>
+          <div class="sel-group">
+            <label>Vista scheletro</label>
+            <select id="poseSkeleton" style="width:auto">
+              <option value="full">Completo</option>
+              <option value="arm">Solo braccio tiro</option>
+            </select>
+          </div>
+          <div class="sel-group">
+            <label>Lato tiro</label>
+            <select id="poseSide" style="width:auto">
+              <option value="right">Destro</option>
+              <option value="left">Sinistro</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button id="poseAnalyzeBtn" onclick="startPoseAnalysis()" style="background:var(--green);color:#000;border:none;padding:12px 28px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;transition:background .2s;opacity:.4;cursor:not-allowed" disabled>▶ AVVIA ANALISI</button>
+          <button id="posePauseBtn" onclick="togglePosePause()" style="display:none;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:12px 28px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px">⏸ PAUSA</button>
+          <button onclick="resetPoseAnalysis()" style="background:transparent;border:1px solid var(--d5);color:var(--muted);padding:12px 20px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px">↺ RESET</button>
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div id="poseStatus" style="display:none;background:var(--d2);border:1px solid var(--d4);border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:var(--mu2)"></div>
+
+      <!-- Canvas area -->
+      <div class="pc" style="padding:12px;display:none" id="poseCanvasWrap">
+        <div style="position:relative;width:100%;background:#000;border-radius:8px;overflow:hidden">
+          <video id="poseVideoEl" style="width:100%;display:block;opacity:0;position:absolute;top:0;left:0" playsinline></video>
+          <canvas id="poseCanvas" style="width:100%;display:block;border-radius:8px"></canvas>
+        </div>
+        <!-- Scrubber -->
+        <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+          <span id="poseCurTime" style="font-size:12px;color:var(--muted);min-width:40px">0:00</span>
+          <input type="range" id="poseScrubber" min="0" max="100" value="0" step="0.1" style="flex:1;accent-color:var(--green);height:4px;cursor:pointer" oninput="scrubPoseVideo(this.value)">
+          <span id="poseDurTime" style="font-size:12px;color:var(--muted);min-width:40px">0:00</span>
+        </div>
+      </div>
+
+      <!-- Metrics panel -->
+      <div id="poseMetrics" style="display:none">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px">
+          <div class="sc"><div class="sl2">Angolo Gomito</div><div class="sv2" id="metElbow">—°</div><div class="ss" id="metElbowNote"></div></div>
+          <div class="sc"><div class="sl2">Angolo Spalla</div><div class="sv2" id="metShoulder">—°</div><div class="ss" id="metShoulderNote"></div></div>
+          <div class="sc"><div class="sl2">Inclinazione Busto</div><div class="sv2" id="metTrunk">—°</div><div class="ss" id="metTrunkNote"></div></div>
+          <div class="sc"><div class="sl2">Altezza Polso</div><div class="sv2" id="metWrist">—</div><div class="ss" id="metWristNote"></div></div>
+        </div>
+
+        <!-- Feedback card -->
+        <div id="poseFeedback" class="pc" style="margin-bottom:16px">
+          <h3 style="margin-bottom:14px">💡 FEEDBACK POSTURA</h3>
+          <div id="poseFeedbackContent" style="font-size:13px;color:var(--mu2);line-height:1.8"></div>
+        </div>
+
+        <!-- Guide card -->
+        <div class="pc" style="margin-bottom:16px">
+          <h3 style="margin-bottom:12px">📐 ANGOLI DI RIFERIMENTO PRO</h3>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;font-size:13px">
+            <div style="background:var(--d3);border-radius:6px;padding:12px">
+              <div style="color:var(--green);font-weight:700;margin-bottom:4px">Gomito (lancio)</div>
+              <div style="color:var(--light)">90° – 130°</div>
+              <div style="color:var(--muted);font-size:12px;margin-top:2px">Angolo ideale al momento del rilascio</div>
+            </div>
+            <div style="background:var(--d3);border-radius:6px;padding:12px">
+              <div style="color:var(--green);font-weight:700;margin-bottom:4px">Spalla</div>
+              <div style="color:var(--light)">15° – 45°</div>
+              <div style="color:var(--muted);font-size:12px;margin-top:2px">Elevazione rispetto all'orizzontale</div>
+            </div>
+            <div style="background:var(--d3);border-radius:6px;padding:12px">
+              <div style="color:var(--green);font-weight:700;margin-bottom:4px">Busto</div>
+              <div style="color:var(--light)">5° – 25°</div>
+              <div style="color:var(--muted);font-size:12px;margin-top:2px">Inclinazione in avanti (vista laterale)</div>
+            </div>
+            <div style="background:var(--d3);border-radius:6px;padding:12px">
+              <div style="color:var(--green);font-weight:700;margin-bottom:4px">Polso</div>
+              <div style="color:var(--light)">All'altezza degli occhi</div>
+              <div style="color:var(--muted);font-size:12px;margin-top:2px">Al momento del rilascio del dardo</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tips card always visible -->
+      <div class="pc">
+        <h3 style="margin-bottom:12px">🎯 COME RIPRENDERE PER I MIGLIORI RISULTATI</h3>
+        <ul style="font-size:13px;color:var(--mu2);line-height:2;list-style:none;padding:0">
+          <li>📱 <strong style="color:var(--light)">Vista laterale</strong> — posiziona la telecamera al tuo fianco (lato del braccio di lancio) per vedere gomito e spalla</li>
+          <li>🎯 <strong style="color:var(--light)">Inquadratura completa</strong> — tutto il corpo deve essere visibile nel frame</li>
+          <li>💡 <strong style="color:var(--light)">Luce adeguata</strong> — evita controluce, usa illuminazione frontale uniforme</li>
+          <li>🎬 <strong style="color:var(--light)">Velocità ottimale</strong> — usa 0.25× per analizzare il momento esatto del rilascio</li>
+          <li>📐 <strong style="color:var(--light)">Sfondo semplice</strong> — più lo sfondo è uniforme, più accurato è il rilevamento</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ADMIN -->
   <div class="tab-body" id="tab-admin">
 
@@ -767,8 +978,45 @@ select:focus{outline:2px solid var(--green)}
       <p style="font-size:12px;color:var(--muted);line-height:1.6">Database: <strong style="color:var(--light)">Firebase Realtime Database</strong> — I dati vengono sincronizzati automaticamente tra tutti i dispositivi.</p>
     </div>
 
+  </div><!-- /tab-admin -->
+
+  </div><!-- /tabScrollArea -->
+
+  <!-- ═══ BOTTOM NAV — Liquid Glass ═══ -->
+  <div id="bottomNav">
+    <div class="bn-glass">
+      <div class="bn-pill" id="bnPill"></div>
+      <div class="bn-scrollbar"><div class="bn-scrollbar-thumb" id="bnScrollThumb"></div></div>
+      <div class="bn-track" id="bnTrack">
+        <button class="nav-tab active" id="bnt-training" onclick="showTab('training')">
+          <span class="nt-icon">🎯</span>ALLENAMENTO
+        </button>
+        <button class="nav-tab" id="bnt-stats" onclick="showTab('stats')">
+          <span class="nt-icon">📊</span>STATISTICHE
+        </button>
+        <button class="nav-tab" id="bnt-play501" onclick="showTab('play501')">
+          <span class="nt-icon">🎮</span>501
+        </button>
+        <button class="nav-tab" id="bnt-checkout" onclick="showTab('checkout')">
+          <span class="nt-icon">📋</span>CHECKOUT
+        </button>
+        <button class="nav-tab" id="bnt-profile" onclick="showTab('profile')">
+          <span class="nt-icon">👤</span>PROFILO
+        </button>
+        <button class="nav-tab" id="bnt-poseanalysis" onclick="showTab('poseanalysis')">
+          <span class="nt-icon">🎬</span>ANALISI
+        </button>
+        <button class="nav-tab" id="adminTabBtn" style="display:none" onclick="showTab('admin')">
+          <span class="nt-icon">⚙️</span>ADMIN
+        </button>
+        <button class="nav-tab" id="logoutTabBtn" onclick="confirmLogout()">
+          <span class="nt-icon">🚪</span>LOGOUT
+        </button>
+      </div>
+    </div>
   </div>
-</div>
+
+</div><!-- /appLayer -->
 
 <!-- ═══════════════════════ 501 GAME OVERLAY ═══════════════════════ -->
 <div id="g501overlay">
@@ -1236,6 +1484,7 @@ function enterApp(){
   loadProfileForm();
   document.getElementById('appLayer').classList.add('visible');
   autoLoadNextSession();
+  setTimeout(()=>bnUpdatePill('training'), 80);
   loadPrev501Sessions(); // load saved 501 sessions for this user
   checkReset();
 }
@@ -1289,19 +1538,134 @@ async function doLogout(){
 // ══════════════════════════════════════════════════
 function showTab(name,silent=false){
   document.querySelectorAll('.tab-body').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  // update bottom nav buttons
+  document.querySelectorAll('#bnTrack .nav-tab').forEach(t=>t.classList.remove('active'));
   const tb=document.getElementById('tab-'+name);
   if(tb) tb.classList.add('active');
-  const tabs=document.querySelectorAll('.nav-tab');
-  const map={training:0,stats:1,play501:2,checkout:3,profile:4,admin:5};
-  if(map[name]!==undefined) tabs[map[name]]?.classList.add('active');
+  const btn=document.getElementById('bnt-'+name);
+  if(btn) btn.classList.add('active');
+  // scroll tabScrollArea to top
+  const sa=document.getElementById('tabScrollArea');
+  if(sa) sa.scrollTop=0;
+  // animate bottom nav pill + scroll to active tab
+  bnUpdatePill(name);
   if(!silent){
     if(name==='stats') renderStats();
     if(name==='admin') renderAdmin();
     if(name==='profile') loadProfileForm();
     if(name==='checkout') renderCOTables();
+    if(name==='poseanalysis') initPoseTab();
   }
 }
+
+// ── Bottom Nav pill + swipe logic ──
+function bnUpdatePill(tabName){
+  const btn = document.getElementById('bnt-'+tabName);
+  const pill = document.getElementById('bnPill');
+  const track = document.getElementById('bnTrack');
+  if(!btn || !pill || !track) return;
+  // scroll track to center the active button
+  const btnLeft = btn.offsetLeft;
+  const btnW = btn.offsetWidth;
+  const trackW = track.offsetWidth;
+  const scrollTo = btnLeft - trackW/2 + btnW/2;
+  track.scrollTo({left: scrollTo, behavior:'smooth'});
+  // position pill relative to glass container (not track)
+  const glass = document.querySelector('.bn-glass');
+  if(!glass) return;
+  const glassLeft = glass.getBoundingClientRect().left;
+  const btnRect = btn.getBoundingClientRect();
+  pill.style.left = (btnRect.left - glassLeft) + 'px';
+  pill.style.width = btnRect.width + 'px';
+  // scrollbar thumb
+  bnUpdateThumb(tabName);
+}
+
+function bnUpdateThumb(tabName){
+  const tabs = ['training','stats','play501','checkout','profile','poseanalysis','admin'];
+  const thumb = document.getElementById('bnScrollThumb');
+  if(!thumb) return;
+  // find visible tabs
+  const visibleTabs = tabs.filter(t => {
+    const b = document.getElementById('bnt-'+t);
+    return b && b.style.display !== 'none';
+  });
+  const idx = visibleTabs.indexOf(tabName);
+  if(idx < 0 || !visibleTabs.length) return;
+  const pct = 100 / visibleTabs.length;
+  thumb.style.width = pct + '%';
+  thumb.style.left = (idx * pct) + '%';
+}
+
+// Swipe gesture on tabScrollArea to switch tabs
+(function initBnSwipe(){
+  const TABS_ORDER = ['training','stats','play501','checkout','profile','poseanalysis'];
+  let _currentTab = 'training';
+  let _touchStartX = 0, _touchStartY = 0, _touchStartTime = 0;
+  let _swipeLocked = false;
+
+  // Override showTab to track current
+  const _origShow = showTab;
+  window._bnCurrentTab = 'training';
+
+  function getVisibleOrder(){
+    return TABS_ORDER.filter(t => {
+      const b = document.getElementById('bnt-'+t);
+      return b && b.style.display !== 'none';
+    });
+  }
+
+  function onTouchStart(e){
+    _touchStartX = e.touches[0].clientX;
+    _touchStartY = e.touches[0].clientY;
+    _touchStartTime = Date.now();
+    _swipeLocked = false;
+  }
+
+  function onTouchEnd(e){
+    if(_swipeLocked) return;
+    const dx = e.changedTouches[0].clientX - _touchStartX;
+    const dy = e.changedTouches[0].clientY - _touchStartY;
+    const dt = Date.now() - _touchStartTime;
+    // Must be fast, horizontal, and at least 60px
+    if(dt > 400 || Math.abs(dy) > Math.abs(dx) || Math.abs(dx) < 60) return;
+    // Only swipe when scroll area is at top (prevent conflict with scrolling)
+    const sa = document.getElementById('tabScrollArea');
+    if(sa && sa.scrollTop > 40) return;
+    const order = getVisibleOrder();
+    const cur = window._bnCurrentTab;
+    const idx = order.indexOf(cur);
+    if(idx < 0) return;
+    if(dx < 0 && idx < order.length-1){
+      showTab(order[idx+1]);
+      window._bnCurrentTab = order[idx+1];
+    } else if(dx > 0 && idx > 0){
+      showTab(order[idx-1]);
+      window._bnCurrentTab = order[idx-1];
+    }
+    _swipeLocked = true;
+  }
+
+  window.addEventListener('DOMContentLoaded', function(){
+    const sa = document.getElementById('tabScrollArea');
+    if(sa){
+      sa.addEventListener('touchstart', onTouchStart, {passive:true});
+      sa.addEventListener('touchend', onTouchEnd, {passive:true});
+    }
+  });
+
+  // Also update _bnCurrentTab on manual tab clicks
+  const origShowTab = window.showTab;
+  // Wrap after definition — done inline below
+})();
+
+// Track current tab globally for swipe
+window._bnCurrentTab = 'training';
+const _bnOrigShowTab = showTab;
+showTab = function(name, silent){
+  window._bnCurrentTab = name;
+  _bnOrigShowTab(name, silent);
+};
 
 // ══════════════════════════════════════════════════
 // SESSIONS
@@ -3454,8 +3818,774 @@ function finalize201Game(){
 }
 function close201(){document.getElementById('g201overlay').style.display='none';}
 
+
 // ══════════════════════════════════════════════════
-// LANDING CAROUSEL — simple drag/swipe, no scroll hijack
+// POSE ANALYSIS ENGINE — MediaPipe Pose (CDN)
+// ══════════════════════════════════════════════════
+let _poseModel = null;
+let _poseModelLoading = false;
+let _poseVideo = null;
+let _poseCanvas = null;
+let _poseCtx = null;
+let _poseAnimFrame = null;
+let _posePaused = false;
+let _poseLoaded = false;
+let _poseScrubbing = false;
+
+// Expose video globally for speed selector
+var poseVideo = null;
+
+function initPoseTab(){
+  if(_poseLoaded) return;
+  _poseLoaded = true;
+  _poseCanvas = document.getElementById('poseCanvas');
+  _poseCtx = _poseCanvas.getContext('2d');
+  _poseVideo = document.getElementById('poseVideoEl');
+
+  // Video time update → scrubber
+  _poseVideo.addEventListener('timeupdate', function(){
+    if(_poseScrubbing) return;
+    const s = document.getElementById('poseScrubber');
+    const cur = document.getElementById('poseCurTime');
+    if(s && _poseVideo.duration){
+      s.value = (_poseVideo.currentTime / _poseVideo.duration) * 100;
+      cur.textContent = fmtTime(_poseVideo.currentTime);
+    }
+  });
+  _poseVideo.addEventListener('loadedmetadata', function(){
+    document.getElementById('poseDurTime').textContent = fmtTime(_poseVideo.duration);
+  });
+
+  loadMediaPipeModel();
+}
+
+function fmtTime(s){
+  const m = Math.floor(s/60);
+  const sec = Math.floor(s%60);
+  return m + ':' + String(sec).padStart(2,'0');
+}
+
+function setPoseStatus(msg, color){
+  const el = document.getElementById('poseStatus');
+  if(!el) return;
+  el.style.display = msg ? 'block' : 'none';
+  el.style.color = color || 'var(--mu2)';
+  el.innerHTML = msg || '';
+}
+
+async function loadMediaPipeModel(){
+  if(_poseModel || _poseModelLoading) return;
+  _poseModelLoading = true;
+  setPoseStatus('⏳ Caricamento modello AI in corso… (prima volta ~10 sec)', 'var(--amber)');
+
+  try {
+    // Dynamically load MediaPipe scripts
+    await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js');
+    await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js');
+    await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js');
+
+    _poseModel = new Pose({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+    });
+
+    _poseModel.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      enableSegmentation: false,
+      smoothSegmentation: false,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+
+    _poseModel.onResults(onPoseResults);
+    await _poseModel.initialize();
+
+    setPoseStatus('✅ Modello caricato! Carica un video e premi Avvia Analisi.', 'var(--green)');
+    _poseModelLoading = false;
+  } catch(e) {
+    setPoseStatus('❌ Errore caricamento modello: ' + e.message + '<br><small>Verifica la connessione internet e ricarica la pagina.</small>', 'var(--red)');
+    _poseModelLoading = false;
+    console.error('MediaPipe load error:', e);
+  }
+}
+
+function loadScript(src){
+  return new Promise((resolve, reject) => {
+    if(document.querySelector('script[src="'+src+'"]')){resolve();return;}
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Failed to load: ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+function handlePoseVideoSelect(input){
+  if(!input.files || !input.files[0]) return;
+  loadPoseVideoFile(input.files[0]);
+}
+
+function handlePoseVideoDrop(e){
+  const file = e.dataTransfer.files[0];
+  if(!file || !file.type.startsWith('video/')) return;
+  loadPoseVideoFile(file);
+}
+
+function loadPoseVideoFile(file){
+  const url = URL.createObjectURL(file);
+  _poseVideo.src = url;
+  poseVideo = _poseVideo;
+  document.getElementById('poseFileName').textContent = '📁 ' + file.name + ' (' + (file.size/1024/1024).toFixed(1) + ' MB)';
+  document.getElementById('poseFileName').style.display = 'block';
+
+  _poseVideo.onloadedmetadata = function(){
+    const w = _poseVideo.videoWidth;
+    const h = _poseVideo.videoHeight;
+    _poseCanvas.width = w;
+    _poseCanvas.height = h;
+    document.getElementById('poseCanvasWrap').style.display = 'block';
+    document.getElementById('poseDurTime').textContent = fmtTime(_poseVideo.duration);
+    // Draw first frame placeholder
+    _poseVideo.currentTime = 0.1;
+  };
+
+  _poseVideo.onseeked = function(){
+    if(!_poseAnimFrame){
+      drawStaticFrame();
+    }
+  };
+
+  // Enable analyze button
+  const btn = document.getElementById('poseAnalyzeBtn');
+  btn.disabled = false;
+  btn.style.opacity = '1';
+  btn.style.cursor = 'pointer';
+
+  if(!_poseModel && !_poseModelLoading){
+    loadMediaPipeModel();
+  } else if(_poseModel){
+    setPoseStatus('✅ Video caricato. Premi Avvia Analisi.', 'var(--green)');
+  }
+}
+
+function drawStaticFrame(){
+  if(!_poseCtx || !_poseVideo) return;
+  _poseCtx.drawImage(_poseVideo, 0, 0, _poseCanvas.width, _poseCanvas.height);
+}
+
+async function startPoseAnalysis(){
+  if(!_poseVideo || !_poseVideo.src){ setPoseStatus('⚠ Carica prima un video.', 'var(--amber)'); return; }
+  if(!_poseModel){
+    if(_poseModelLoading){
+      setPoseStatus('⏳ Attendi il completamento del caricamento del modello…', 'var(--amber)');
+    } else {
+      await loadMediaPipeModel();
+    }
+    return;
+  }
+
+  _posePaused = false;
+  _poseVideo.playbackRate = parseFloat(document.getElementById('poseSpeed').value);
+  _poseVideo.currentTime = 0;
+
+  document.getElementById('posePauseBtn').style.display = '';
+  document.getElementById('poseMetrics').style.display = 'block';
+  setPoseStatus('🔄 Analisi in corso…', 'var(--green)');
+
+  _poseVideo.play().then(() => {
+    cancelAnimationFrame(_poseAnimFrame);
+    processPoseFrame();
+  }).catch(e => {
+    setPoseStatus('❌ Errore riproduzione: ' + e.message, 'var(--red)');
+  });
+}
+
+async function processPoseFrame(){
+  if(_posePaused){
+    _poseAnimFrame = requestAnimationFrame(processPoseFrame);
+    return;
+  }
+  if(_poseVideo.paused || _poseVideo.ended){
+    if(_poseVideo.ended){
+      setPoseStatus('✅ Analisi completata! Usa il cursore per rivedere ogni fotogramma.', 'var(--green)');
+      document.getElementById('posePauseBtn').textContent = '▶ RIPRENDI';
+    }
+    return;
+  }
+
+  try {
+    await _poseModel.send({image: _poseVideo});
+  } catch(e) {
+    console.warn('Pose send error:', e);
+  }
+
+  _poseAnimFrame = requestAnimationFrame(processPoseFrame);
+}
+
+function togglePosePause(){
+  if(!_poseVideo) return;
+  _posePaused = !_posePaused;
+  const btn = document.getElementById('posePauseBtn');
+  if(_posePaused){
+    _poseVideo.pause();
+    btn.textContent = '▶ RIPRENDI';
+    cancelAnimationFrame(_poseAnimFrame);
+  } else {
+    _poseVideo.play();
+    btn.textContent = '⏸ PAUSA';
+    processPoseFrame();
+  }
+}
+
+function scrubPoseVideo(val){
+  if(!_poseVideo || !_poseVideo.duration) return;
+  _poseScrubbing = true;
+  _poseVideo.pause();
+  cancelAnimationFrame(_poseAnimFrame);
+  _poseVideo.currentTime = (val / 100) * _poseVideo.duration;
+  document.getElementById('poseCurTime').textContent = fmtTime(_poseVideo.currentTime);
+
+  _poseVideo.onseeked = async function(){
+    _poseScrubbing = false;
+    if(_poseModel){
+      try { await _poseModel.send({image: _poseVideo}); } catch(e){}
+    } else {
+      drawStaticFrame();
+    }
+  };
+}
+
+function resetPoseAnalysis(){
+  cancelAnimationFrame(_poseAnimFrame);
+  _poseAnimFrame = null;
+  _posePaused = false;
+  if(_poseVideo){
+    _poseVideo.pause();
+    _poseVideo.src = '';
+    poseVideo = null;
+  }
+  if(_poseCtx) _poseCtx.clearRect(0,0,_poseCanvas.width,_poseCanvas.height);
+  document.getElementById('poseCanvasWrap').style.display = 'none';
+  document.getElementById('poseMetrics').style.display = 'none';
+  document.getElementById('posePauseBtn').style.display = 'none';
+  document.getElementById('poseFileName').style.display = 'none';
+  document.getElementById('poseVideoInput').value = '';
+  document.getElementById('poseScrubber').value = 0;
+  document.getElementById('poseCurTime').textContent = '0:00';
+  document.getElementById('poseDurTime').textContent = '0:00';
+  const btn = document.getElementById('poseAnalyzeBtn');
+  btn.disabled = true; btn.style.opacity = '.4'; btn.style.cursor = 'not-allowed';
+  setPoseStatus(_poseModel ? '✅ Modello caricato. Carica un nuovo video.' : '', 'var(--green)');
+  resetPoseMetrics();
+}
+
+function resetPoseMetrics(){
+  ['metElbow','metShoulder','metTrunk','metWrist'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.textContent='—';
+  });
+  ['metElbowNote','metShoulderNote','metTrunkNote','metWristNote'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.textContent='';
+  });
+  const fc = document.getElementById('poseFeedbackContent');
+  if(fc) fc.innerHTML = '';
+}
+
+// ── Geometry helpers ──
+function angle3pts(A, B, C){
+  // Angle at B between A-B-C
+  const ab = {x: A.x - B.x, y: A.y - B.y};
+  const cb = {x: C.x - B.x, y: C.y - B.y};
+  const dot = ab.x*cb.x + ab.y*cb.y;
+  const cross = ab.x*cb.y - ab.y*cb.x;
+  return Math.abs(Math.atan2(Math.abs(cross), dot) * 180 / Math.PI);
+}
+
+function angleFromHorizontal(A, B){
+  const dx = B.x - A.x;
+  const dy = B.y - A.y;
+  return Math.abs(Math.atan2(Math.abs(dy), Math.abs(dx)) * 180 / Math.PI);
+}
+
+// ── Main results callback ──
+let _lastLandmarks = null;
+
+function onPoseResults(results){
+  if(!_poseCtx || !_poseCanvas) return;
+
+  const W = _poseCanvas.width;
+  const H = _poseCanvas.height;
+
+  // Clear and draw video frame
+  _poseCtx.clearRect(0, 0, W, H);
+  _poseCtx.drawImage(results.image, 0, 0, W, H);
+
+  if(!results.poseLandmarks || results.poseLandmarks.length === 0){
+    _poseCtx.fillStyle = 'rgba(239,68,68,0.8)';
+    _poseCtx.font = 'bold ' + Math.round(W*0.025) + 'px DM Sans, sans-serif';
+    _poseCtx.fillText('Nessuna persona rilevata', W*0.03, H*0.06);
+    return;
+  }
+
+  _lastLandmarks = results.poseLandmarks;
+  const lm = results.poseLandmarks;
+  const side = document.getElementById('poseSide')?.value || 'right';
+  const skeletonMode = document.getElementById('poseSkeleton')?.value || 'full';
+
+  // MediaPipe landmark indices
+  const IDX = {
+    nose:0, l_shoulder:11, r_shoulder:12,
+    l_elbow:13, r_elbow:14, l_wrist:15, r_wrist:16,
+    l_hip:23, r_hip:24, l_knee:25, r_knee:26,
+    l_ankle:27, r_ankle:28, l_eye:2, r_eye:5
+  };
+
+  const throwing_shoulder = side === 'right' ? IDX.r_shoulder : IDX.l_shoulder;
+  const throwing_elbow    = side === 'right' ? IDX.r_elbow    : IDX.l_elbow;
+  const throwing_wrist    = side === 'right' ? IDX.r_wrist    : IDX.l_wrist;
+  const opp_shoulder      = side === 'right' ? IDX.l_shoulder : IDX.r_shoulder;
+  const throwing_hip      = side === 'right' ? IDX.r_hip      : IDX.l_hip;
+  const opp_hip           = side === 'right' ? IDX.l_hip      : IDX.r_hip;
+
+  function pt(idx){ return {x: lm[idx].x * W, y: lm[idx].y * H, v: lm[idx].visibility || 0}; }
+
+  const eShoulder = pt(throwing_shoulder);
+  const eElbow    = pt(throwing_elbow);
+  const eWrist    = pt(throwing_wrist);
+  const oShoulder = pt(opp_shoulder);
+  const eHip      = pt(throwing_hip);
+  const oHip      = pt(opp_hip);
+  const eKnee     = side === 'right' ? pt(IDX.r_knee) : pt(IDX.l_knee);
+  const eAnkle    = side === 'right' ? pt(IDX.r_ankle) : pt(IDX.l_ankle);
+  const nose      = pt(IDX.nose);
+
+  // ── Compute angles ──
+  const elbowAngle    = (eElbow.v > 0.4 && eShoulder.v > 0.4 && eWrist.v > 0.4)
+                        ? angle3pts(eShoulder, eElbow, eWrist) : null;
+  const shoulderAngle = (eShoulder.v > 0.4 && eElbow.v > 0.4)
+                        ? angleFromHorizontal(eShoulder, eElbow) : null;
+  const trunkAngle    = (eShoulder.v > 0.4 && eHip.v > 0.4)
+                        ? angleFromHorizontal(eHip, eShoulder) : null; // angle of torso from horizontal
+  const wristHigherThanEye = (eWrist.v > 0.4 && nose.v > 0.4)
+                        ? eWrist.y < nose.y : null; // y inverted: smaller y = higher
+
+  // ── Draw skeleton ──
+  const alpha = 0.92;
+
+  function drawBone(A, B, color, width, visThresh){
+    if(A.v < (visThresh||0.3) || B.v < (visThresh||0.3)) return;
+    _poseCtx.beginPath();
+    _poseCtx.moveTo(A.x, A.y);
+    _poseCtx.lineTo(B.x, B.y);
+    _poseCtx.strokeStyle = color;
+    _poseCtx.lineWidth = width;
+    _poseCtx.lineCap = 'round';
+    _poseCtx.globalAlpha = alpha;
+    _poseCtx.stroke();
+    _poseCtx.globalAlpha = 1;
+  }
+
+  function drawJoint(pt, color, radius, visThresh){
+    if(pt.v < (visThresh||0.3)) return;
+    _poseCtx.beginPath();
+    _poseCtx.arc(pt.x, pt.y, radius, 0, Math.PI*2);
+    _poseCtx.fillStyle = color;
+    _poseCtx.globalAlpha = alpha;
+    _poseCtx.fill();
+    _poseCtx.globalAlpha = 1;
+  }
+
+  const boneW = Math.max(2, Math.round(W * 0.004));
+  const jointR = Math.max(4, Math.round(W * 0.008));
+  const throwColor = '#22c55e';
+  const bodyColor  = 'rgba(255,255,255,0.55)';
+  const dimColor   = 'rgba(255,255,255,0.25)';
+
+  if(skeletonMode === 'full'){
+    // Body skeleton (dimmed)
+    drawBone(oShoulder, eShoulder, bodyColor, boneW-1);
+    drawBone(eShoulder, eHip, dimColor, boneW-1);
+    drawBone(oShoulder, oHip, dimColor, boneW-1);
+    drawBone(eHip, oHip, dimColor, boneW-1);
+    drawBone(eHip, eKnee, dimColor, boneW-1);
+    drawBone(eKnee, eAnkle, dimColor, boneW-1);
+    // Non-throwing arm (dimmed)
+    const oppElbow = side==='right' ? pt(IDX.l_elbow) : pt(IDX.r_elbow);
+    const oppWrist = side==='right' ? pt(IDX.l_wrist) : pt(IDX.r_wrist);
+    drawBone(oShoulder, oppElbow, dimColor, boneW-1);
+    drawBone(oppElbow, oppWrist, dimColor, boneW-1);
+    drawJoint(oShoulder, bodyColor, jointR-1);
+    drawJoint(eHip, dimColor, jointR-1);
+    drawJoint(oHip, dimColor, jointR-1);
+    drawJoint(eKnee, dimColor, jointR-1);
+    drawJoint(eAnkle, dimColor, jointR-1);
+  }
+
+  // Throwing arm (highlighted bright green)
+  drawBone(eShoulder, eElbow, throwColor, boneW+2);
+  drawBone(eElbow, eWrist, throwColor, boneW+2);
+
+  // Joints
+  drawJoint(eShoulder, '#ffffff', jointR);
+  drawJoint(eElbow, throwColor, jointR+2);
+  drawJoint(eWrist, '#facc15', jointR+1);
+
+  // ── Throw line from wrist toward target (horizontal projection) ──
+  if(eWrist.v > 0.4){
+    const lineLen = W * 0.22;
+    const dirX = side === 'right' ? 1 : -1;
+    _poseCtx.beginPath();
+    _poseCtx.moveTo(eWrist.x, eWrist.y);
+    _poseCtx.lineTo(eWrist.x + dirX * lineLen, eWrist.y - lineLen * 0.08);
+    _poseCtx.strokeStyle = '#facc15';
+    _poseCtx.lineWidth = Math.max(2, boneW);
+    _poseCtx.setLineDash([Math.round(W*0.012), Math.round(W*0.008)]);
+    _poseCtx.globalAlpha = 0.85;
+    _poseCtx.stroke();
+    _poseCtx.setLineDash([]);
+    _poseCtx.globalAlpha = 1;
+    // Arrow head
+    _poseCtx.beginPath();
+    const ax = eWrist.x + dirX * lineLen;
+    const ay = eWrist.y - lineLen * 0.08;
+    const arrowSize = Math.max(8, boneW * 3);
+    _poseCtx.moveTo(ax, ay);
+    _poseCtx.lineTo(ax - dirX * arrowSize, ay - arrowSize * 0.5);
+    _poseCtx.lineTo(ax - dirX * arrowSize, ay + arrowSize * 0.5);
+    _poseCtx.closePath();
+    _poseCtx.fillStyle = '#facc15';
+    _poseCtx.globalAlpha = 0.85;
+    _poseCtx.fill();
+    _poseCtx.globalAlpha = 1;
+  }
+
+  // ── Angle arc overlays ──
+  if(elbowAngle !== null && eElbow.v > 0.5){
+    drawAngleArc(_poseCtx, eShoulder, eElbow, eWrist, elbowAngle, throwColor, W);
+    drawAngleLabel(_poseCtx, eElbow, Math.round(elbowAngle) + '°', throwColor, W, -1);
+  }
+  if(shoulderAngle !== null && eShoulder.v > 0.5){
+    drawAngleLabel(_poseCtx, eShoulder, Math.round(shoulderAngle) + '°', '#a78bfa', W, -1);
+  }
+
+  // ── Update metric cards ──
+  updateMetricCard('metElbow', 'metElbowNote', elbowAngle,
+    [90, 130], ['< 90° — braccio troppo chiuso', '90°–130° — ottimo ✅', '> 130° — braccio troppo aperto']);
+  updateMetricCard('metShoulder', 'metShoulderNote', shoulderAngle,
+    [15, 45], ['< 15° — spalla troppo bassa', '15°–45° — ottimo ✅', '> 45° — spalla troppo alta']);
+  updateMetricCard('metTrunk', 'metTrunkNote', trunkAngle !== null ? 90 - trunkAngle : null,
+    [5, 25], ['< 5° — posizione troppo dritta', '5°–25° — ottima inclinazione ✅', '> 25° — troppa inclinazione']);
+
+  if(wristHigherThanEye !== null){
+    document.getElementById('metWrist').textContent = wristHigherThanEye ? 'Alta ✅' : 'Bassa ⚠';
+    document.getElementById('metWrist').style.color = wristHigherThanEye ? 'var(--green)' : 'var(--amber)';
+    document.getElementById('metWristNote').textContent = wristHigherThanEye ? 'Polso sopra gli occhi' : 'Polso sotto gli occhi';
+  }
+
+  // ── Feedback ──
+  updatePoseFeedback(elbowAngle, shoulderAngle,
+    trunkAngle !== null ? 90 - trunkAngle : null, wristHigherThanEye);
+}
+
+function drawAngleArc(ctx, A, B, C, angleDeg, color, W){
+  const radius = Math.max(18, W * 0.025);
+  const v1 = {x: A.x - B.x, y: A.y - B.y};
+  const v2 = {x: C.x - B.x, y: C.y - B.y};
+  const a1 = Math.atan2(v1.y, v1.x);
+  const a2 = Math.atan2(v2.y, v2.x);
+  ctx.beginPath();
+  ctx.arc(B.x, B.y, radius, a1, a2, false);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = Math.max(1.5, W * 0.002);
+  ctx.globalAlpha = 0.7;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+function drawAngleLabel(ctx, pt, text, color, W, yDir){
+  const fs = Math.max(12, Math.round(W * 0.022));
+  ctx.font = 'bold ' + fs + 'px DM Sans, sans-serif';
+  const tw = ctx.measureText(text).width;
+  const pad = 5;
+  const bx = pt.x - tw/2 - pad;
+  const by = pt.y + (yDir || -1) * (fs * 1.8);
+  ctx.fillStyle = 'rgba(0,0,0,0.65)';
+  ctx.beginPath();
+  ctx.roundRect(bx, by - fs - pad, tw + pad*2, fs + pad*2, 4);
+  ctx.fill();
+  ctx.fillStyle = color;
+  ctx.fillText(text, bx + pad, by);
+}
+
+function updateMetricCard(valId, noteId, value, range, labels){
+  const vEl = document.getElementById(valId);
+  const nEl = document.getElementById(noteId);
+  if(!vEl || !nEl) return;
+  if(value === null){ vEl.textContent = '—'; vEl.style.color = 'var(--light)'; nEl.textContent = ''; return; }
+  const v = Math.round(value);
+  vEl.textContent = v + '°';
+  if(v < range[0]){
+    vEl.style.color = 'var(--amber)';
+    nEl.textContent = labels[0];
+  } else if(v <= range[1]){
+    vEl.style.color = 'var(--green)';
+    nEl.textContent = labels[1];
+  } else {
+    vEl.style.color = 'var(--red)';
+    nEl.textContent = labels[2];
+  }
+}
+
+function updatePoseFeedback(elbow, shoulder, trunk, wristHigh){
+  const el = document.getElementById('poseFeedbackContent');
+  if(!el) return;
+  const tips = [];
+
+  if(elbow !== null){
+    const e = Math.round(elbow);
+    if(e < 90) tips.push({icon:'⚠️', color:'var(--amber)', text:'<strong>Gomito troppo chiuso (' + e + '°)</strong> — Prova ad allargare leggermente il gomito. Un angolo inferiore a 90° riduce la potenza e la precisione del lancio.'});
+    else if(e > 130) tips.push({icon:'⚠️', color:'var(--amber)', text:'<strong>Gomito troppo aperto (' + e + '°)</strong> — Tieni il gomito più alto e raccolto. Oltre 130° il braccio perde stabilità nel momento del rilascio.'});
+    else tips.push({icon:'✅', color:'var(--green)', text:'<strong>Angolo gomito ottimo (' + e + '°)</strong> — Il tuo gomito è nella posizione ideale per un lancio potente e controllato.'});
+  }
+  if(shoulder !== null){
+    const s = Math.round(shoulder);
+    if(s < 15) tips.push({icon:'⚠️', color:'var(--amber)', text:'<strong>Spalla troppo bassa (' + s + '°)</strong> — Solleva leggermente il braccio. Una spalla troppo bassa riduce la proiezione verso il bersaglio.'});
+    else if(s > 45) tips.push({icon:'⚠️', color:'var(--amber)', text:'<strong>Spalla troppo alta (' + s + '°)</strong> — Abbassa il braccio. Una spalla troppo alta crea tensione e imprecisione nel rilascio.'});
+    else tips.push({icon:'✅', color:'var(--green)', text:'<strong>Angolo spalla ottimo (' + s + '°)</strong> — La tua spalla è ben posizionata rispetto all'orizzontale.'});
+  }
+  if(trunk !== null){
+    const t = Math.round(trunk);
+    if(t < 5) tips.push({icon:'💡', color:'var(--blue)', text:'<strong>Posizione del busto troppo dritta (' + t + '°)</strong> — Inclínati leggermente in avanti (5°–25°). Ti avvicini al bersaglio e migliori la traiettoria.'});
+    else if(t > 25) tips.push({icon:'⚠️', color:'var(--amber)', text:'<strong>Busto troppo inclinato (' + t + '°)</strong> — Riduci l'inclinazione in avanti. Troppa inclinazione può compromettere l'equilibrio e la ripetibilità del tiro.'});
+    else tips.push({icon:'✅', color:'var(--green)', text:'<strong>Inclinazione busto ottima (' + t + '°)</strong> — La tua postura è bilanciata e funzionale.'});
+  }
+  if(wristHigh !== null){
+    if(!wristHigh) tips.push({icon:'💡', color:'var(--blue)', text:'<strong>Polso basso al momento del rilascio</strong> — Il polso dovrebbe trovarsi all'altezza degli occhi o più in alto nel momento in cui lasci la freccia. Questo migliora la traiettoria verso la zona alta del tabellone.'});
+    else tips.push({icon:'✅', color:'var(--green)', text:'<strong>Altezza polso corretta</strong> — Il polso è all'altezza degli occhi o superiore. Ottima posizione per un rilascio preciso.'});
+  }
+
+  if(!tips.length){ el.innerHTML = '<span style="color:var(--muted)">Muovi il video per vedere il feedback in tempo reale.</span>'; return; }
+
+  el.innerHTML = tips.map(t =>
+    '<div style="display:flex;gap:10px;margin-bottom:10px;padding:10px;background:var(--d3);border-radius:6px;border-left:3px solid ' + t.color + '">' +
+    '<span style="font-size:18px;flex-shrink:0">' + t.icon + '</span>' +
+    '<span style="color:var(--mu2)">' + t.text + '</span></div>'
+  ).join('');
+}
+
+// ══════════════════════════════════════════════════
+// COOKIE CONSENT
+// ══════════════════════════════════════════════════
+function initCookieBanner(){
+  const consent = localStorage.getItem('cmaf_cookie_consent');
+  if(!consent){
+    document.getElementById('cookieBanner').style.display='flex';
+  }
+}
+function acceptCookies(){
+  localStorage.setItem('cmaf_cookie_consent', 'accepted');
+  document.getElementById('cookieBanner').style.display='none';
+}
+function rejectCookies(){
+  localStorage.setItem('cmaf_cookie_consent', 'rejected');
+  document.getElementById('cookieBanner').style.display='none';
+}
+
+// ══════════════════════════════════════════════════
+// LEGAL MODALS
+// ══════════════════════════════════════════════════
+const LEGAL_CONTENT = {
+  privacy: `
+    <h2 style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#22c55e;margin-bottom:6px;letter-spacing:.04em">PRIVACY POLICY</h2>
+    <p style="font-size:12px;color:#666;margin-bottom:24px">Ultimo aggiornamento: giugno 2026</p>
+    <div style="font-size:14px;color:#aaa;line-height:1.8">
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">1. Titolare del Trattamento</h3>
+      <p>Michele De Monte, C.F. DMNMHL92M19G489E, residente a Caprino Veronese (VR), Italia.<br>
+      E-mail: <a href="mailto:michele.demonte1992@gmail.com" style="color:#22c55e">michele.demonte1992@gmail.com</a></p>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">2. Dati Raccolti</h3>
+      <p>L'app raccoglie e tratta le seguenti categorie di dati personali:</p>
+      <ul style="margin:8px 0 8px 20px">
+        <li><strong style="color:#e5e5e5">Dati identificativi:</strong> nome, cognome, indirizzo e-mail, numero di telefono (facoltativi).</li>
+        <li><strong style="color:#e5e5e5">Dati di autenticazione:</strong> indirizzo e-mail e password (gestiti tramite Firebase Authentication di Google).</li>
+        <li><strong style="color:#e5e5e5">Dati di utilizzo:</strong> sessioni di allenamento, risultati di gioco, statistiche salvate.</li>
+        <li><strong style="color:#e5e5e5">Dati tecnici:</strong> dati anonimi di utilizzo raccolti da Vercel Analytics (indirizzo IP anonimizzato, tipo di browser, sistema operativo).</li>
+      </ul>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">3. Finalità e Basi Giuridiche</h3>
+      <ul style="margin:8px 0 8px 20px">
+        <li><strong style="color:#e5e5e5">Erogazione del servizio:</strong> autenticazione, salvataggio dei progressi, accesso alle funzionalità dell'app. Base giuridica: esecuzione di un contratto (art. 6.1.b GDPR).</li>
+        <li><strong style="color:#e5e5e5">Monitoraggio delle prestazioni:</strong> analisi aggregata e anonima del funzionamento del servizio. Base giuridica: legittimo interesse (art. 6.1.f GDPR).</li>
+        <li><strong style="color:#e5e5e5">Comunicazioni amministrative:</strong> invio di e-mail di reset password o notifiche relative all'account. Base giuridica: esecuzione di un contratto.</li>
+      </ul>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">4. Conservazione dei Dati</h3>
+      <p>I dati degli utenti vengono conservati per tutta la durata dell'account attivo. I risultati di allenamento vengono eliminati automaticamente dopo 365 giorni dalla loro registrazione. I dati vengono eliminati entro 30 giorni dalla richiesta di cancellazione dell'account.</p>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">5. Destinatari dei Dati</h3>
+      <p>I dati possono essere condivisi con i seguenti fornitori di servizi tecnici:</p>
+      <ul style="margin:8px 0 8px 20px">
+        <li><strong style="color:#e5e5e5">Google LLC / Firebase:</strong> autenticazione e database cloud (con server in Europa). <a href="https://policies.google.com/privacy" target="_blank" style="color:#22c55e">Privacy Policy Google</a></li>
+        <li><strong style="color:#e5e5e5">Vercel Inc.:</strong> hosting e analytics anonima. <a href="https://vercel.com/legal/privacy-policy" target="_blank" style="color:#22c55e">Privacy Policy Vercel</a></li>
+      </ul>
+      <p>I dati non vengono venduti né ceduti a terzi per finalità di marketing.</p>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">6. Diritti degli Interessati</h3>
+      <p>Ai sensi degli articoli 15–22 del GDPR, l'utente ha il diritto di:</p>
+      <ul style="margin:8px 0 8px 20px">
+        <li>Accedere ai propri dati personali</li>
+        <li>Rettificarli o aggiornarli (tramite la sezione Profilo)</li>
+        <li>Richiederne la cancellazione ("diritto all'oblio")</li>
+        <li>Opporsi al trattamento o richiederne la limitazione</li>
+        <li>Richiedere la portabilità dei dati</li>
+      </ul>
+      <p>Per esercitare questi diritti, contattare: <a href="mailto:michele.demonte1992@gmail.com" style="color:#22c55e">michele.demonte1992@gmail.com</a></p>
+      <p>È inoltre possibile proporre reclamo all'autorità di controllo italiana: <strong style="color:#e5e5e5">Garante per la Protezione dei Dati Personali</strong> — <a href="https://www.garanteprivacy.it" target="_blank" style="color:#22c55e">www.garanteprivacy.it</a></p>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">7. Trasferimenti Internazionali</h3>
+      <p>Firebase utilizza server nel territorio dell'Unione Europea (europe-west1). Vercel può trattare dati su server ubicati negli Stati Uniti nel rispetto delle garanzie previste dalle Clausole Contrattuali Standard (SCC) approvate dalla Commissione Europea.</p>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">8. Sicurezza</h3>
+      <p>Le password sono gestite interamente da Firebase Authentication e non sono accessibili in chiaro. La comunicazione avviene sempre tramite protocollo HTTPS. Il titolare adotta misure tecniche e organizzative adeguate per proteggere i dati da accessi non autorizzati.</p>
+    </div>
+  `,
+  cookies: `
+    <h2 style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#22c55e;margin-bottom:6px;letter-spacing:.04em">COOKIE POLICY</h2>
+    <p style="font-size:12px;color:#666;margin-bottom:24px">Ultimo aggiornamento: giugno 2026</p>
+    <div style="font-size:14px;color:#aaa;line-height:1.8">
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">Cosa sono i cookie</h3>
+      <p>I cookie sono piccoli file di testo che i siti web salvano sul dispositivo dell'utente durante la navigazione. Sono utilizzati per far funzionare il sito, migliorare l'esperienza d'uso e raccogliere informazioni aggregate.</p>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">Cookie utilizzati da questo sito</h3>
+
+      <div style="background:#1a1a1a;border-radius:8px;padding:16px;margin-bottom:14px">
+        <div style="font-weight:700;color:#f0ece4;margin-bottom:6px">🔧 Cookie tecnici necessari (sempre attivi)</div>
+        <p style="margin:0">Utilizzati per il funzionamento del sito: mantenimento della sessione di login, preferenze di consenso ai cookie. Non richiedono consenso ai sensi dell'art. 122 del Codice Privacy e del Provvedimento del Garante dell'8 maggio 2014.</p>
+        <ul style="margin:8px 0 0 20px">
+          <li><code style="background:#222;padding:2px 6px;border-radius:3px">cmaf_cookie_consent</code> — memorizza la scelta dell'utente sul consenso cookie (localStorage, sessione)</li>
+          <li>Cookie di sessione Firebase Authentication — necessari per mantenere l'accesso all'app</li>
+        </ul>
+      </div>
+
+      <div style="background:#1a1a1a;border-radius:8px;padding:16px;margin-bottom:14px">
+        <div style="font-weight:700;color:#f0ece4;margin-bottom:6px">📊 Cookie analitici di terze parti (Vercel Analytics)</div>
+        <p style="margin:0">Vercel Analytics raccoglie dati aggregati e anonimi sulle visite al sito (pagine visitate, tipo di dispositivo, paese di provenienza). I dati non sono collegati a singoli utenti identificabili. Per maggiori informazioni: <a href="https://vercel.com/legal/privacy-policy" target="_blank" style="color:#22c55e">Privacy Policy Vercel</a>.</p>
+      </div>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">Gestione del consenso</h3>
+      <p>Selezionando "Solo necessari" nel banner, vengono attivati solo i cookie tecnici indispensabili al funzionamento del servizio. Selezionando "Accetta tutto", si consente anche il tracciamento anonimo di Vercel Analytics.</p>
+      <p>Puoi modificare le tue preferenze in qualsiasi momento cancellando i dati del sito dalle impostazioni del browser.</p>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">Come disabilitare i cookie dal browser</h3>
+      <ul style="margin:8px 0 8px 20px">
+        <li><a href="https://support.google.com/chrome/answer/95647" target="_blank" style="color:#22c55e">Google Chrome</a></li>
+        <li><a href="https://support.mozilla.org/it/kb/Attivare%20e%20disattivare%20i%20cookie" target="_blank" style="color:#22c55e">Mozilla Firefox</a></li>
+        <li><a href="https://support.apple.com/it-it/guide/safari/sfri11471/mac" target="_blank" style="color:#22c55e">Apple Safari</a></li>
+      </ul>
+      <p>La disabilitazione dei cookie tecnici può compromettere il corretto funzionamento dell'app.</p>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">Contatti</h3>
+      <p>Per informazioni: <a href="mailto:michele.demonte1992@gmail.com" style="color:#22c55e">michele.demonte1992@gmail.com</a></p>
+    </div>
+  `,
+  terms: `
+    <h2 style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#22c55e;margin-bottom:6px;letter-spacing:.04em">TERMINI E CONDIZIONI D'USO</h2>
+    <p style="font-size:12px;color:#666;margin-bottom:24px">Ultimo aggiornamento: giugno 2026</p>
+    <div style="font-size:14px;color:#aaa;line-height:1.8">
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">1. Titolare e Gestore del Servizio</h3>
+      <p>Il servizio "Come Migliorare a Freccette" è gestito da Michele De Monte, C.F. DMNMHL92M19G489E, con sede a Caprino Veronese (VR), Italia. Contatto: <a href="mailto:michele.demonte1992@gmail.com" style="color:#22c55e">michele.demonte1992@gmail.com</a></p>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">2. Descrizione del Servizio</h3>
+      <p>"Come Migliorare a Freccette" è un'applicazione web per l'allenamento al gioco delle freccette. Il servizio è ad accesso riservato: gli utenti possono accedere solo con credenziali fornite dall'amministratore. Il servizio è fornito gratuitamente agli utenti autorizzati.</p>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">3. Accesso e Account</h3>
+      <p>L'accesso al servizio avviene tramite credenziali personali (e-mail e password). L'utente è responsabile della riservatezza delle proprie credenziali e di tutte le attività effettuate con il proprio account. In caso di accesso non autorizzato o compromissione delle credenziali, l'utente deve notificarlo immediatamente all'indirizzo <a href="mailto:michele.demonte1992@gmail.com" style="color:#22c55e">michele.demonte1992@gmail.com</a>.</p>
+      <p>Il titolare si riserva il diritto di sospendere o bloccare un account in caso di utilizzo non conforme ai presenti Termini.</p>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">4. Utilizzo Consentito</h3>
+      <p>L'utente si impegna a utilizzare il servizio esclusivamente per finalità personali e non commerciali. È vietato:</p>
+      <ul style="margin:8px 0 8px 20px">
+        <li>Tentare di accedere ad account di altri utenti</li>
+        <li>Manipolare, alterare o cancellare dati di altri utenti</li>
+        <li>Utilizzare il servizio per finalità illecite</li>
+        <li>Tentare di violare la sicurezza del sistema</li>
+        <li>Condividere le proprie credenziali con terzi</li>
+      </ul>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">5. Proprietà Intellettuale</h3>
+      <p>Tutti i contenuti del servizio (testi, grafica, codice sorgente, struttura degli allenamenti, guide al checkout) sono di proprietà esclusiva di Michele De Monte e sono protetti dalle leggi sul diritto d'autore. È vietata la riproduzione, distribuzione o utilizzo commerciale senza autorizzazione scritta.</p>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">6. Disponibilità del Servizio</h3>
+      <p>Il titolare si impegna a garantire la disponibilità del servizio nella misura del ragionevolmente possibile, ma non fornisce garanzie di continuità, completezza o assenza di errori. Il servizio può essere interrotto temporaneamente per manutenzione o aggiornamenti senza preavviso.</p>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">7. Limitazione di Responsabilità</h3>
+      <p>Il titolare non è responsabile per:</p>
+      <ul style="margin:8px 0 8px 20px">
+        <li>Eventuali perdite di dati dovute a malfunzionamenti tecnici</li>
+        <li>Interruzioni del servizio di terze parti (Firebase, Vercel)</li>
+        <li>Danni indiretti o consequenziali derivanti dall'uso del servizio</li>
+      </ul>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">8. Trattamento dei Dati Personali</h3>
+      <p>Il trattamento dei dati personali è disciplinato dalla <a href="#" onclick="openLegal('privacy');return false;" style="color:#22c55e">Privacy Policy</a> e dalla <a href="#" onclick="openLegal('cookies');return false;" style="color:#22c55e">Cookie Policy</a>, da intendersi come parte integrante dei presenti Termini.</p>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">9. Modifiche ai Termini</h3>
+      <p>Il titolare si riserva il diritto di modificare i presenti Termini in qualsiasi momento. Le modifiche saranno comunicate agli utenti tramite avviso nell'app o via e-mail. L'uso continuato del servizio dopo la comunicazione delle modifiche costituisce accettazione dei nuovi Termini.</p>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">10. Legge Applicabile e Foro Competente</h3>
+      <p>I presenti Termini sono disciplinati dalla legge italiana. Per qualsiasi controversia relativa all'interpretazione o esecuzione dei presenti Termini, il foro competente è quello di Verona, fatta salva la normativa applicabile ai consumatori ai sensi del D.Lgs. 206/2005 (Codice del Consumo).</p>
+
+      <h3 style="font-size:17px;color:#f0ece4;margin:20px 0 8px">11. Contatti</h3>
+      <p>Per qualsiasi comunicazione relativa ai presenti Termini: <a href="mailto:michele.demonte1992@gmail.com" style="color:#22c55e">michele.demonte1992@gmail.com</a></p>
+    </div>
+  `
+};
+
+function openLegal(type){
+  document.getElementById('legalContent').innerHTML = LEGAL_CONTENT[type] || '';
+  document.getElementById('legalModal').style.display='flex';
+  document.getElementById('legalModal').scrollTop=0;
+}
+function closeLegal(){
+  document.getElementById('legalModal').style.display='none';
+}
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape') closeLegal();
+});
+document.getElementById('legalModal').addEventListener('click', function(e){
+  if(e.target===this) closeLegal();
+});
+
+// Show app legal footer when inside app
+const _origEnterApp = enterApp;
+function enterApp(){
+  _origEnterApp();
+  document.getElementById('appLegalFooter').style.display='block';
+  document.getElementById('tabScrollArea').appendChild(document.getElementById('appLegalFooter'));
+}
+
+// Init cookie banner on load
+window.addEventListener('load', initCookieBanner);
+
+// Reposition pill on resize
+window.addEventListener('resize', function(){
+  if(window._bnCurrentTab) setTimeout(()=>bnUpdatePill(window._bnCurrentTab), 50);
+}, {passive:true});
+
+// Scroll shadow on bottom nav — show subtle top glow when content is scrolled
+(function(){
+  window.addEventListener('DOMContentLoaded', function(){
+    const sa = document.getElementById('tabScrollArea');
+    const bn = document.getElementById('bottomNav');
+    if(!sa || !bn) return;
+    sa.addEventListener('scroll', function(){
+      const scrolled = sa.scrollTop > 10;
+      bn.style.borderTop = scrolled
+        ? '1px solid rgba(255,255,255,0.07)'
+        : '1px solid transparent';
+    }, {passive:true});
+  });
+})();
+
 // Works with mouse drag on desktop and touch swipe on mobile/tablet
 // Dots are also clickable for navigation
 // ══════════════════════════════════════════════════
@@ -3639,6 +4769,37 @@ if(document.readyState==='loading'){
     </div>
   </div>
 </div>
+<!-- ═══════════════════════ COOKIE BANNER ═══════════════════════ -->
+<div id="cookieBanner" style="position:fixed;bottom:0;left:0;right:0;z-index:10000;background:#111;border-top:1px solid #22c55e44;padding:18px 20px;display:none;flex-wrap:wrap;align-items:center;gap:14px;box-shadow:0 -4px 24px rgba(0,0,0,.5)">
+  <div style="flex:1;min-width:240px;font-size:13px;color:#aaa;line-height:1.65">
+    🍪 Questo sito utilizza cookie tecnici necessari al funzionamento. Non utilizziamo cookie di profilazione o di marketing di terze parti. I dati di utilizzo sono raccolti da <strong style="color:#e5e5e5">Vercel Analytics</strong> in forma anonima per monitorare le prestazioni del servizio.
+    <a href="#" onclick="openLegal('cookies');return false;" style="color:#22c55e;text-decoration:underline;margin-left:4px">Cookie Policy</a> ·
+    <a href="#" onclick="openLegal('privacy');return false;" style="color:#22c55e;text-decoration:underline;margin-left:4px">Privacy Policy</a>
+  </div>
+  <div style="display:flex;gap:10px;flex-shrink:0;flex-wrap:wrap">
+    <button onclick="rejectCookies()" style="background:transparent;border:1px solid #555;color:#aaa;padding:10px 20px;border-radius:5px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap">Solo necessari</button>
+    <button onclick="acceptCookies()" style="background:#22c55e;border:none;color:#000;padding:10px 24px;border-radius:5px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap">Accetta tutto</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ LEGAL MODAL ═══════════════════════ -->
+<div id="legalModal" style="position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.9);display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto">
+  <div style="background:#141414;border:1px solid #1e1e1e;border-radius:16px;padding:36px 32px;width:100%;max-width:720px;margin:auto;position:relative">
+    <button onclick="closeLegal()" style="position:absolute;top:16px;right:18px;background:transparent;border:none;color:#666;font-size:24px;cursor:pointer;line-height:1;padding:4px 8px">×</button>
+    <div id="legalContent"></div>
+  </div>
+</div>
+
+<!-- ═══ LEGAL FOOTER inside APP LAYER ═══ -->
+<div id="appLegalFooter" style="display:none;padding:14px 20px;text-align:center;font-size:11px;color:#555;border-top:1px solid #1e1e1e;flex-shrink:0">
+  Titolare: Michele De Monte · C.F. DMNMHL92M19G489E · Caprino Veronese (VR) ·
+  <a href="mailto:michele.demonte1992@gmail.com" style="color:#555;text-decoration:underline">michele.demonte1992@gmail.com</a>
+  &nbsp;|&nbsp;
+  <a href="#" onclick="openLegal('privacy');return false;" style="color:#555;text-decoration:underline">Privacy</a> ·
+  <a href="#" onclick="openLegal('cookies');return false;" style="color:#555;text-decoration:underline">Cookie</a> ·
+  <a href="#" onclick="openLegal('terms');return false;" style="color:#555;text-decoration:underline">Termini</a>
+</div>
+
 <!-- Delete confirmation popup -->
 <div id="confirmPopup" style="position:fixed;inset:0;z-index:1800;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;padding:20px">
   <div class="modal-box" style="max-width:380px">
