@@ -124,135 +124,140 @@ button{cursor:pointer}
 
 /* ═══ APP SHELL — LIQUID GLASS DOCK ═══ */
 
-/* Dock wrapper — fixed floating pill at screen bottom */
 #liquidDock{
   position:fixed;
   bottom:22px;
   left:50%;
   transform:translateX(-50%);
   z-index:9000;
-  display:none; /* shown only when app is active */
+  display:none;
   touch-action:none;
   user-select:none;
   -webkit-user-select:none;
 }
 
-/* Outer glass pill */
 .ld-pill{
   position:relative;
   display:flex;
   align-items:center;
   height:62px;
-  padding:0 10px;
+  padding:0 8px;
   border-radius:999px;
   border:1.5px solid var(--green);
-  /* frosted glass */
-  background:rgba(10,15,10,0.55);
-  backdrop-filter:blur(22px) saturate(1.6);
-  -webkit-backdrop-filter:blur(22px) saturate(1.6);
+  /* Very transparent frosted glass */
+  background:rgba(4,8,4,0.22);
+  backdrop-filter:blur(32px) saturate(2.2);
+  -webkit-backdrop-filter:blur(32px) saturate(2.2);
   box-shadow:
-    0 8px 32px rgba(0,0,0,0.55),
-    0 1.5px 0 rgba(255,255,255,0.06) inset,
-    0 0 0 1px rgba(34,197,94,0.08);
+    0 8px 40px rgba(0,0,0,0.40),
+    0 1px 0 rgba(255,255,255,0.05) inset,
+    0 0 0 1px rgba(34,197,94,0.12);
   overflow:hidden;
   cursor:grab;
+  /* Desktop wider */
+  width:min(700px, calc(100vw - 48px));
+}
+@media(max-width:600px){
+  .ld-pill{ width:min(430px, calc(100vw - 36px)); height:58px; }
 }
 .ld-pill:active{cursor:grabbing}
 
-/* The sliding highlight pill (stays centered, the track slides under it) */
+/* Highlight pill — JS sets left + width in real time */
 .ld-highlight{
   position:absolute;
   top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  height:44px;
+  transform:translateY(-50%);
+  left:8px;       /* initial, overridden by JS */
+  width:80px;     /* initial, overridden by JS */
+  height:46px;
   border-radius:999px;
-  background:rgba(255,255,255,0.13);
+  background:rgba(255,255,255,0.115);
   backdrop-filter:blur(8px);
   -webkit-backdrop-filter:blur(8px);
-  border:1px solid rgba(255,255,255,0.18);
-  box-shadow:0 2px 12px rgba(0,0,0,0.25);
+  border:1px solid rgba(255,255,255,0.16);
+  box-shadow:0 2px 14px rgba(0,0,0,0.22);
   pointer-events:none;
   z-index:2;
-  transition:width .18s cubic-bezier(.4,0,.2,1);
+  will-change:left,width;
 }
 
-/* Scrollable track inside the pill */
 .ld-track{
   display:flex;
   align-items:center;
-  gap:0;
   position:relative;
   z-index:3;
-  transition:transform .0s; /* JS drives this */
   will-change:transform;
 }
 
-/* Individual tab item */
 .ld-item{
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
   gap:2px;
-  padding:0 16px;
+  padding:0 13px;
   height:54px;
   border:none;
   background:transparent;
   cursor:pointer;
   flex-shrink:0;
-  transition:color .15s;
   -webkit-tap-highlight-color:transparent;
-  pointer-events:none; /* swipe handled by dock, tap via JS */
+  pointer-events:none;
 }
+@media(max-width:600px){.ld-item{padding:0 10px}}
 
 .ld-icon{
-  font-size:20px;
+  font-size:19px;
   line-height:1;
-  transition:transform .15s cubic-bezier(.34,1.56,.64,1);
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1);
 }
 .ld-label{
   font-family:'DM Sans',sans-serif;
   font-weight:700;
-  font-size:9.5px;
-  letter-spacing:.07em;
+  font-size:9px;
+  letter-spacing:.08em;
   text-transform:uppercase;
   color:var(--muted);
   transition:color .15s;
   white-space:nowrap;
 }
 
-/* Active item styling */
 .ld-item.active .ld-label{ color:var(--green); }
-.ld-item.active .ld-icon{ transform:scale(1.18); }
+.ld-item.active .ld-icon{ transform:scale(1.22); }
 
-/* Logout button — separate pill, right of dock */
+/* Logout top-right */
 #ldLogout{
-  display:none; /* shown with dock */
   position:fixed;
-  bottom:22px;
-  right:20px;
+  top:14px;
+  right:16px;
+  bottom:auto;
   z-index:9000;
-  height:46px;
-  width:46px;
+  height:38px;
+  width:auto;
+  padding:0 16px;
   border-radius:999px;
-  border:1.5px solid rgba(239,68,68,0.4);
-  background:rgba(10,15,10,0.55);
-  backdrop-filter:blur(22px);
-  -webkit-backdrop-filter:blur(22px);
-  box-shadow:0 8px 32px rgba(0,0,0,0.45);
+  border:1.5px solid rgba(239,68,68,0.35);
+  background:rgba(4,8,4,0.28);
+  backdrop-filter:blur(28px);
+  -webkit-backdrop-filter:blur(28px);
+  box-shadow:0 4px 16px rgba(0,0,0,0.30);
   display:none;
   align-items:center;
   justify-content:center;
+  gap:6px;
   cursor:pointer;
-  font-size:18px;
-  color:rgba(239,68,68,0.7);
+  font-size:12px;
+  font-family:'DM Sans',sans-serif;
+  font-weight:700;
+  letter-spacing:.06em;
+  color:rgba(239,68,68,0.65);
   transition:all .2s;
   -webkit-tap-highlight-color:transparent;
+  white-space:nowrap;
 }
 #ldLogout:hover{ border-color:#ef4444; color:#ef4444; background:rgba(60,5,5,0.5); }
 
-/* Keep old .nav-tabs hidden (used by landing — not visible in app) */
+/* Keep old .nav-tabs hidden */
 .nav-tabs{ display:none!important; }
 
 /* Tab body bottom padding increased for dock */
@@ -537,7 +542,7 @@ select:focus{outline:2px solid var(--green)}
 /* ═══ LEGAL MODAL ═══ */
 #legalModal{position:fixed;inset:0;z-index:4000;background:rgba(0,0,0,.88);display:none;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto}
 #legalModal.open{display:flex}
-.legal-box{background:var(--d2);border:1px solid var(--d4);border-radius:16px;width:100%;max-width:780px;margin:auto;position:relative;padding:40px 36px 100px;box-shadow:0 0 40px rgba(0,0,0,.6)}
+.legal-box{background:var(--d2);border:1px solid #166534;border-radius:16px;width:100%;max-width:780px;margin:auto;position:relative;padding:40px 36px 110px;box-shadow:0 0 40px rgba(0,0,0,.6),0 0 0 1px rgba(34,197,94,.08)}
 .legal-box::before{content:'';position:absolute;top:-1px;left:15%;right:15%;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);border-radius:2px;pointer-events:none}
 .legal-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,5vw,34px);color:var(--light);margin-bottom:6px;letter-spacing:.04em}
 .legal-sub{font-size:12px;color:var(--muted);margin-bottom:28px;letter-spacing:.06em;text-transform:uppercase}
@@ -549,11 +554,54 @@ select:focus{outline:2px solid var(--green)}
 .legal-body ul li{margin-bottom:4px}
 .legal-body a{color:var(--green);word-break:break-all}
 .legal-body strong{color:var(--light)}
-.legal-body .legal-chip{display:inline-block;background:var(--gdim);border:1px solid #166534;color:var(--green);font-size:11px;padding:2px 10px;border-radius:12px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:16px}
-.legal-close-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:780px;padding:16px 36px;background:var(--d2);border-top:1px solid var(--d4);display:flex;justify-content:center;z-index:4001;border-radius:0 0 16px 16px}
-.legal-close-btn{background:var(--green);color:#000;border:none;padding:13px 60px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;cursor:pointer;transition:background .2s;letter-spacing:.02em}
-.legal-close-btn:hover{background:var(--green2)}
-@media(max-width:600px){.legal-box{padding:28px 18px 100px}.legal-close-bar{padding:14px 18px}}
+.legal-body .legal-chip{display:inline-block;background:var(--gdim);border:1px solid #166534;color:var(--green);font-size:11px;padding:2px 10px;border-radius:999px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:16px}
+/* Floating glass close button */
+.legal-close-bar{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);width:auto;padding:0;background:transparent;border-top:none;display:flex;justify-content:center;z-index:4001;border-radius:0;pointer-events:none}
+.legal-close-btn{
+  pointer-events:all;
+  background:rgba(10,15,10,0.60);
+  backdrop-filter:blur(22px) saturate(1.6);
+  -webkit-backdrop-filter:blur(22px) saturate(1.6);
+  color:var(--green);
+  border:1.5px solid var(--green);
+  padding:13px 52px;
+  border-radius:999px;
+  font-family:'DM Sans',sans-serif;
+  font-weight:700;
+  font-size:16px;
+  cursor:pointer;
+  letter-spacing:.06em;
+  box-shadow:0 8px 32px rgba(0,0,0,.5),0 1.5px 0 rgba(255,255,255,.06) inset;
+  transition:background .2s,box-shadow .2s;
+}
+.legal-close-btn:hover{background:rgba(5,46,22,0.75);box-shadow:0 8px 32px rgba(34,197,94,.15),0 1.5px 0 rgba(255,255,255,.08) inset}
+@media(max-width:600px){.legal-box{padding:28px 18px 110px}.legal-close-bar{bottom:20px}}
+
+/* ═══ GLOBAL PILL BUTTONS — tutti i tasti con angoli completamente smussati ═══ */
+button,
+input[type="button"],
+input[type="submit"],
+.btn-g,.playbtn,.save-btn,.reset-btn,.a-sub,
+.at-btn,.at-arm-btn,
+.cookie-btn-accept,.cookie-btn-reject,
+.co-filter-btn,
+.iib,
+.g501-prev-btn,.g501-clr-btn,.g501-pad-btn,
+.g501-close,
+.ld-pill{
+  border-radius:999px!important;
+}
+/* Eccezioni: elementi che devono mantenere forma rettangolare/card */
+.nav-tab,.ld-item,.co-q-input,.af input,.af select,
+select,input[type="text"],input[type="password"],input[type="number"],input[type="email"],
+textarea{
+  border-radius:inherit;
+}
+/* Ripristino specifico per input form */
+.af input,.af select,
+input[type="text"],input[type="password"],input[type="number"],input[type="email"]{
+  border-radius:10px!important;
+}
 </style>
 </head>
 <body>
@@ -787,7 +835,7 @@ select:focus{outline:2px solid var(--green)}
     </div>
   </div>
 </div>
-<button id="ldLogout" title="Logout" onclick="confirmLogout()" aria-label="Logout">⏻</button>
+<button id="ldLogout" title="Logout" onclick="confirmLogout()" aria-label="Logout">⏻ LOGOUT</button>
 
 <!-- legacy nav (kept for DOM compatibility, hidden) -->
 <div class="nav-tabs" id="mainNav" aria-hidden="true">
@@ -1661,7 +1709,7 @@ async function doLogout(){
 }
 
 // ══════════════════════════════════════════════════
-// LIQUID GLASS DOCK
+// LIQUID GLASS DOCK — v2 (precise snap, dynamic pill, hard stops)
 // ══════════════════════════════════════════════════
 const LD = {
   tabs: [
@@ -1675,135 +1723,188 @@ const LD = {
   adminTab:{id:'admin', icon:'⚙️', label:'Admin'},
   showAdmin: false,
   current: 'training',
-  itemW: 0,       // measured per-item width
-  trackOffset: 0, // current translateX of track
+  trackOffset: 0,
   dragStartX: 0,
   dragStartOffset: 0,
   isDragging: false,
-  pillW: 0,
+  didDrag: false,
+  // measured per-item data: [{left, width, center}]
+  itemRects: [],
+  pillInnerW: 0,  // pill inner width (excluding padding)
+  PILL_PAD: 8,    // pill left/right padding
 };
 
+function ldAllTabs(){ return LD.showAdmin ? [...LD.tabs, LD.adminTab] : [...LD.tabs]; }
+
+// ── Build DOM ──
 function ldBuildDock(showAdmin){
   LD.showAdmin = showAdmin;
+  LD.current = 'training';
   const track = document.getElementById('ldTrack');
-  const allTabs = showAdmin ? [...LD.tabs, LD.adminTab] : [...LD.tabs];
-  track.innerHTML = allTabs.map(t=>
-    `<div class="ld-item${t.id===LD.current?' active':''}" data-tab="${t.id}">
+  track.innerHTML = ldAllTabs().map(t=>
+    `<div class="ld-item${t.id==='training'?' active':''}" data-tab="${t.id}">
       <span class="ld-icon">${t.icon}</span>
       <span class="ld-label">${t.label}</span>
     </div>`
   ).join('');
-  requestAnimationFrame(()=>{ ldMeasure(); ldSnapTo(LD.current, false); });
+  // Wait two frames so DOM is measured after render
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    ldMeasure();
+    ldSnapToIdx(0, false);
+  }));
 }
 
+// ── Measure item rects relative to track origin ──
 function ldMeasure(){
-  const items = document.querySelectorAll('.ld-item');
-  if(!items.length) return;
-  // All items same width for clean centering
-  let maxW = 0;
-  items.forEach(el=>{ maxW = Math.max(maxW, el.getBoundingClientRect().width); });
-  LD.itemW = maxW || 72;
-  // Update highlight width
-  document.getElementById('ldHighlight').style.width = (LD.itemW+8)+'px';
-  // Pill width: show up to 5 items on screen, cap to viewport
-  const visible = Math.min(5, items.length);
-  const pillW = Math.min(LD.itemW * visible + 20, window.innerWidth - 36);
-  document.getElementById('ldPill').style.width = pillW+'px';
-  LD.pillW = pillW;
-}
-
-function ldIndexOf(tabId){
-  const all = LD.showAdmin ? [...LD.tabs, LD.adminTab] : [...LD.tabs];
-  return all.findIndex(t=>t.id===tabId);
-}
-
-function ldSnapTo(tabId, animate=true){
-  const idx = ldIndexOf(tabId);
-  if(idx<0) return;
-  const all = LD.showAdmin ? [...LD.tabs, LD.adminTab] : [...LD.tabs];
-  const totalItems = all.length;
-  // Center the active item under the highlight
-  // track offset so item[idx] is centered in pill
-  const centerOfPill = 0; // highlight is at pill center
-  // track translateX: pill center is at LD.pillW/2 from pill left edge
-  // item[idx] center is at (idx+0.5)*LD.itemW from track left
-  const offset = (LD.pillW/2) - (idx + 0.5)*LD.itemW;
-  const minOffset = LD.pillW - totalItems*LD.itemW - 10;
-  const maxOffset = 10;
-  LD.trackOffset = Math.max(minOffset, Math.min(maxOffset, offset));
+  const pill  = document.getElementById('ldPill');
   const track = document.getElementById('ldTrack');
-  track.style.transition = animate ? 'transform .32s cubic-bezier(.4,0,.2,1)' : 'none';
-  track.style.transform  = `translateX(${LD.trackOffset}px)`;
-  LD.current = tabId;
-  // Update active classes
-  document.querySelectorAll('.ld-item').forEach(el=>{
-    el.classList.toggle('active', el.dataset.tab===tabId);
+  const items = track.querySelectorAll('.ld-item');
+  if(!items.length) return;
+
+  // Temporarily set track to translateX(0) so we can measure
+  track.style.transition = 'none';
+  track.style.transform  = 'translateX(0)';
+
+  const pillRect  = pill.getBoundingClientRect();
+  LD.pillInnerW   = pillRect.width - LD.PILL_PAD*2;
+
+  LD.itemRects = [];
+  items.forEach(el=>{
+    const r = el.getBoundingClientRect();
+    const left   = r.left - pillRect.left - LD.PILL_PAD;
+    const width  = r.width;
+    const center = left + width/2;
+    LD.itemRects.push({left, width, center});
   });
 }
 
-// ── Drag / swipe ──
+// ── Snap so item[idx] is centered in pill ──
+// Hard stop: first item left edge cannot go right of PILL_PAD,
+//            last item right edge cannot go left of pillW - PILL_PAD
+function ldSnapToIdx(idx, animate=true){
+  const all = ldAllTabs();
+  if(idx < 0 || idx >= all.length) return;
+  if(!LD.itemRects.length) return;
+
+  // Target offset: item center aligns with pill center
+  const pillCenter = LD.pillInnerW / 2;
+  let offset = pillCenter - LD.itemRects[idx].center;
+
+  // Hard stops: first item and last item
+  const firstStop = 0;  // when track is at 0, first item is leftmost
+  const lastStop  = LD.pillInnerW - (LD.itemRects[all.length-1].left + LD.itemRects[all.length-1].width);
+
+  offset = Math.min(firstStop, Math.max(lastStop, offset));
+  LD.trackOffset = offset;
+
+  const track = document.getElementById('ldTrack');
+  track.style.transition = animate ? 'transform .32s cubic-bezier(.4,0,.2,1)' : 'none';
+  track.style.transform  = `translateX(${offset}px)`;
+
+  LD.current = all[idx].id;
+  ldUpdateActive(idx);
+  ldUpdateHighlight(idx, animate);
+}
+
+// Snap by tabId
+function ldSnapTo(tabId, animate=true){
+  const idx = ldAllTabs().findIndex(t=>t.id===tabId);
+  if(idx>=0) ldSnapToIdx(idx, animate);
+}
+
+// ── Update active class ──
+function ldUpdateActive(idx){
+  document.querySelectorAll('.ld-item').forEach((el,i)=>{
+    el.classList.toggle('active', i===idx);
+  });
+}
+
+// ── Update highlight pill: matches item[idx] size and position ──
+function ldUpdateHighlight(idx, animate=true){
+  if(!LD.itemRects[idx]) return;
+  const hl   = document.getElementById('ldHighlight');
+  const rect = LD.itemRects[idx];
+  // Highlight left = item left + current track offset + pill padding
+  const hlLeft = rect.left + LD.trackOffset + LD.PILL_PAD;
+  const hlW    = rect.width + 4; // slight padding around item
+
+  if(animate){
+    hl.style.transition = 'left .32s cubic-bezier(.4,0,.2,1), width .2s cubic-bezier(.4,0,.2,1)';
+  } else {
+    hl.style.transition = 'none';
+  }
+  hl.style.left  = hlLeft + 'px';
+  hl.style.width = hlW + 'px';
+}
+
+// ── During drag: find nearest item by center proximity ──
+function ldNearestIdx(){
+  const pillCenter = LD.pillInnerW / 2;
+  let nearest=0, bestDist=Infinity;
+  LD.itemRects.forEach((r,i)=>{
+    const itemCenterInPill = r.center + LD.trackOffset;
+    const dist = Math.abs(itemCenterInPill - pillCenter);
+    if(dist < bestDist){ bestDist=dist; nearest=i; }
+  });
+  return nearest;
+}
+
+// ── Live update during drag (no snap, just follow finger) ──
+function ldLiveUpdate(rawOffset){
+  const all = ldAllTabs();
+  const firstStop = 0;
+  const lastStop  = LD.pillInnerW - (LD.itemRects[all.length-1].left + LD.itemRects[all.length-1].width);
+
+  // Hard stops with rubber-band feel
+  let offset = rawOffset;
+  if(offset > firstStop) offset = firstStop + (offset-firstStop)*0.18;
+  if(offset < lastStop)  offset = lastStop  + (offset-lastStop)*0.18;
+
+  LD.trackOffset = offset;
+  const track = document.getElementById('ldTrack');
+  track.style.transition = 'none';
+  track.style.transform  = `translateX(${offset}px)`;
+
+  // Live highlight nearest
+  const nearest = ldNearestIdx();
+  ldUpdateActive(nearest);
+  // Move highlight to follow item in real time
+  const hl = document.getElementById('ldHighlight');
+  hl.style.transition = 'none';
+  const rect = LD.itemRects[nearest];
+  hl.style.left  = (rect.left + offset + LD.PILL_PAD) + 'px';
+  hl.style.width = (rect.width + 4) + 'px';
+}
+
+// ── Pointer events ──
 function ldPointerDown(e){
   if(e.target.closest('#ldLogout')) return;
   LD.isDragging = true;
+  LD.didDrag    = false;
   LD.dragStartX = e.touches ? e.touches[0].clientX : e.clientX;
   LD.dragStartOffset = LD.trackOffset;
-  document.getElementById('ldTrack').style.transition='none';
   e.preventDefault();
 }
 
 function ldPointerMove(e){
   if(!LD.isDragging) return;
-  const x = e.touches ? e.touches[0].clientX : e.clientX;
+  const x  = e.touches ? e.touches[0].clientX : e.clientX;
   const dx = x - LD.dragStartX;
-  const all = LD.showAdmin ? [...LD.tabs, LD.adminTab] : [...LD.tabs];
-  const totalItems = all.length;
-  const minOffset = LD.pillW - totalItems*LD.itemW - 10;
-  const maxOffset = 10;
-  let newOffset = LD.dragStartOffset + dx;
-  // Rubber-band at edges
-  if(newOffset > maxOffset)  newOffset = maxOffset  + (newOffset-maxOffset)*0.3;
-  if(newOffset < minOffset)  newOffset = minOffset  + (newOffset-minOffset)*0.3;
-  LD.trackOffset = newOffset;
-  document.getElementById('ldTrack').style.transform=`translateX(${newOffset}px)`;
-  // Live highlight which item is under center
-  ldHighlightNearest();
+  if(Math.abs(dx) > 3) LD.didDrag = true;
+  ldLiveUpdate(LD.dragStartOffset + dx);
   e.preventDefault();
 }
 
-function ldHighlightNearest(){
-  // Which item is closest to pill center?
-  const centerX = LD.pillW/2;
-  const all = LD.showAdmin ? [...LD.tabs, LD.adminTab] : [...LD.tabs];
-  let nearest=0, bestDist=Infinity;
-  all.forEach((t,i)=>{
-    const itemCenterInPill = LD.trackOffset + (i+0.5)*LD.itemW;
-    const dist = Math.abs(itemCenterInPill - centerX);
-    if(dist<bestDist){ bestDist=dist; nearest=i; }
-  });
-  document.querySelectorAll('.ld-item').forEach((el,i)=>{
-    el.classList.toggle('active', i===nearest);
-  });
-}
-
-function ldPointerUp(e){
+function ldPointerUp(){
   if(!LD.isDragging) return;
-  LD.isDragging=false;
-  // Find which item is centered → navigate there
-  const centerX = LD.pillW/2;
-  const all = LD.showAdmin ? [...LD.tabs, LD.adminTab] : [...LD.tabs];
-  let nearest=0, bestDist=Infinity;
-  all.forEach((t,i)=>{
-    const itemCenterInPill = LD.trackOffset + (i+0.5)*LD.itemW;
-    const dist = Math.abs(itemCenterInPill - centerX);
-    if(dist<bestDist){ bestDist=dist; nearest=i; }
-  });
-  const target = all[nearest].id;
-  ldSnapTo(target, true);
-  showTab(target);
+  LD.isDragging = false;
+  const nearest = ldNearestIdx();
+  ldSnapToIdx(nearest, true);
+  showTab(ldAllTabs()[nearest].id);
 }
 
-// Single tap (short press without dragging)
 function ldTap(e){
+  if(LD.didDrag) return; // was a drag, not a tap
   const item = e.target.closest('.ld-item');
   if(!item) return;
   const tabId = item.dataset.tab;
@@ -1814,21 +1915,14 @@ function ldTap(e){
 
 function ldInitEvents(){
   const pill = document.getElementById('ldPill');
-  // Touch
-  pill.addEventListener('touchstart', ldPointerDown,  {passive:false});
-  pill.addEventListener('touchmove',  ldPointerMove,  {passive:false});
-  pill.addEventListener('touchend',   ldPointerUp,    {passive:true});
-  // Mouse
-  pill.addEventListener('mousedown',  ldPointerDown,  {passive:false});
-  window.addEventListener('mousemove', ldPointerMove, {passive:false});
-  window.addEventListener('mouseup',   ldPointerUp,   {passive:true});
-  // Tap (click without drag)
-  pill.addEventListener('click', ldTap);
-  // Resize
-  window.addEventListener('resize', ()=>{
-    ldMeasure();
-    ldSnapTo(LD.current, false);
-  });
+  pill.addEventListener('touchstart', ldPointerDown, {passive:false});
+  pill.addEventListener('touchmove',  ldPointerMove, {passive:false});
+  pill.addEventListener('touchend',   ldPointerUp,   {passive:true});
+  pill.addEventListener('mousedown',  ldPointerDown, {passive:false});
+  window.addEventListener('mousemove',ldPointerMove, {passive:false});
+  window.addEventListener('mouseup',  ldPointerUp,   {passive:true});
+  pill.addEventListener('click',      ldTap);
+  window.addEventListener('resize',()=>{ ldMeasure(); ldSnapTo(LD.current, false); });
 }
 
 function ldShow(showAdminTab){
@@ -1843,17 +1937,17 @@ function ldHide(){
   document.getElementById('ldLogout').style.display='none';
 }
 
-// ── Updated showTab — drives dock + content ──
+// ── showTab — drives dock + content ──
 function showTab(name,silent=false){
   document.querySelectorAll('.tab-body').forEach(t=>t.classList.remove('active'));
   const tb=document.getElementById('tab-'+name);
   if(tb) tb.classList.add('active');
-  // Sync legacy nav (hidden, but used by old code references)
+  // Legacy nav sync
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   const legacyMap={training:0,stats:1,play501:2,checkout:3,shotanalysis:4,profile:5,admin:6};
   const tabs=document.querySelectorAll('.nav-tab');
   if(legacyMap[name]!==undefined) tabs[legacyMap[name]]?.classList.add('active');
-  // Sync dock
+  // Dock sync
   if(LD.current!==name) ldSnapTo(name,true);
   if(!silent){
     if(name==='stats')    renderStats();
