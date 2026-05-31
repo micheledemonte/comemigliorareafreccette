@@ -468,9 +468,9 @@ select:hover{border-color:var(--green)}
     justify-content:center;
   }
   .g501-inner{
-    width:min(400px,calc(100vw - 48px));
+    width:min(480px,calc(100vw - 48px));
     height:auto;          /* natural height — no stretching */
-    max-height:96vh;
+    max-height:98vh;
     flex-shrink:0;
     padding:10px;
     gap:7px;
@@ -482,7 +482,7 @@ select:hover{border-color:var(--green)}
     flex:0 0 auto!important;
     /* 3 cols × item + gaps, 4 rows — compute from width */
     aspect-ratio:3/4;
-    max-height:55vh;
+    max-height:62vh;
   }
 }
 
@@ -546,7 +546,7 @@ select:hover{border-color:var(--green)}
   display:grid;
   grid-template-columns:repeat(3,1fr);
   grid-template-rows:repeat(4,1fr);
-  gap:clamp(5px,1.5vw,10px);
+  gap:clamp(7px,2vw,12px);
   background:#000;
   flex:1 1 0;
   min-height:0;
@@ -2097,7 +2097,7 @@ function ldDesktopHlLive(hlCenterPx){
 // The track scrolls smoothly; pill highlights the current step target.
 // LD._stepIdx tracks the "in-flight" index during drag.
 
-const LD_STEP_PX = 38; // pixels of swipe per step (1 tab)
+const LD_STEP_PX = 50; // pixels of swipe per step (1 tab)
 
 function ldMobileSnapToIdx(idx, animate=true){
   const all = ldAllTabs();
@@ -2114,11 +2114,22 @@ function ldMobileSnapToIdx(idx, animate=true){
 }
 
 function ldMobileStepUpdate(targetIdx){
-  // Snap track to targetIdx position and update highlight
+  // Snap track to targetIdx with a short smooth transition during drag
   const all = ldAllTabs();
   const n = Math.max(0, Math.min(all.length-1, targetIdx));
   LD._stepIdx = n;
-  ldMobileSnapToIdx(n, false); // no CSS transition during live drag
+  // Use a quick transition so steps feel fluid, not jerky
+  const all2 = ldAllTabs();
+  if(n<0||n>=all2.length||!LD.itemRects.length) return;
+  const bounds = ldOffsetBounds();
+  let offset = LD.pillInnerW/2 - LD.itemRects[n].center;
+  offset = Math.max(bounds.min, Math.min(bounds.max, offset));
+  LD.trackOffset = offset;
+  const track = document.getElementById('ldTrack');
+  track.style.transition = 'transform .15s cubic-bezier(.4,0,.2,1)';
+  track.style.transform  = `translateX(${offset}px)`;
+  ldUpdateActive(n);
+  ldUpdateHighlight(n, true);
 }
 
 // ═══ POINTER EVENTS ═══
