@@ -545,15 +545,16 @@ select:hover{border-color:var(--green)}
 .g501-pad{
   display:grid;
   grid-template-columns:repeat(3,1fr);
-  grid-template-rows:repeat(4,1fr);
-  gap:clamp(7px,2vw,12px);
+  /* no grid-template-rows: let aspect-ratio on keys set row heights naturally */
+  gap:clamp(8px,2.2vw,14px);
   background:#000;
   flex:1 1 0;
   min-height:0;
-  padding:2px 1px 4px;
+  padding:4px 4px 6px;
+  align-content:center;
 }
 
-/* Keys: square via aspect-ratio, font scales with container width */
+/* Keys: square via aspect-ratio */
 .g501-key{
   background:#1c1c1c;border:none;color:#fff;
   font-family:'Bebas Neue',sans-serif;
@@ -562,12 +563,12 @@ select:hover{border-color:var(--green)}
   border-radius:999px!important;
   display:flex;align-items:center;justify-content:center;
   width:100%;
-  aspect-ratio:1;        /* square — works because grid columns are equal */
+  aspect-ratio:1;
   cursor:pointer;
   transition:background .08s,transform .08s,box-shadow .08s;
   box-shadow:0 2px 6px rgba(0,0,0,0.5);
   -webkit-tap-highlight-color:transparent;
-  min-height:0;
+  min-width:0;
 }
 .g501-key:hover{background:#2a2a2a}
 .g501-key:active{background:#3d3d3d;transform:scale(1.08);box-shadow:0 4px 20px rgba(255,255,255,0.09)}
@@ -2036,7 +2037,7 @@ function ldUpdateHighlight(idx, animate=true){
   // On desktop trackOffset=0 always; on mobile it changes
   const hlLeft = rect.left + LD.trackOffset + LD.PILL_PAD;
   hl.style.transition = animate
-    ? 'left .24s cubic-bezier(.4,0,.2,1),width .14s cubic-bezier(.4,0,.2,1)'
+    ? 'left .28s cubic-bezier(.25,.46,.45,.94),width .2s cubic-bezier(.25,.46,.45,.94)'
     : 'none';
   hl.style.left  = hlLeft + 'px';
   hl.style.width = (rect.width + 4) + 'px';
@@ -2126,13 +2127,12 @@ function ldMobileStepUpdate(targetIdx){
   offset = Math.max(bounds.min, Math.min(bounds.max, offset));
   LD.trackOffset = offset;
   const track = document.getElementById('ldTrack');
-  track.style.transition = 'transform .15s cubic-bezier(.4,0,.2,1)';
+  track.style.transition = 'transform .28s cubic-bezier(.25,.46,.45,.94)';
   track.style.transform  = `translateX(${offset}px)`;
   ldUpdateActive(n);
   ldUpdateHighlight(n, true);
 }
 
-// ═══ POINTER EVENTS ═══
 function ldPointerDown(e){
   if(e.target.closest('#ldLogout')) return;
   const x = e.touches ? e.touches[0].clientX : e.clientX;
