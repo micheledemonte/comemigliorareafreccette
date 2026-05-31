@@ -444,9 +444,39 @@ select:hover{border-color:var(--green)}
 .pw-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0;line-height:1;transition:color .2s}
 .pw-eye:hover{color:var(--light)}
 /* ═══ GAME OVERLAY LAYOUT ═══ */
+/* Mobile/tablet: fullscreen */
 #g501overlay{position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden;gap:5px;padding:6px 6px 4px}
 #g501overlay.open{display:flex}
 #g201overlay.open{display:flex}
+
+/* Desktop (>768px): transparent wrapper centered, game-width container */
+@media(min-width:769px){
+  #g501overlay,#g201overlay{
+    background:rgba(0,0,0,0.55)!important; /* dim overlay behind box */
+    align-items:center;
+    justify-content:center;
+    padding:0;
+  }
+  .g501-inner{
+    background:transparent;
+    border:none;
+    border-radius:20px;
+    width:min(620px,calc(100vw - 48px));
+    height:calc(100vh - 80px);
+    max-height:860px;
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    padding:6px;
+    overflow:hidden;
+  }
+}
+/* Mobile: inner wrapper fills overlay */
+@media(max-width:768px){
+  .g501-inner{
+    display:contents; /* flat — children go directly into overlay flex */
+  }
+}
 
 /* Block 1: Score — green bg rounded */
 .g501-score-area{background:#1a3a1a;border-radius:20px;flex-shrink:0;padding:12px 20px 8px;text-align:center;position:relative}
@@ -505,6 +535,26 @@ select:hover{border-color:var(--green)}
 
 /* Close button */
 .g501-close{position:fixed;top:10px;right:12px;z-index:510;background:rgba(0,0,0,.60);border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 16px;border-radius:999px!important;font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;letter-spacing:.04em;cursor:pointer;transition:all .2s;white-space:nowrap}
+
+/* Key press animation via JS class */
+@keyframes keyPressGlow{
+  0%  {transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5)}
+  35% {transform:scale(1.15); box-shadow:0 6px 24px rgba(255,255,255,0.15)}
+  100%{transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5)}
+}
+@keyframes keyPressGlowRed{
+  0%  {transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5)}
+  35% {transform:scale(1.15); box-shadow:0 6px 24px rgba(239,68,68,0.35)}
+  100%{transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5)}
+}
+@keyframes keyPressGlowGreen{
+  0%  {transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5)}
+  35% {transform:scale(1.15); box-shadow:0 6px 24px rgba(74,222,128,0.45)}
+  100%{transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5)}
+}
+.g501-key.pressing        {animation:keyPressGlow      .22s cubic-bezier(.4,0,.2,1) forwards}
+.g501-key.pressing-red    {animation:keyPressGlowRed   .22s cubic-bezier(.4,0,.2,1) forwards}
+.g501-key.pressing-green  {animation:keyPressGlowGreen .22s cubic-bezier(.4,0,.2,1) forwards}
 
 /* Miss doubles screen */
 .g501-miss-screen{position:fixed;inset:0;z-index:510;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
@@ -1280,6 +1330,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 </div>
 <div id="g501overlay">
   <button class="g501-close" onclick="close501()">ESCI ×</button>
+  <div class="g501-inner">
   <div class="g501-score-area">
     <div id="g501pts" class="g501-pts">501</div>
     <div id="g501co" class="g501-checkout"></div>
@@ -1307,6 +1358,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <button class="g501-key noscore-left" onclick="g501NoScoreLeft()">NO SCORE</button>
     <button class="g501-key" onclick="g501Digit('0')">0</button>
     <button class="g501-key ok-btn" id="g501okBtn" onclick="g501OKBtn()">OK</button>
+  </div>
   </div>
 </div>
 
@@ -1351,6 +1403,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 <!-- ═══════════════════════ 201 IN 9 GAME OVERLAY ═══════════════════════ -->
 <div id="g201overlay" style="position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden;gap:5px;padding:6px 6px 4px">
   <button onclick="close201()" class="g501-close" style="position:fixed;top:10px;right:12px;z-index:501">ESCI ×</button>
+  <div class="g501-inner">
   <!-- Block 1: Score -->
   <div class="g501-score-area">
     <div id="g201pts" class="g501-pts">201</div>
@@ -1382,6 +1435,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <button class="g501-key noscore-left" onclick="g201NoScore()">NO SCORE</button>
     <button class="g501-key" onclick="g201Digit('0')">0</button>
     <button class="g501-key ok-btn" id="g201okBtn" onclick="g201OKBtn()">OK</button>
+  </div>
   </div>
 </div>
 
@@ -1993,20 +2047,57 @@ function ldMobileSnapToIdx(idx, animate=true){
 }
 
 function ldMobileLiveUpdate(rawOffset){
-  const b = ldOffsetBounds();
-  let off = rawOffset;
-  // Very soft rubber-band at edges — makes first/last items easy to reach
-  if(off > b.max) off = b.max + (off-b.max)*0.06;
-  if(off < b.min) off = b.min + (off-b.min)*0.06;
+  const b   = ldOffsetBounds();
+  const all = ldAllTabs();
+  let off   = rawOffset;
+
+  // When beyond hard stops: track stays clamped but highlight pill
+  // slides toward the extreme item, giving visual feedback
+  let hlOverride = null;
+
+  if(off > b.max){
+    // Swiping right past ALLENAMENTO (first item)
+    const excess = off - b.max; // positive: how far beyond
+    off = b.max; // clamp track
+    // Slide highlight toward item 0
+    const firstRect = LD.itemRects[0];
+    if(firstRect){
+      // Interpolate highlight leftward based on excess (max 40px travel)
+      const travel = Math.min(excess * 0.4, 40);
+      const hlLeft = (firstRect.left + b.max + LD.PILL_PAD) - travel;
+      hlOverride = {left: hlLeft, width: firstRect.width + 4, idx: 0};
+    }
+  } else if(off < b.min){
+    // Swiping left past LOGOUT (last item)
+    const excess = b.min - off; // positive: how far beyond
+    off = b.min; // clamp track
+    const lastIdx = all.length - 1;
+    const lastRect = LD.itemRects[lastIdx];
+    if(lastRect){
+      const travel = Math.min(excess * 0.4, 40);
+      const hlLeft = (lastRect.left + b.min + LD.PILL_PAD) + travel;
+      hlOverride = {left: hlLeft, width: lastRect.width + 4, idx: lastIdx};
+    }
+  }
+
   LD.trackOffset = off;
   const track = document.getElementById('ldTrack');
   track.style.transition = 'none';
   track.style.transform  = `translateX(${off}px)`;
-  const n   = ldNearestIdx(off);
-  ldUpdateActive(n);
-  const hl  = document.getElementById('ldHighlight');
-  const r   = LD.itemRects[n];
-  if(r){ hl.style.transition='none'; hl.style.left=(r.left+off+LD.PILL_PAD)+'px'; hl.style.width=(r.width+4)+'px'; }
+
+  const hl = document.getElementById('ldHighlight');
+  if(hlOverride){
+    // Active item = the extreme one
+    ldUpdateActive(hlOverride.idx);
+    hl.style.transition = 'none';
+    hl.style.left  = hlOverride.left + 'px';
+    hl.style.width = hlOverride.width + 'px';
+  } else {
+    const n = ldNearestIdx(off);
+    ldUpdateActive(n);
+    const r = LD.itemRects[n];
+    if(r){ hl.style.transition='none'; hl.style.left=(r.left+off+LD.PILL_PAD)+'px'; hl.style.width=(r.width+4)+'px'; }
+  }
 }
 
 // ═══ POINTER EVENTS ═══
@@ -2089,13 +2180,23 @@ function ldPointerUp(){
   if(!ldIsDesktop() && LD.isDragging){
     LD.isDragging = false;
     if(!LD.didDrag) return;
-    const n = ldNearestIdx(LD.trackOffset);
-    const tgt = ldAllTabs()[n];
-    if(tgt && tgt.isLogout){ showTab('__logout'); return; }
-    LD.current    = ldAllTabs()[n].id;
+    const b   = ldOffsetBounds();
+    const all = ldAllTabs();
+    let n;
+    // If released beyond a hard stop, snap to the extreme item
+    if(LD.trackOffset >= b.max - 1){
+      n = 0; // ALLENAMENTO
+    } else if(LD.trackOffset <= b.min + 1){
+      n = all.length - 1; // LOGOUT
+    } else {
+      n = ldNearestIdx(LD.trackOffset);
+    }
+    const tgt = all[n];
+    if(tgt && tgt.isLogout){ ldMobileSnapToIdx(n, true); showTab('__logout'); return; }
+    LD.current    = all[n].id;
     LD.currentIdx = n;
     ldMobileSnapToIdx(n, true);
-    showTab(ldAllTabs()[n].id);
+    showTab(all[n].id);
   }
 }
 
@@ -5128,7 +5229,39 @@ if(document.readyState==='loading'){
 } else {
   bootApp();
 }
-</script>
+
+// ══════════════════════════════════════════════════
+// GAME KEYPAD — press animation via event delegation
+// ══════════════════════════════════════════════════
+(function(){
+  function addPressAnim(container){
+    if(!container) return;
+    function onDown(e){
+      const key = e.target.closest('.g501-key');
+      if(!key) return;
+      // Determine glow color
+      let cls = 'pressing';
+      if(key.classList.contains('noscore-left')||key.classList.contains('bust-btn')) cls='pressing-red';
+      if(key.classList.contains('ok-btn')||key.classList.contains('checkout-btn')) cls='pressing-green';
+      // Remove then re-add to restart animation
+      key.classList.remove('pressing','pressing-red','pressing-green');
+      void key.offsetWidth; // reflow
+      key.classList.add(cls);
+      key.addEventListener('animationend',()=>{key.classList.remove(cls);},{once:true});
+    }
+    container.addEventListener('pointerdown', onDown, {passive:true});
+  }
+  // Apply to overlays once DOM ready
+  function initKeyAnims(){
+    addPressAnim(document.getElementById('g501overlay'));
+    addPressAnim(document.getElementById('g201overlay'));
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', initKeyAnims);
+  } else {
+    initKeyAnims();
+  }
+})();
 <!-- Setup / Cloud Info Modal (informativo — credenziali hardcoded) -->
 <div id="setupModal" style="position:fixed;inset:0;z-index:1900;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--d2);border:1px solid var(--d4);border-radius:14px;padding:36px;width:100%;max-width:480px">
