@@ -31,7 +31,7 @@ button{cursor:pointer}
 
 /* ═══ LAYER SYSTEM ═══ */
 #landing{position:relative;z-index:1;min-height:100vh}
-#appLayer{position:fixed;inset:0;z-index:10;display:none;flex-direction:column;background:var(--dark);overflow:hidden}
+#appLayer{position:fixed;inset:0;z-index:10;display:none;flex-direction:column;background:var(--dark);overflow:hidden;contain:layout}
 #appLayer.visible{display:flex}
 #loginModal{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s}
 #loginModal.open{opacity:1;pointer-events:all}
@@ -122,7 +122,8 @@ button{cursor:pointer}
 /* ═══ APP SHELL ═══ */
 /* ═══ BOTTOM NAV — Liquid Glass iOS style ═══ */
 #bottomNav{
-  position:fixed;bottom:0;left:0;right:0;z-index:200;
+  flex-shrink:0;
+  z-index:200;
   padding:0 0 env(safe-area-inset-bottom,0px) 0;
 }
 .bn-glass{
@@ -190,8 +191,6 @@ button{cursor:pointer}
   overflow-y:auto;
   overflow-x:hidden;
   -webkit-overflow-scrolling:touch;
-  /* leave room for bottom nav */
-  padding-bottom:calc(84px + env(safe-area-inset-bottom,0px));
 }
 /* nav scroll progress bar */
 .bn-scrollbar{
