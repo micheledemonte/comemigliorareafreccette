@@ -652,7 +652,7 @@ select:hover{border-color:var(--green)}
 .at-drop-label strong{color:var(--light)}
 .at-video-wrap{position:relative;background:#000;border-radius:6px;overflow:hidden;margin-top:10px;display:none}
 .at-video-wrap video{width:100%;display:block;max-height:280px;object-fit:contain;background:#000}
-.at-video-wrap canvas{position:absolute;top:0;left:0;width:100%;height:100%}
+.at-video-wrap canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
 .at-video-ctrl{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}
 .at-btn{background:var(--green);color:#000;border:none;padding:9px 18px;border-radius:5px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:background .2s;white-space:nowrap}
 .at-btn:hover{background:var(--green2)}
@@ -1203,9 +1203,9 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
             <canvas id="atCanvasFront"></canvas>
           </div>
           <div class="at-video-ctrl" id="atCtrlFront" style="display:none">
-            <button class="at-btn" onclick="atToggleAnalysis('front')" id="atBtnAnalyzeFront">▶ PLAY + ANALISI</button>
-            <button class="at-btn sec" onclick="atStepFrame('front',-1)">◀ Frame</button>
-            <button class="at-btn sec" onclick="atStepFrame('front',1)">Frame ▶</button>
+            <button class="at-btn" onclick="atMainBtn('front')" id="atBtnAnalyzeFront">🔍 ANALIZZA</button>
+            <button class="at-btn sec" onclick="atStepFrame('front',-1)" id="atBtnPrevFront" style="display:none">◀ Frame</button>
+            <button class="at-btn sec" onclick="atStepFrame('front',1)" id="atBtnNextFront" style="display:none">Frame ▶</button>
             <button class="at-btn danger" onclick="atRemoveVideo('front')">✕</button>
           </div>
           <div id="atTimelineFront" style="display:none">
@@ -1236,9 +1236,9 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
             <canvas id="atCanvasSide"></canvas>
           </div>
           <div class="at-video-ctrl" id="atCtrlSide" style="display:none">
-            <button class="at-btn" onclick="atToggleAnalysis('side')" id="atBtnAnalyzeSide">▶ PLAY + ANALISI</button>
-            <button class="at-btn sec" onclick="atStepFrame('side',-1)">◀ Frame</button>
-            <button class="at-btn sec" onclick="atStepFrame('side',1)">Frame ▶</button>
+            <button class="at-btn" onclick="atMainBtn('side')" id="atBtnAnalyzeSide">🔍 ANALIZZA</button>
+            <button class="at-btn sec" onclick="atStepFrame('side',-1)" id="atBtnPrevSide" style="display:none">◀ Frame</button>
+            <button class="at-btn sec" onclick="atStepFrame('side',1)" id="atBtnNextSide" style="display:none">Frame ▶</button>
             <button class="at-btn danger" onclick="atRemoveVideo('side')">✕</button>
           </div>
           <div id="atTimelineSide" style="display:none">
@@ -4512,6 +4512,16 @@ function atInitPose(view){
   return pose;
 }
 
+// ── State extensions ──
+AT.rafRunning  = {front:false, side:false};
+AT.rafId       = {front:null,  side:null};
+AT.sending     = {front:false, side:false};
+AT.anglesAccum = {front:[],    side:[]};
+AT.analyzed    = {front:false, side:false}; // true after full analysis done
+AT.annotFrames = {front:[],    side:[]};    // array of annotated ImageData per frame
+AT.playIdx     = {front:0,     side:0};
+AT.playTimer   = {front:null,  side:null};
+
 // ── Video load ──
 function atLoadVideo(view, inputEl){
   const file = inputEl.files[0];
@@ -4531,6 +4541,14 @@ function atLoadVideo(view, inputEl){
   tl.style.display   = 'block';
   badge.textContent  = '✓ Pronto';
   badge.className    = 'at-badge';
+  AT.analyzed[view]  = false;
+  AT.annotFrames[view] = [];
+  AT.anglesAccum[view] = [];
+
+  const btn = document.getElementById('atBtnAnalyze'+cap(view));
+  if(btn){ btn.textContent='🔍 ANALIZZA'; btn.style.background=''; }
+  document.getElementById('atBtnPrev'+cap(view)).style.display='none';
+  document.getElementById('atBtnNext'+cap(view)).style.display='none';
 
   vid.onloadedmetadata = () => {
     const canvas = document.getElementById('atCanvas'+cap(view));
@@ -4539,18 +4557,22 @@ function atLoadVideo(view, inputEl){
     document.getElementById('atDur'+cap(view)).textContent = atFmtTime(vid.duration);
     if(!AT.poseDetectors[view]){
       AT.poseDetectors[view] = atInitPose(view);
-      if(AT.poseDetectors[view]) AT.mpReady = true;
     }
-    vid.currentTime = 0.05;
+    // Show first frame on canvas (static, no play)
+    vid.currentTime = 0;
   };
   vid.ontimeupdate = () => atUpdateTimeline(view);
-  // Draw first frame on seek (before analysis starts)
   vid.onseeked = () => {
-    if(!AT.rafRunning[view]) atDrawCurrentFrame(view);
+    if(!AT.rafRunning[view]){
+      const canvas = document.getElementById('atCanvas'+cap(view));
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
+    }
   };
 }
 
 function atRemoveVideo(view){
+  atStopPlayback(view);
   atStopAnalysis(view);
   const vid  = document.getElementById('atVideo'+cap(view));
   const wrap = document.getElementById('atVideoWrap'+cap(view));
@@ -4569,134 +4591,235 @@ function atRemoveVideo(view){
   finp.value = '';
   AT.poses[view] = null;
   AT.anglesAccum[view] = [];
+  AT.annotFrames[view] = [];
+  AT.analyzed[view] = false;
   AT.snapshots[view] = [];
   document.getElementById('atSnapshots'+cap(view)).innerHTML = '';
   atUpdateResultsBox();
 }
 
-// ── rAF-based continuous analysis ──
-// State per view
-AT.rafRunning = {front:false, side:false};
-AT.rafId      = {front:null,  side:null};
-AT.sending    = {front:false, side:false}; // prevent parallel MP sends
-AT.anglesAccum= {front:[],    side:[]};    // accumulate angle sets during play
-
-function atToggleAnalysis(view){
-  if(AT.rafRunning[view]){
-    atStopAnalysis(view);
-  } else {
+// ── Main button: ANALIZZA → PLAY (toggle) ──
+function atMainBtn(view){
+  if(!AT.analyzed[view]){
     atStartAnalysis(view);
+  } else {
+    // Toggle playback
+    if(AT.playTimer[view]) atStopPlayback(view);
+    else atStartPlayback(view);
   }
 }
 
+// ══════════════════════
+// PHASE 1: OFFLINE ANALYSIS
+// Seek through entire video, send each frame to MediaPipe, save annotated canvas
+// ══════════════════════
 function atStartAnalysis(view){
-  const vid = document.getElementById('atVideo'+cap(view));
-  const btn = document.getElementById('atBtnAnalyze'+cap(view));
-  const prog= document.getElementById('atProg'+cap(view));
+  const vid  = document.getElementById('atVideo'+cap(view));
+  const prog = document.getElementById('atProg'+cap(view));
+  const btn  = document.getElementById('atBtnAnalyze'+cap(view));
 
-  if(!vid.src || vid.readyState < 2){
+  if(!vid.src || vid.readyState < 1){
     prog.textContent = '⚠ Carica prima un video.';
     return;
   }
   if(!AT.poseDetectors[view]){ AT.poseDetectors[view] = atInitPose(view); }
   if(!AT.poseDetectors[view]){
-    prog.textContent = '⚠ Libreria MediaPipe non disponibile.';
+    prog.textContent = '⚠ Libreria MediaPipe non disponibile. Riprova tra qualche secondo.';
     return;
   }
 
   AT.rafRunning[view] = true;
   AT.anglesAccum[view] = [];
-  btn.textContent = '⏸ PAUSA';
+  AT.annotFrames[view] = [];
+  AT.analyzed[view] = false;
+  btn.textContent = '⏳ ANALISI…';
+  btn.disabled = true;
   btn.style.background = 'var(--amber)';
-  prog.textContent = '⏳ Analisi in corso...';
+  prog.textContent = '0%';
 
-  vid.play();
-  atRafLoop(view);
-}
-
-function atStopAnalysis(view){
-  const vid = document.getElementById('atVideo'+cap(view));
-  const btn = document.getElementById('atBtnAnalyze'+cap(view));
-  const prog= document.getElementById('atProg'+cap(view));
-
-  AT.rafRunning[view] = false;
-  if(AT.rafId[view]) { cancelAnimationFrame(AT.rafId[view]); AT.rafId[view]=null; }
+  // Seek-based offline analysis: step through video at ~10fps
+  const FPS_STEP = 1/10; // analyse 10 frames per second of video
   vid.pause();
-  if(btn){ btn.textContent='▶ PLAY + ANALISI'; btn.style.background=''; }
-  prog.textContent = '';
-  // Build final report from accumulated angles
-  if(AT.anglesAccum[view].length > 0) atBuildFinalReport(view);
-}
+  vid.currentTime = 0;
 
-let _atLastVideoTime = {front:-1, side:-1};
+  AT._analysisCursor = 0;
+  AT._analysisDuration = vid.duration || 10;
 
-function atRafLoop(view){
-  if(!AT.rafRunning[view]) return;
-  const vid    = document.getElementById('atVideo'+cap(view));
-  const canvas = document.getElementById('atCanvas'+cap(view));
+  const doNextFrame = () => {
+    if(!AT.rafRunning[view]) return; // aborted
 
-  // Check if video ended
-  if(vid.ended || vid.paused){
-    atStopAnalysis(view);
-    return;
-  }
+    const cursor = AT._analysisCursor;
+    if(cursor >= AT._analysisDuration + 0.01){
+      // Done — finalize
+      atFinalizeAnalysis(view);
+      return;
+    }
+    // Seek to next frame
+    vid.currentTime = Math.min(cursor, AT._analysisDuration);
+    AT._analysisCursor += FPS_STEP;
+  };
 
-  // Only send to MediaPipe when we have a new frame (time changed)
-  if(vid.currentTime !== _atLastVideoTime[view] && !AT.sending[view]){
-    _atLastVideoTime[view] = vid.currentTime;
-    // Draw current video frame on canvas
+  AT._doNextFrame = doNextFrame;
+
+  // On each seeked event: draw + send to MediaPipe
+  vid.onseeked = () => {
+    if(!AT.rafRunning[view]) return;
+    const canvas = document.getElementById('atCanvas'+cap(view));
     canvas.width  = vid.videoWidth  || canvas.width;
     canvas.height = vid.videoHeight || canvas.height;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
 
-    // Send to MediaPipe (non-blocking)
-    AT.sending[view] = true;
-    AT.poseDetectors[view].send({image: canvas}).catch(()=>{
-      AT.sending[view] = false;
-    });
-    // onResults will draw overlays and set sending=false
-  } else if(AT.poses[view]){
-    // Redraw overlays on same frame (between MP sends)
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
-    atDrawPose(view, AT.poses[view]);
+    // Update progress bar
+    const pct = Math.min(100, Math.round(vid.currentTime / AT._analysisDuration * 100));
+    const prog2 = document.getElementById('atProg'+cap(view));
+    if(prog2) prog2.textContent = pct+'%';
+    atUpdateTimeline(view);
+
+    if(!AT.sending[view]){
+      AT.sending[view] = true;
+      AT.poseDetectors[view].send({image: canvas}).catch(()=>{
+        AT.sending[view] = false;
+        // Even without pose save blank frame and continue
+        AT.annotFrames[view].push(canvas.toDataURL('image/jpeg',0.6));
+        doNextFrame();
+      });
+    }
+  };
+}
+
+function atStopAnalysis(view){
+  AT.rafRunning[view] = false;
+  AT.sending[view] = false;
+  const btn = document.getElementById('atBtnAnalyze'+cap(view));
+  const prog= document.getElementById('atProg'+cap(view));
+  if(btn){ btn.textContent='🔍 ANALIZZA'; btn.disabled=false; btn.style.background=''; }
+  if(prog) prog.textContent='';
+}
+
+// ── MediaPipe result during analysis ──
+function atOnResults(view, results){
+  if(!AT.rafRunning[view]){ AT.sending[view]=false; return; }
+
+  const canvas = document.getElementById('atCanvas'+cap(view));
+
+  if(results.poseLandmarks && results.poseLandmarks.length){
+    AT.poses[view] = results.poseLandmarks;
+    // Draw pose overlays on top of the already-drawn frame
+    atDrawPose(view, results.poseLandmarks);
+    // Accumulate angles
+    const ang = atCalcAngles(results.poseLandmarks, view);
+    AT.anglesAccum[view].push(ang);
+    AT.analysisCount[view]++;
   }
 
-  AT.rafId[view] = requestAnimationFrame(() => atRafLoop(view));
+  // Save this annotated frame
+  AT.annotFrames[view].push(canvas.toDataURL('image/jpeg', 0.65));
+  AT.sending[view] = false;
+
+  // Continue to next frame
+  if(AT.rafRunning[view] && AT._doNextFrame) AT._doNextFrame();
 }
 
-function atPlayPause(view){
-  // Legacy — now handled by atToggleAnalysis
-  atToggleAnalysis(view);
+function atFinalizeAnalysis(view){
+  AT.rafRunning[view] = false;
+  AT.analyzed[view] = true;
+
+  const btn = document.getElementById('atBtnAnalyze'+cap(view));
+  const prog= document.getElementById('atProg'+cap(view));
+  if(btn){ btn.textContent='▶ PLAY'; btn.disabled=false; btn.style.background='var(--green)'; btn.style.color='#000'; }
+  if(prog) prog.textContent = `✓ ${AT.annotFrames[view].length} frame analizzati`;
+
+  // Show step buttons
+  document.getElementById('atBtnPrev'+cap(view)).style.display='';
+  document.getElementById('atBtnNext'+cap(view)).style.display='';
+
+  // Build final report
+  atBuildFinalReport(view);
+
+  // Show first annotated frame
+  if(AT.annotFrames[view].length){
+    AT.playIdx[view] = 0;
+    atShowAnnotatedFrame(view, 0);
+  }
 }
 
+// ══════════════════════
+// PHASE 2: PLAYBACK of annotated frames
+// ══════════════════════
+function atStartPlayback(view){
+  if(!AT.analyzed[view] || !AT.annotFrames[view].length) return;
+  const btn = document.getElementById('atBtnAnalyze'+cap(view));
+  if(btn){ btn.textContent='⏸ PAUSA'; btn.style.background='var(--amber)'; btn.style.color='#000'; }
+
+  const FPS = 10; // same fps used in analysis
+  AT.playTimer[view] = setInterval(()=>{
+    const frames = AT.annotFrames[view];
+    if(!frames.length){ atStopPlayback(view); return; }
+    AT.playIdx[view] = (AT.playIdx[view] + 1) % frames.length;
+    atShowAnnotatedFrame(view, AT.playIdx[view]);
+    // Update timeline
+    const pct = (AT.playIdx[view] / (frames.length-1) * 100).toFixed(1);
+    const fill = document.getElementById('atFill'+cap(view));
+    const time = document.getElementById('atTime'+cap(view));
+    if(fill) fill.style.width = pct+'%';
+    if(time) time.textContent = atFmtTime(AT.playIdx[view]/FPS);
+  }, 1000/FPS);
+}
+
+function atStopPlayback(view){
+  if(AT.playTimer[view]){ clearInterval(AT.playTimer[view]); AT.playTimer[view]=null; }
+  const btn = document.getElementById('atBtnAnalyze'+cap(view));
+  if(btn && AT.analyzed[view]){ btn.textContent='▶ PLAY'; btn.style.background='var(--green)'; btn.style.color='#000'; }
+}
+
+function atShowAnnotatedFrame(view, idx){
+  const canvas = document.getElementById('atCanvas'+cap(view));
+  const frames = AT.annotFrames[view];
+  if(!frames[idx]) return;
+  const img = new Image();
+  img.onload = () => {
+    canvas.width  = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    canvas.getContext('2d').drawImage(img,0,0);
+  };
+  img.src = frames[idx];
+}
+
+// Step through annotated frames
 function atStepFrame(view, dir){
-  atStopAnalysis(view);
-  const vid = document.getElementById('atVideo'+cap(view));
-  vid.pause();
-  vid.currentTime = Math.max(0, Math.min(vid.duration||0, vid.currentTime + dir*(1/30)));
+  atStopPlayback(view);
+  if(AT.analyzed[view] && AT.annotFrames[view].length){
+    const frames = AT.annotFrames[view];
+    AT.playIdx[view] = Math.max(0, Math.min(frames.length-1, AT.playIdx[view]+dir));
+    atShowAnnotatedFrame(view, AT.playIdx[view]);
+    const pct=(AT.playIdx[view]/(frames.length-1)*100).toFixed(1);
+    const fill=document.getElementById('atFill'+cap(view));
+    if(fill) fill.style.width=pct+'%';
+  }
 }
 
 function atSeek(view, e){
-  const bar = document.getElementById('atBar'+cap(view));
-  const vid = document.getElementById('atVideo'+cap(view));
-  if(!vid.duration) return;
-  const rect  = bar.getBoundingClientRect();
-  const ratio = Math.max(0, Math.min(1,(e.clientX-rect.left)/rect.width));
-  atStopAnalysis(view);
-  vid.currentTime = ratio * vid.duration;
+  atStopPlayback(view);
+  if(AT.analyzed[view] && AT.annotFrames[view].length){
+    const bar = document.getElementById('atBar'+cap(view));
+    const rect = bar.getBoundingClientRect();
+    const ratio = Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
+    AT.playIdx[view] = Math.round(ratio*(AT.annotFrames[view].length-1));
+    atShowAnnotatedFrame(view, AT.playIdx[view]);
+  }
 }
 
 function atUpdateTimeline(view){
   const vid = document.getElementById('atVideo'+cap(view));
   if(!vid.duration) return;
   const pct=(vid.currentTime/vid.duration*100).toFixed(1);
-  document.getElementById('atFill'+cap(view)).style.width=pct+'%';
-  document.getElementById('atTime'+cap(view)).textContent=atFmtTime(vid.currentTime);
+  const fill=document.getElementById('atFill'+cap(view));
+  const time=document.getElementById('atTime'+cap(view));
+  if(fill) fill.style.width=pct+'%';
+  if(time) time.textContent=atFmtTime(vid.currentTime);
 }
 
-// ── Frame draw & analysis ──
 function atDrawCurrentFrame(view){
   const vid    = document.getElementById('atVideo'+cap(view));
   const canvas = document.getElementById('atCanvas'+cap(view));
@@ -4707,125 +4830,165 @@ function atDrawCurrentFrame(view){
   if(AT.poses[view]) atDrawPose(view, AT.poses[view]);
 }
 
-// ── MediaPipe callback — fires after each frame ──
-function atOnResults(view, results){
-  AT.sending[view] = false;
+function atPlayPause(view){ atMainBtn(view); }
 
-  if(!results.poseLandmarks || !results.poseLandmarks.length) return;
-
-  AT.poses[view] = results.poseLandmarks;
-
-  // Draw overlays on canvas (video frame already drawn in rAfLoop)
-  atDrawPose(view, results.poseLandmarks);
-
-  // Accumulate angles for final report
-  const ang = atCalcAngles(results.poseLandmarks, view);
-  AT.anglesAccum[view].push(ang);
-  AT.analysisCount[view]++;
-
-  // Live update results every 15 frames
-  if(AT.analysisCount[view] % 15 === 0) atComputeAndShowResults();
-}
-
-// Build averaged report from all accumulated frames
+// ══════════════════════
+// REPORT: Punti di Forza / Punti Deboli
+// ══════════════════════
 function atBuildFinalReport(view){
   const accum = AT.anglesAccum[view];
   if(!accum.length) return;
-  // Average each angle across all frames
   const keys = Object.keys(AT_ANGLE_REFS);
   const averaged = {};
   keys.forEach(k=>{
-    const vals = accum.map(a=>a[k]).filter(v=>v!==null&&v!==undefined&&!isNaN(v));
+    const vals = accum.map(a=>a[k]).filter(v=>v!=null&&!isNaN(v));
     averaged[k] = vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : null;
   });
-  // Merge with other view if available
-  const otherView = view==='front'?'side':'front';
-  const otherAccum = AT.anglesAccum[otherView];
-  if(otherAccum && otherAccum.length){
-    const otherAvg = {};
+  // Merge other view
+  const ov = view==='front'?'side':'front';
+  if(AT.anglesAccum[ov]&&AT.anglesAccum[ov].length){
+    const otherAvg={};
     keys.forEach(k=>{
-      const vals = otherAccum.map(a=>a[k]).filter(v=>v!==null&&v!==undefined&&!isNaN(v));
-      otherAvg[k] = vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : null;
+      const vals=AT.anglesAccum[ov].map(a=>a[k]).filter(v=>v!=null&&!isNaN(v));
+      otherAvg[k]=vals.length?vals.reduce((s,v)=>s+v,0)/vals.length:null;
     });
-    keys.forEach(k=>{ if(averaged[k]===null) averaged[k]=otherAvg[k]; });
+    keys.forEach(k=>{ if(averaged[k]==null) averaged[k]=otherAvg[k]; });
   }
-  // Show averaged results
-  atShowAveragedResults(averaged);
+  atShowReport(averaged);
 }
 
-function atShowAveragedResults(averaged){
+function atShowReport(averaged){
+  // Angle cards (numeric display)
   const grid = document.getElementById('atAnglesGrid');
   let html='';
   for(const [key,ref] of Object.entries(AT_ANGLE_REFS)){
     const val=averaged[key];
-    if(val===null||val===undefined) continue;
+    if(val==null) continue;
     const cls=atAngleClass(key,val);
     html+=`<div class="at-angle-card">
       <div class="at-angle-val ${cls}">${Math.round(val)}${ref.unit}</div>
       <div class="at-angle-lbl">${ref.label}</div>
-      <div class="at-angle-range">ottimale: ${ref.ideal[0]}–${ref.ideal[1]}${ref.unit}</div>
-      <div style="font-size:9px;color:var(--muted);margin-top:2px">media video</div>
+      <div class="at-angle-range">${ref.ideal[0]}–${ref.ideal[1]}${ref.unit}</div>
     </div>`;
   }
-  grid.innerHTML = html || '<p style="color:var(--muted);font-size:13px">Nessun angolo calcolato.</p>';
-  const report = atGenerateReport(averaged);
-  document.getElementById('atReportItems').innerHTML = report.map(r=>
-    `<div class="at-report-item">
-      <div class="at-report-icon">${r.icon}</div>
-      <div class="at-report-text"><strong>${r.title}</strong> — ${r.text}</div>
-    </div>`
-  ).join('');
+  grid.innerHTML = html || '<p style="color:var(--muted);font-size:13px">Nessun angolo rilevato.</p>';
+
+  // Qualitative report: strengths + weaknesses
+  const report = atQualitativeReport(averaged);
+  const el = document.getElementById('atReportItems');
+
+  let out = '';
+  if(report.strengths.length){
+    out += `<div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--green);margin-bottom:6px;margin-top:2px">💪 PUNTI DI FORZA</div>`;
+    out += report.strengths.map(r=>
+      `<div class="at-report-item">
+        <div class="at-report-icon">${r.icon}</div>
+        <div class="at-report-text"><strong>${r.title}</strong> — ${r.text}</div>
+      </div>`).join('');
+  }
+  if(report.weaknesses.length){
+    out += `<div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--red,#ef4444);margin-bottom:6px;margin-top:12px">⚠ PUNTI DEBOLI</div>`;
+    out += report.weaknesses.map(r=>
+      `<div class="at-report-item">
+        <div class="at-report-icon">${r.icon}</div>
+        <div class="at-report-text"><strong>${r.title}</strong> — ${r.text}</div>
+      </div>`).join('');
+  }
+  if(!out) out='<p style="color:var(--muted);font-size:13px">Analisi insufficiente — prova un video più lungo con buona visibilità del corpo.</p>';
+  el.innerHTML = out;
   document.getElementById('atResultsBox').classList.add('show');
 }
 
-// Snapshot (called manually via step or at key moments)
-function atSaveSnapshot(view){
-  const canvas = document.getElementById('atCanvas'+cap(view));
-  const url = canvas.toDataURL('image/jpeg',0.7);
-  const snaps = AT.snapshots[view];
-  if(snaps.length>=8) snaps.shift();
-  snaps.push({url,view});
-  const strip = document.getElementById('atSnapshots'+cap(view));
-  strip.innerHTML = snaps.map((s,i)=>
-    `<img class="at-snapshot ${i===snaps.length-1?'sel':''}" src="${s.url}" onclick="atSelectSnapshot('${view}',${i})">`
-  ).join('');
-  AT.allSnapshots.push({url,view});
-  const allStrip=document.getElementById('atAllSnapshots');
-  if(allStrip) allStrip.innerHTML=AT.allSnapshots.slice(-12).map(s=>
-    `<img class="at-snapshot" src="${s.url}" title="${s.view==='front'?'Frontale':'Laterale'}">`
-  ).join('');
-}
+function atQualitativeReport(ang){
+  const strengths = [];
+  const weaknesses = [];
 
-function atSelectSnapshot(view,idx){
-  const canvas=document.getElementById('atCanvas'+cap(view));
-  const img=new Image();
-  img.onload=()=>{canvas.width=img.width;canvas.height=img.height;canvas.getContext('2d').drawImage(img,0,0);};
-  img.src=AT.snapshots[view][idx].url;
-  document.querySelectorAll(`#atSnapshots${cap(view)} .at-snapshot`).forEach((el,i)=>el.classList.toggle('sel',i===idx));
+  // ── Gomito ──
+  if(ang.elbow!=null){
+    const v=ang.elbow;
+    if(v>=85&&v<=105) strengths.push({icon:'✅',title:'Gomito in posizione ottimale',text:`L'angolo di gomito (${Math.round(v)}°) è nella zona ideale 85–105°. Questo garantisce una spinta lineare potente e controllata verso il bersaglio.`});
+    else if(v<75) weaknesses.push({icon:'🔴',title:'Gomito troppo chiuso',text:`Il gomito è eccessivamente piegato (${Math.round(v)}°). Questo accorcia la traiettoria di spinta e riduce la potenza. Lavora ad aprire leggermente il gomito nella fase di caricamento, puntando al range 85–105°.`});
+    else if(v>115) weaknesses.push({icon:'🔴',title:'Gomito troppo aperto',text:`Il braccio è quasi disteso già in fase di caricamento (${Math.round(v)}°). Perdi potenza e controllo nella spinta finale. Prova a piegare maggiormente il gomito prima del lancio.`});
+    else strengths.push({icon:'👍',title:'Gomito nella norma',text:`Angolo di gomito a ${Math.round(v)}° — nella norma. Una piccola correzione verso 90–100° potrebbe affinare ulteriormente la linearità del gesto.`});
+  }
+
+  // ── Polso ──
+  if(ang.wristFlex!=null){
+    const v=ang.wristFlex;
+    if(v>=160&&v<=180) strengths.push({icon:'✅',title:'Rilascio del polso pulito',text:`Il polso è ben esteso nel momento del rilascio (${Math.round(v)}°). Questo è uno dei punti più importanti della tecnica: garantisce traiettoria stabile e prevedibile.`});
+    else if(v<145) weaknesses.push({icon:'🔴',title:'Polso non completamente esteso al rilascio',text:`Il polso rimane flesso (${Math.round(v)}°) durante il rilascio. Questo causa variabilità nel punto di uscita della freccetta e spesso produce lanci troppo alti. Esercitati a "spingere con le dita" verso il bersaglio completando il gesto oltre la freccetta.`});
+    else weaknesses.push({icon:'⚠️',title:'Estensione del polso migliorabile',text:`Il polso è quasi esteso ma non completamente (${Math.round(v)}°). Un piccolo lavoro sulla finitura del gesto porterà maggiore consistenza nel rilascio.`});
+  }
+
+  // ── Spalla ──
+  if(ang.shoulder!=null){
+    const v=ang.shoulder;
+    if(v>=30&&v<=60) strengths.push({icon:'✅',title:'Altezza della spalla corretta',text:`La spalla di tiro è posizionata all'altezza ideale (${Math.round(v)}°). Mirare risulta naturale e non devi compensare con la testa o il busto.`});
+    else if(v<20) weaknesses.push({icon:'⚠️',title:'Spalla di tiro troppo bassa',text:`Il braccio è tenuto basso rispetto alla linea di mira (${Math.round(v)}°). Devi compensare alzando il polso, il che introduce instabilità. Prova ad alzare il punto di mira e a portare il gomito leggermente in avanti.`});
+    else if(v>75) weaknesses.push({icon:'⚠️',title:'Spalla di tiro troppo alta',text:`Il braccio è alzato eccessivamente (${Math.round(v)}°). Questo crea tensione nel deltoide e riduce la precisione. Rilassa la spalla abbassando leggermente il punto di mira.`});
+  }
+
+  // ── Inclinazione busto ──
+  if(ang.bodyLean!=null){
+    const v=ang.bodyLean;
+    if(v>=5&&v<=20) strengths.push({icon:'✅',title:'Postura del busto equilibrata',text:`L'inclinazione in avanti è naturale (${Math.round(v)}°). Ti avvicini al bersaglio senza perdere l'equilibrio, il che favorisce la consistenza nel tiro.`});
+    else if(v>30) weaknesses.push({icon:'⚠️',title:'Busto troppo inclinato in avanti',text:`Ti sporgi eccessivamente verso il bersaglio (${Math.round(v)}°). Questo può causare instabilità posturale e affaticamento muscolare nel corso della partita. Cerca di mantenere una posizione più eretta con una leggera inclinazione naturale (5–15°).`});
+    else if(v<3) weaknesses.push({icon:'💡',title:'Postura troppo eretta',text:`Stai tirando quasi in verticale (${Math.round(v)}°). Una piccola inclinazione in avanti (5–15°) ti aiuterebbe ad allineare meglio l'occhio con la freccetta e il bersaglio.`});
+  }
+
+  // ── Allineamento spalle (vista frontale) ──
+  if(ang.shoulderH!=null){
+    const v=ang.shoulderH;
+    if(v<=10) strengths.push({icon:'✅',title:'Spalle ben allineate',text:`La differenza di altezza tra le due spalle è minima (${Math.round(v)}°). Questo indica una postura stabile senza rotazioni compensatorie che potrebbero alterare la direzione del tiro.`});
+    else if(v>20) weaknesses.push({icon:'⚠️',title:'Rotazione delle spalle eccessiva',text:`C'è un dislivello significativo tra le spalle (${Math.round(v)}°). Una rotazione eccessiva può deviare la direzione del tiro. Concentrati a tenere la spalla non dominante ferma e leggermente abbassata durante il lancio.`});
+  }
+
+  // ── Avambraccio verticale ──
+  if(ang.forearmV!=null){
+    const v=ang.forearmV;
+    if(v>=70&&v<=90) strengths.push({icon:'✅',title:'Avambraccio verticale ottimale',text:`L'avambraccio è quasi perpendicolare al suolo (${Math.round(v)}° dalla verticale). Questa posizione massimizza la lunghezza utile del gesto di spinta, aumentando precisione e potenza.`});
+    else if(v<55) weaknesses.push({icon:'⚠️',title:'Avambraccio troppo orizzontale',text:`L'avambraccio è inclinato orizzontalmente (${Math.round(v)}°) nella fase di caricamento. Questo riduce la distanza di spinta. Porta il gomito più in alto per raddrizzare l'avambraccio.`});
+  }
+
+  // ── Fianchi ──
+  if(ang.hipAlign!=null){
+    const v=ang.hipAlign;
+    if(v<=15) strengths.push({icon:'✅',title:'Base stabile',text:`I fianchi sono ben in equilibrio (${Math.round(v)}° di dislivello). Una base solida e simmetrica è fondamentale per la ripetibilità del gesto.`});
+    else if(v>25) weaknesses.push({icon:'💡',title:'Base di appoggio asimmetrica',text:`I fianchi mostrano un certo dislivello (${Math.round(v)}°). Una distribuzione del peso più uniforme sulle due gambe potrebbe migliorare la stabilità del tiro, soprattutto in partita prolungata.`});
+  }
+
+  return {strengths, weaknesses};
 }
 
 function atComputeAndShowResults(){
-  const lmF=AT.poses.front;
-  const lmS=AT.poses.side;
-  if(!lmF&&!lmS) return;
-  const angF=lmF?atCalcAngles(lmF,'front'):{};
-  const angS=lmS?atCalcAngles(lmS,'side'):{};
-  const merged={
-    elbow:     angS.elbow     ??angF.elbow,
-    shoulder:  angS.shoulder  ??angF.shoulder,
-    forearmV:  angS.forearmV  ??angF.forearmV,
-    wristFlex: angS.wristFlex ??angF.wristFlex,
-    bodyLean:  angS.bodyLean  ??angF.bodyLean,
-    hipAlign:  angF.hipAlign  ??angS.hipAlign,
-    shoulderH: angF.shoulderH ??angS.shoulderH,
-    releaseH:  angS.releaseH  ??angF.releaseH
-  };
-  atShowAveragedResults(merged);
+  // No-op during analysis: report built at end
 }
 
 function atUpdateResultsBox(){
   if(!AT.poses.front&&!AT.poses.side)
     document.getElementById('atResultsBox').classList.remove('show');
+}
+
+function atSaveSnapshot(view){
+  // During playback user can take a snapshot of the current annotated frame
+  if(!AT.annotFrames[view].length) return;
+  const url = AT.annotFrames[view][AT.playIdx[view]];
+  const snaps = AT.snapshots[view];
+  if(snaps.length>=8) snaps.shift();
+  snaps.push({url,view});
+  const strip=document.getElementById('atSnapshots'+cap(view));
+  strip.innerHTML=snaps.map((s,i)=>
+    `<img class="at-snapshot ${i===snaps.length-1?'sel':''}" src="${s.url}" onclick="atSelectSnapshot('${view}',${i})">`).join('');
+  AT.allSnapshots.push({url,view});
+  const all=document.getElementById('atAllSnapshots');
+  if(all) all.innerHTML=AT.allSnapshots.slice(-12).map(s=>`<img class="at-snapshot" src="${s.url}">`).join('');
+}
+
+function atSelectSnapshot(view,idx){
+  const canvas=document.getElementById('atCanvas'+cap(view));
+  const img=new Image();
+  img.onload=()=>{canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;canvas.getContext('2d').drawImage(img,0,0);};
+  img.src=AT.snapshots[view][idx].url;
 }
 
 // ── Geometry helpers ──
