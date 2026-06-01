@@ -1178,7 +1178,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
         <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('wrist',this)"> ✋ Polso/mano</label>
         <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('angles',this)"> 📐 Angoli</label>
         <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('spine',this)"> 🫀 Colonna/busto</label>
-        <label class="at-check"><input type="checkbox" onchange="atToggleOverlay('hips',this)"> 🦵 Fianchi/gambe</label>
+        <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('hips',this)"> 🦵 Fianchi/gambe</label>
         <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('aimline',this)"> 🎯 Linea di mira</label>
       </div>
     </div>
@@ -1203,10 +1203,9 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
             <canvas id="atCanvasFront"></canvas>
           </div>
           <div class="at-video-ctrl" id="atCtrlFront" style="display:none">
-            <button class="at-btn" onclick="atAnalyzeFrame('front')" id="atBtnAnalyzeFront">🔍 ANALIZZA FRAME</button>
-            <button class="at-btn sec" onclick="atPlayPause('front')" id="atBtnPlayFront">▶ PLAY</button>
-            <button class="at-btn sec" onclick="atStepFrame('front',-1)">◀</button>
-            <button class="at-btn sec" onclick="atStepFrame('front',1)">▶</button>
+            <button class="at-btn" onclick="atToggleAnalysis('front')" id="atBtnAnalyzeFront">▶ PLAY + ANALISI</button>
+            <button class="at-btn sec" onclick="atStepFrame('front',-1)">◀ Frame</button>
+            <button class="at-btn sec" onclick="atStepFrame('front',1)">Frame ▶</button>
             <button class="at-btn danger" onclick="atRemoveVideo('front')">✕</button>
           </div>
           <div id="atTimelineFront" style="display:none">
@@ -1237,10 +1236,9 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
             <canvas id="atCanvasSide"></canvas>
           </div>
           <div class="at-video-ctrl" id="atCtrlSide" style="display:none">
-            <button class="at-btn" onclick="atAnalyzeFrame('side')" id="atBtnAnalyzeSide">🔍 ANALIZZA FRAME</button>
-            <button class="at-btn sec" onclick="atPlayPause('side')" id="atBtnPlaySide">▶ PLAY</button>
-            <button class="at-btn sec" onclick="atStepFrame('side',-1)">◀</button>
-            <button class="at-btn sec" onclick="atStepFrame('side',1)">▶</button>
+            <button class="at-btn" onclick="atToggleAnalysis('side')" id="atBtnAnalyzeSide">▶ PLAY + ANALISI</button>
+            <button class="at-btn sec" onclick="atStepFrame('side',-1)">◀ Frame</button>
+            <button class="at-btn sec" onclick="atStepFrame('side',1)">Frame ▶</button>
             <button class="at-btn danger" onclick="atRemoveVideo('side')">✕</button>
           </div>
           <div id="atTimelineSide" style="display:none">
@@ -4461,7 +4459,7 @@ function close201(){document.getElementById('g201overlay').style.display='none';
 // ══════════════════════════════════════════════════
 const AT = {
   arm: 'right',          // 'right' | 'left'
-  overlays: {skeleton:true, arm:true, forearm:true, wrist:true, angles:true, spine:true, hips:false, aimline:true},
+  overlays: {skeleton:true, arm:true, forearm:true, wrist:true, angles:true, spine:true, hips:true, aimline:true},
   poses: {front:null, side:null},         // last detected pose landmarks
   poseDetectors: {front:null, side:null}, // MediaPipe Pose instances
   mpReady: false,
@@ -4518,10 +4516,10 @@ function atInitPose(view){
 function atLoadVideo(view, inputEl){
   const file = inputEl.files[0];
   if(!file) return;
-  const vid = document.getElementById('atVideo'+cap(view));
-  const wrap= document.getElementById('atVideoWrap'+cap(view));
-  const ctrl= document.getElementById('atCtrl'+cap(view));
-  const tl  = document.getElementById('atTimeline'+cap(view));
+  const vid  = document.getElementById('atVideo'+cap(view));
+  const wrap = document.getElementById('atVideoWrap'+cap(view));
+  const ctrl = document.getElementById('atCtrl'+cap(view));
+  const tl   = document.getElementById('atTimeline'+cap(view));
   const badge= document.getElementById('atBadge'+cap(view));
   const drop = document.getElementById('atDrop'+cap(view));
 
@@ -4538,30 +4536,30 @@ function atLoadVideo(view, inputEl){
     const canvas = document.getElementById('atCanvas'+cap(view));
     canvas.width  = vid.videoWidth  || 640;
     canvas.height = vid.videoHeight || 360;
-    const dur = vid.duration;
-    document.getElementById('atDur'+cap(view)).textContent = atFmtTime(dur);
-    // Init MediaPipe detector for this view
+    document.getElementById('atDur'+cap(view)).textContent = atFmtTime(vid.duration);
     if(!AT.poseDetectors[view]){
       AT.poseDetectors[view] = atInitPose(view);
       if(AT.poseDetectors[view]) AT.mpReady = true;
     }
-    // Draw first frame
-    vid.currentTime = 0.1;
+    vid.currentTime = 0.05;
   };
   vid.ontimeupdate = () => atUpdateTimeline(view);
-  vid.onseeked = () => atDrawCurrentFrame(view);
+  // Draw first frame on seek (before analysis starts)
+  vid.onseeked = () => {
+    if(!AT.rafRunning[view]) atDrawCurrentFrame(view);
+  };
 }
 
 function atRemoveVideo(view){
-  const vid = document.getElementById('atVideo'+cap(view));
-  const wrap= document.getElementById('atVideoWrap'+cap(view));
-  const ctrl= document.getElementById('atCtrl'+cap(view));
-  const tl  = document.getElementById('atTimeline'+cap(view));
+  atStopAnalysis(view);
+  const vid  = document.getElementById('atVideo'+cap(view));
+  const wrap = document.getElementById('atVideoWrap'+cap(view));
+  const ctrl = document.getElementById('atCtrl'+cap(view));
+  const tl   = document.getElementById('atTimeline'+cap(view));
   const drop = document.getElementById('atDrop'+cap(view));
   const badge= document.getElementById('atBadge'+cap(view));
   const finp = document.getElementById('atFile'+cap(view));
-  vid.pause();
-  vid.src = '';
+  vid.pause(); vid.src = '';
   wrap.style.display = 'none';
   ctrl.style.display = 'none';
   tl.style.display   = 'none';
@@ -4570,40 +4568,132 @@ function atRemoveVideo(view){
   badge.className    = 'at-badge inactive';
   finp.value = '';
   AT.poses[view] = null;
+  AT.anglesAccum[view] = [];
   AT.snapshots[view] = [];
   document.getElementById('atSnapshots'+cap(view)).innerHTML = '';
   atUpdateResultsBox();
 }
 
-function atPlayPause(view){
+// ── rAF-based continuous analysis ──
+// State per view
+AT.rafRunning = {front:false, side:false};
+AT.rafId      = {front:null,  side:null};
+AT.sending    = {front:false, side:false}; // prevent parallel MP sends
+AT.anglesAccum= {front:[],    side:[]};    // accumulate angle sets during play
+
+function atToggleAnalysis(view){
+  if(AT.rafRunning[view]){
+    atStopAnalysis(view);
+  } else {
+    atStartAnalysis(view);
+  }
+}
+
+function atStartAnalysis(view){
   const vid = document.getElementById('atVideo'+cap(view));
-  const btn = document.getElementById('atBtnPlay'+cap(view));
-  if(vid.paused){ vid.play(); btn.textContent='⏸ PAUSA'; }
-  else { vid.pause(); btn.textContent='▶ PLAY'; }
+  const btn = document.getElementById('atBtnAnalyze'+cap(view));
+  const prog= document.getElementById('atProg'+cap(view));
+
+  if(!vid.src || vid.readyState < 2){
+    prog.textContent = '⚠ Carica prima un video.';
+    return;
+  }
+  if(!AT.poseDetectors[view]){ AT.poseDetectors[view] = atInitPose(view); }
+  if(!AT.poseDetectors[view]){
+    prog.textContent = '⚠ Libreria MediaPipe non disponibile.';
+    return;
+  }
+
+  AT.rafRunning[view] = true;
+  AT.anglesAccum[view] = [];
+  btn.textContent = '⏸ PAUSA';
+  btn.style.background = 'var(--amber)';
+  prog.textContent = '⏳ Analisi in corso...';
+
+  vid.play();
+  atRafLoop(view);
+}
+
+function atStopAnalysis(view){
+  const vid = document.getElementById('atVideo'+cap(view));
+  const btn = document.getElementById('atBtnAnalyze'+cap(view));
+  const prog= document.getElementById('atProg'+cap(view));
+
+  AT.rafRunning[view] = false;
+  if(AT.rafId[view]) { cancelAnimationFrame(AT.rafId[view]); AT.rafId[view]=null; }
+  vid.pause();
+  if(btn){ btn.textContent='▶ PLAY + ANALISI'; btn.style.background=''; }
+  prog.textContent = '';
+  // Build final report from accumulated angles
+  if(AT.anglesAccum[view].length > 0) atBuildFinalReport(view);
+}
+
+let _atLastVideoTime = {front:-1, side:-1};
+
+function atRafLoop(view){
+  if(!AT.rafRunning[view]) return;
+  const vid    = document.getElementById('atVideo'+cap(view));
+  const canvas = document.getElementById('atCanvas'+cap(view));
+
+  // Check if video ended
+  if(vid.ended || vid.paused){
+    atStopAnalysis(view);
+    return;
+  }
+
+  // Only send to MediaPipe when we have a new frame (time changed)
+  if(vid.currentTime !== _atLastVideoTime[view] && !AT.sending[view]){
+    _atLastVideoTime[view] = vid.currentTime;
+    // Draw current video frame on canvas
+    canvas.width  = vid.videoWidth  || canvas.width;
+    canvas.height = vid.videoHeight || canvas.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
+
+    // Send to MediaPipe (non-blocking)
+    AT.sending[view] = true;
+    AT.poseDetectors[view].send({image: canvas}).catch(()=>{
+      AT.sending[view] = false;
+    });
+    // onResults will draw overlays and set sending=false
+  } else if(AT.poses[view]){
+    // Redraw overlays on same frame (between MP sends)
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
+    atDrawPose(view, AT.poses[view]);
+  }
+
+  AT.rafId[view] = requestAnimationFrame(() => atRafLoop(view));
+}
+
+function atPlayPause(view){
+  // Legacy — now handled by atToggleAnalysis
+  atToggleAnalysis(view);
 }
 
 function atStepFrame(view, dir){
+  atStopAnalysis(view);
   const vid = document.getElementById('atVideo'+cap(view));
   vid.pause();
-  document.getElementById('atBtnPlay'+cap(view)).textContent = '▶ PLAY';
-  vid.currentTime = Math.max(0, Math.min(vid.duration, vid.currentTime + dir * (1/25)));
+  vid.currentTime = Math.max(0, Math.min(vid.duration||0, vid.currentTime + dir*(1/30)));
 }
 
 function atSeek(view, e){
   const bar = document.getElementById('atBar'+cap(view));
   const vid = document.getElementById('atVideo'+cap(view));
   if(!vid.duration) return;
-  const rect = bar.getBoundingClientRect();
-  const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  const rect  = bar.getBoundingClientRect();
+  const ratio = Math.max(0, Math.min(1,(e.clientX-rect.left)/rect.width));
+  atStopAnalysis(view);
   vid.currentTime = ratio * vid.duration;
 }
 
 function atUpdateTimeline(view){
   const vid = document.getElementById('atVideo'+cap(view));
   if(!vid.duration) return;
-  const pct = (vid.currentTime / vid.duration * 100).toFixed(1);
-  document.getElementById('atFill'+cap(view)).style.width = pct+'%';
-  document.getElementById('atTime'+cap(view)).textContent = atFmtTime(vid.currentTime);
+  const pct=(vid.currentTime/vid.duration*100).toFixed(1);
+  document.getElementById('atFill'+cap(view)).style.width=pct+'%';
+  document.getElementById('atTime'+cap(view)).textContent=atFmtTime(vid.currentTime);
 }
 
 // ── Frame draw & analysis ──
@@ -4614,227 +4704,131 @@ function atDrawCurrentFrame(view){
   canvas.width  = vid.videoWidth  || canvas.width;
   canvas.height = vid.videoHeight || canvas.height;
   ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
-  // If we have a cached pose for this view, redraw overlays
   if(AT.poses[view]) atDrawPose(view, AT.poses[view]);
 }
 
-async function atAnalyzeFrame(view){
-  const vid    = document.getElementById('atVideo'+cap(view));
-  const canvas = document.getElementById('atCanvas'+cap(view));
-  const prog   = document.getElementById('atProg'+cap(view));
-  const btn    = document.getElementById('atBtnAnalyze'+cap(view));
-
-  if(!vid.src || vid.readyState < 2){ prog.textContent = '⚠ Carica prima un video.'; return; }
-  if(!AT.poseDetectors[view]){ AT.poseDetectors[view] = atInitPose(view); }
-  if(!AT.poseDetectors[view]){ prog.textContent = '⚠ Libreria MediaPipe non disponibile.'; return; }
-
-  vid.pause();
-  document.getElementById('atBtnPlay'+cap(view)).textContent = '▶ PLAY';
-  prog.textContent = '⏳ Analisi in corso...';
-  btn.disabled = true;
-
-  // Draw frame to canvas
-  canvas.width  = vid.videoWidth  || 640;
-  canvas.height = vid.videoHeight || 360;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
-
-  try {
-    await AT.poseDetectors[view].send({image: canvas});
-    // onResults callback fires async → progress cleared there
-  } catch(e) {
-    prog.textContent = '⚠ Errore analisi: ' + e.message;
-    btn.disabled = false;
-  }
-}
-
-// ── MediaPipe callback ──
+// ── MediaPipe callback — fires after each frame ──
 function atOnResults(view, results){
-  const btn  = document.getElementById('atBtnAnalyze'+cap(view));
-  const prog = document.getElementById('atProg'+cap(view));
-  btn.disabled = false;
+  AT.sending[view] = false;
 
-  if(!results.poseLandmarks || !results.poseLandmarks.length){
-    prog.textContent = '⚠ Nessuna posa rilevata nel frame. Prova un frame diverso.';
-    return;
-  }
+  if(!results.poseLandmarks || !results.poseLandmarks.length) return;
 
-  prog.textContent = '';
   AT.poses[view] = results.poseLandmarks;
+
+  // Draw overlays on canvas (video frame already drawn in rAfLoop)
+  atDrawPose(view, results.poseLandmarks);
+
+  // Accumulate angles for final report
+  const ang = atCalcAngles(results.poseLandmarks, view);
+  AT.anglesAccum[view].push(ang);
   AT.analysisCount[view]++;
 
-  atDrawPose(view, results.poseLandmarks);
-  atSaveSnapshot(view);
-  atComputeAndShowResults();
+  // Live update results every 15 frames
+  if(AT.analysisCount[view] % 15 === 0) atComputeAndShowResults();
 }
 
-// ── Draw skeleton + overlays ──
-function atDrawPose(view, lm){
-  const vid    = document.getElementById('atVideo'+cap(view));
+// Build averaged report from all accumulated frames
+function atBuildFinalReport(view){
+  const accum = AT.anglesAccum[view];
+  if(!accum.length) return;
+  // Average each angle across all frames
+  const keys = Object.keys(AT_ANGLE_REFS);
+  const averaged = {};
+  keys.forEach(k=>{
+    const vals = accum.map(a=>a[k]).filter(v=>v!==null&&v!==undefined&&!isNaN(v));
+    averaged[k] = vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : null;
+  });
+  // Merge with other view if available
+  const otherView = view==='front'?'side':'front';
+  const otherAccum = AT.anglesAccum[otherView];
+  if(otherAccum && otherAccum.length){
+    const otherAvg = {};
+    keys.forEach(k=>{
+      const vals = otherAccum.map(a=>a[k]).filter(v=>v!==null&&v!==undefined&&!isNaN(v));
+      otherAvg[k] = vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : null;
+    });
+    keys.forEach(k=>{ if(averaged[k]===null) averaged[k]=otherAvg[k]; });
+  }
+  // Show averaged results
+  atShowAveragedResults(averaged);
+}
+
+function atShowAveragedResults(averaged){
+  const grid = document.getElementById('atAnglesGrid');
+  let html='';
+  for(const [key,ref] of Object.entries(AT_ANGLE_REFS)){
+    const val=averaged[key];
+    if(val===null||val===undefined) continue;
+    const cls=atAngleClass(key,val);
+    html+=`<div class="at-angle-card">
+      <div class="at-angle-val ${cls}">${Math.round(val)}${ref.unit}</div>
+      <div class="at-angle-lbl">${ref.label}</div>
+      <div class="at-angle-range">ottimale: ${ref.ideal[0]}–${ref.ideal[1]}${ref.unit}</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:2px">media video</div>
+    </div>`;
+  }
+  grid.innerHTML = html || '<p style="color:var(--muted);font-size:13px">Nessun angolo calcolato.</p>';
+  const report = atGenerateReport(averaged);
+  document.getElementById('atReportItems').innerHTML = report.map(r=>
+    `<div class="at-report-item">
+      <div class="at-report-icon">${r.icon}</div>
+      <div class="at-report-text"><strong>${r.title}</strong> — ${r.text}</div>
+    </div>`
+  ).join('');
+  document.getElementById('atResultsBox').classList.add('show');
+}
+
+// Snapshot (called manually via step or at key moments)
+function atSaveSnapshot(view){
   const canvas = document.getElementById('atCanvas'+cap(view));
-  const ctx    = canvas.getContext('2d');
-
-  // Re-draw video frame under overlays
-  if(vid.readyState >= 2) ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
-
-  const W = canvas.width, H = canvas.height;
-  const pt = (i) => ({x: lm[i].x * W, y: lm[i].y * H, v: lm[i].visibility||0});
-  const isRight = AT.arm === 'right';
-
-  // MediaPipe landmark indices
-  const IDX = {
-    nose:0,
-    lShoulder:11, rShoulder:12,
-    lElbow:13,    rElbow:14,
-    lWrist:15,    rWrist:16,
-    lHip:23,      rHip:24,
-    lKnee:25,     rKnee:26,
-    lAnkle:27,    rAnkle:28,
-    lIndex:19,    rIndex:20,
-    lPinky:17,    rPinky:18,
-    lEar:7,       rEar:8
-  };
-
-  const throwShoulder = isRight ? IDX.rShoulder : IDX.lShoulder;
-  const throwElbow    = isRight ? IDX.rElbow    : IDX.lElbow;
-  const throwWrist    = isRight ? IDX.rWrist    : IDX.lWrist;
-  const throwIndex    = isRight ? IDX.rIndex    : IDX.lIndex;
-  const oppShoulder   = isRight ? IDX.lShoulder : IDX.rShoulder;
-  const throwHip      = isRight ? IDX.rHip      : IDX.lHip;
-  const oppHip        = isRight ? IDX.lHip      : IDX.rHip;
-
-  // ── Helper: draw bone ──
-  function bone(i1, i2, color='#22c55e', width=2.5, alpha=0.85){
-    const p1=pt(i1), p2=pt(i2);
-    if(p1.v<0.3 || p2.v<0.3) return;
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = color;
-    ctx.lineWidth   = width;
-    ctx.lineCap     = 'round';
-    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-    ctx.restore();
-  }
-
-  // ── Helper: draw joint dot ──
-  function dot(i, color='#22c55e', r=5){
-    const p=pt(i);
-    if(p.v<0.3) return;
-    ctx.save();
-    ctx.globalAlpha=0.9;
-    ctx.fillStyle=color;
-    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI*2); ctx.fill();
-    ctx.restore();
-  }
-
-  // ── Helper: draw angle arc + label ──
-  function angleLabel(cx,cy, angleDeg, label, color){
-    if(!AT.overlays.angles) return;
-    ctx.save();
-    ctx.fillStyle   = color;
-    ctx.font        = 'bold 12px DM Sans, sans-serif';
-    ctx.textAlign   = 'center';
-    ctx.shadowColor = 'rgba(0,0,0,0.8)';
-    ctx.shadowBlur  = 4;
-    ctx.fillText(Math.round(angleDeg)+'°', cx, cy);
-    ctx.restore();
-  }
-
-  // ── Skeleton ──
-  if(AT.overlays.skeleton){
-    const mutedBone = 'rgba(255,255,255,0.25)';
-    // Body outline
-    bone(IDX.lShoulder, IDX.rShoulder, '#94a3b8', 2, 0.5);
-    bone(IDX.lHip,      IDX.rHip,      '#94a3b8', 2, 0.5);
-    bone(IDX.lShoulder, IDX.lHip,      '#94a3b8', 2, 0.5);
-    bone(IDX.rShoulder, IDX.rHip,      '#94a3b8', 2, 0.5);
-    // Legs
-    if(AT.overlays.hips){
-      bone(IDX.lHip, IDX.lKnee,   '#64748b',2,0.5);
-      bone(IDX.rHip, IDX.rKnee,   '#64748b',2,0.5);
-      bone(IDX.lKnee,IDX.lAnkle,  '#64748b',2,0.4);
-      bone(IDX.rKnee,IDX.rAnkle,  '#64748b',2,0.4);
-      dot(IDX.lKnee,'#64748b',4); dot(IDX.rKnee,'#64748b',4);
-      dot(IDX.lAnkle,'#64748b',3);dot(IDX.rAnkle,'#64748b',3);
-    }
-    // Head
-    bone(IDX.nose, IDX.lShoulder, '#94a3b8',1.5,0.3);
-    bone(IDX.nose, IDX.rShoulder, '#94a3b8',1.5,0.3);
-    // Non-throw arm (muted)
-    const na1=isRight?IDX.lShoulder:IDX.rShoulder;
-    const na2=isRight?IDX.lElbow:IDX.rElbow;
-    const na3=isRight?IDX.lWrist:IDX.rWrist;
-    bone(na1,na2,'#475569',2,0.5); bone(na2,na3,'#475569',2,0.4);
-    dot(na1,'#475569',4); dot(na2,'#475569',4); dot(na3,'#475569',3);
-  }
-
-  // ── Spine / posture ──
-  if(AT.overlays.spine){
-    const midShX = (pt(IDX.lShoulder).x + pt(IDX.rShoulder).x)/2;
-    const midShY = (pt(IDX.lShoulder).y + pt(IDX.rShoulder).y)/2;
-    const midHiX = (pt(IDX.lHip).x + pt(IDX.rHip).x)/2;
-    const midHiY = (pt(IDX.lHip).y + pt(IDX.rHip).y)/2;
-    ctx.save();
-    ctx.globalAlpha=0.6;
-    ctx.strokeStyle='#60a5fa'; ctx.lineWidth=2; ctx.setLineDash([4,4]);
-    ctx.beginPath(); ctx.moveTo(midShX,midShY); ctx.lineTo(midHiX,midHiY); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.restore();
-  }
-
-  // ── Throw arm ──
-  if(AT.overlays.arm){
-    bone(throwShoulder, throwElbow, '#22c55e', 3.5, 0.95);
-    dot(throwShoulder,'#22c55e',6);
-    dot(throwElbow,'#4ade80',6);
-  }
-  if(AT.overlays.forearm){
-    bone(throwElbow, throwWrist, '#4ade80', 3, 0.95);
-  }
-  if(AT.overlays.wrist){
-    bone(throwWrist, throwIndex, '#facc15', 2.5, 0.9);
-    dot(throwWrist,'#facc15',5);
-    dot(throwIndex,'#facc15',4);
-  }
-
-  // ── Aim line ──
-  if(AT.overlays.aimline){
-    const pw = pt(throwWrist), pi = pt(throwIndex), pe = pt(throwElbow);
-    if(pw.v>0.3 && pi.v>0.3){
-      const dx = pi.x-pw.x, dy = pi.y-pw.y;
-      const len = Math.sqrt(dx*dx+dy*dy)||1;
-      const ext = 180;
-      ctx.save();
-      ctx.globalAlpha=0.7;
-      ctx.strokeStyle='#f59e0b'; ctx.lineWidth=2; ctx.setLineDash([6,5]);
-      ctx.beginPath();
-      ctx.moveTo(pw.x, pw.y);
-      ctx.lineTo(pw.x + dx/len*ext, pw.y + dy/len*ext);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
-    }
-  }
-
-  // ── Angle labels on canvas ──
-  const angles = atCalcAngles(lm, view);
-  if(AT.overlays.angles){
-    const pSh = pt(throwShoulder), pEl = pt(throwElbow), pWr = pt(throwWrist);
-    if(angles.elbow !== null && pEl.v>0.3){
-      const col = atAngleColor('elbow', angles.elbow);
-      angleLabel(pEl.x+22, pEl.y-8, angles.elbow, 'gomito', col);
-    }
-    if(angles.wristFlex !== null && pWr.v>0.3){
-      const col = atAngleColor('wristFlex', angles.wristFlex);
-      angleLabel(pWr.x+22, pWr.y-8, angles.wristFlex, 'polso', col);
-    }
-    if(angles.shoulder !== null && pSh.v>0.3){
-      const col = atAngleColor('shoulder', angles.shoulder);
-      angleLabel(pSh.x+22, pSh.y-8, angles.shoulder, 'spalla', col);
-    }
-  }
+  const url = canvas.toDataURL('image/jpeg',0.7);
+  const snaps = AT.snapshots[view];
+  if(snaps.length>=8) snaps.shift();
+  snaps.push({url,view});
+  const strip = document.getElementById('atSnapshots'+cap(view));
+  strip.innerHTML = snaps.map((s,i)=>
+    `<img class="at-snapshot ${i===snaps.length-1?'sel':''}" src="${s.url}" onclick="atSelectSnapshot('${view}',${i})">`
+  ).join('');
+  AT.allSnapshots.push({url,view});
+  const allStrip=document.getElementById('atAllSnapshots');
+  if(allStrip) allStrip.innerHTML=AT.allSnapshots.slice(-12).map(s=>
+    `<img class="at-snapshot" src="${s.url}" title="${s.view==='front'?'Frontale':'Laterale'}">`
+  ).join('');
 }
 
+function atSelectSnapshot(view,idx){
+  const canvas=document.getElementById('atCanvas'+cap(view));
+  const img=new Image();
+  img.onload=()=>{canvas.width=img.width;canvas.height=img.height;canvas.getContext('2d').drawImage(img,0,0);};
+  img.src=AT.snapshots[view][idx].url;
+  document.querySelectorAll(`#atSnapshots${cap(view)} .at-snapshot`).forEach((el,i)=>el.classList.toggle('sel',i===idx));
+}
+
+function atComputeAndShowResults(){
+  const lmF=AT.poses.front;
+  const lmS=AT.poses.side;
+  if(!lmF&&!lmS) return;
+  const angF=lmF?atCalcAngles(lmF,'front'):{};
+  const angS=lmS?atCalcAngles(lmS,'side'):{};
+  const merged={
+    elbow:     angS.elbow     ??angF.elbow,
+    shoulder:  angS.shoulder  ??angF.shoulder,
+    forearmV:  angS.forearmV  ??angF.forearmV,
+    wristFlex: angS.wristFlex ??angF.wristFlex,
+    bodyLean:  angS.bodyLean  ??angF.bodyLean,
+    hipAlign:  angF.hipAlign  ??angS.hipAlign,
+    shoulderH: angF.shoulderH ??angS.shoulderH,
+    releaseH:  angS.releaseH  ??angF.releaseH
+  };
+  atShowAveragedResults(merged);
+}
+
+function atUpdateResultsBox(){
+  if(!AT.poses.front&&!AT.poses.side)
+    document.getElementById('atResultsBox').classList.remove('show');
+}
+
+// ── Geometry helpers ──
 // ── Geometry helpers ──
 function atAngle3(A,B,C){
   const AB={x:A.x-B.x,y:A.y-B.y};
@@ -4931,86 +4925,9 @@ function atAngleClass(key, val){
 }
 
 // ── Snapshot ──
-function atSaveSnapshot(view){
-  const canvas = document.getElementById('atCanvas'+cap(view));
-  const url = canvas.toDataURL('image/jpeg', 0.7);
-  const snaps = AT.snapshots[view];
-  if(snaps.length >= 8) snaps.shift();
-  snaps.push({url, view, angles: atCalcAngles(AT.poses[view]||[], view)});
 
-  const strip = document.getElementById('atSnapshots'+cap(view));
-  strip.innerHTML = snaps.map((s,i)=>
-    `<img class="at-snapshot ${i===snaps.length-1?'sel':''}" src="${s.url}" onclick="atSelectSnapshot('${view}',${i})">`
-  ).join('');
-
-  // Also add to combined gallery
-  AT.allSnapshots.push({url, view});
-  const allStrip = document.getElementById('atAllSnapshots');
-  if(allStrip) allStrip.innerHTML = AT.allSnapshots.slice(-12).map(s=>
-    `<img class="at-snapshot" src="${s.url}" title="Vista ${s.view==='front'?'frontale':'laterale'}">`
-  ).join('');
-}
-
-function atSelectSnapshot(view, idx){
-  const snaps = AT.snapshots[view];
-  const canvas = document.getElementById('atCanvas'+cap(view));
-  const img = new Image();
-  img.onload = () => {
-    canvas.width = img.width; canvas.height = img.height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-  };
-  img.src = snaps[idx].url;
-  document.querySelectorAll(`#atSnapshots${cap(view)} .at-snapshot`).forEach((el,i)=>el.classList.toggle('sel',i===idx));
-}
 
 // ── Compute angles & show results ──
-function atComputeAndShowResults(){
-  const lmF = AT.poses.front;
-  const lmS = AT.poses.side;
-  if(!lmF && !lmS) return;
-
-  const angF = lmF ? atCalcAngles(lmF, 'front') : {};
-  const angS = lmS ? atCalcAngles(lmS, 'side')  : {};
-  // Merge — side view preferred for sagittal angles
-  const merged = {
-    elbow:     angS.elbow     ?? angF.elbow,
-    shoulder:  angS.shoulder  ?? angF.shoulder,
-    forearmV:  angS.forearmV  ?? angF.forearmV,
-    wristFlex: angS.wristFlex ?? angF.wristFlex,
-    bodyLean:  angS.bodyLean  ?? angF.bodyLean,
-    hipAlign:  angF.hipAlign  ?? angS.hipAlign,
-    shoulderH: angF.shoulderH ?? angS.shoulderH,
-    releaseH:  angS.releaseH  ?? angF.releaseH
-  };
-
-  // ── Render angle cards ──
-  const grid = document.getElementById('atAnglesGrid');
-  let html = '';
-  for(const [key, ref] of Object.entries(AT_ANGLE_REFS)){
-    const val = merged[key];
-    if(val === null || val === undefined) continue;
-    const cls = atAngleClass(key, val);
-    html += `<div class="at-angle-card">
-      <div class="at-angle-val ${cls}">${Math.round(val)}${ref.unit}</div>
-      <div class="at-angle-lbl">${ref.label}</div>
-      <div class="at-angle-range">ottimale: ${ref.ideal[0]}–${ref.ideal[1]}${ref.unit}</div>
-    </div>`;
-  }
-  grid.innerHTML = html || '<p style="color:var(--muted);font-size:13px">Nessun angolo calcolato.</p>';
-
-  // ── Generate report ──
-  const report = atGenerateReport(merged);
-  document.getElementById('atReportItems').innerHTML = report.map(r=>
-    `<div class="at-report-item">
-      <div class="at-report-icon">${r.icon}</div>
-      <div class="at-report-text"><strong>${r.title}</strong> — ${r.text}</div>
-    </div>`
-  ).join('');
-
-  document.getElementById('atResultsBox').classList.add('show');
-}
-
 // ── Technical report generator ──
 function atGenerateReport(ang){
   const items = [];
@@ -5113,12 +5030,6 @@ function atDrop(e, view){
   const inp = document.getElementById('atFile'+cap(view));
   const dt = new DataTransfer(); dt.items.add(file); inp.files = dt.files;
   atLoadVideo(view, inp);
-}
-
-function atUpdateResultsBox(){
-  if(!AT.poses.front && !AT.poses.side){
-    document.getElementById('atResultsBox').classList.remove('show');
-  }
 }
 
 // ── Utils ──
