@@ -650,9 +650,33 @@ select:hover{border-color:var(--green)}
 .at-drop-icon{font-size:32px;margin-bottom:8px}
 .at-drop-label{font-size:13px;color:var(--mu2);line-height:1.6}
 .at-drop-label strong{color:var(--light)}
-.at-video-wrap{position:relative;background:#000;border-radius:6px;overflow:hidden;margin-top:10px;display:none}
-.at-video-wrap video{width:100%;display:block;max-height:280px;object-fit:contain;background:#000}
-.at-video-wrap canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+/* Video wrap: adattato al video senza bande nere */
+.at-video-wrap{
+  position:relative;
+  background:#000;
+  border-radius:6px;
+  overflow:hidden;
+  margin-top:10px;
+  display:none;
+  width:100%;
+  line-height:0; /* remove gap under video */
+}
+/* Video nascosto dopo analisi — canvas mostra i frame annotati */
+.at-video-wrap video{
+  width:100%;
+  height:auto;        /* altezza si adatta all'aspect ratio — NO bande nere */
+  display:block;
+  background:#000;
+  object-fit:unset;   /* non serve contain: width:100% + height:auto è corretto */
+}
+/* Canvas: si sovrappone al video con le stesse dimensioni */
+.at-video-wrap canvas{
+  position:absolute;
+  top:0;left:0;
+  width:100%;height:100%;
+  pointer-events:none;
+  display:block;
+}
 .at-video-ctrl{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}
 .at-btn{background:var(--green);color:#000;border:none;padding:9px 18px;border-radius:5px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:background .2s;white-space:nowrap}
 .at-btn:hover{background:var(--green2)}
@@ -4582,6 +4606,7 @@ function atRemoveVideo(view){
   const badge= document.getElementById('atBadge'+cap(view));
   const finp = document.getElementById('atFile'+cap(view));
   vid.pause(); vid.src = '';
+  vid.style.display = ''; // restore visibility
   wrap.style.display = 'none';
   ctrl.style.display = 'none';
   tl.style.display   = 'none';
@@ -4635,42 +4660,39 @@ function atStartAnalysis(view){
   btn.textContent = '⏳ ANALISI…';
   btn.disabled = true;
   btn.style.background = 'var(--amber)';
+  btn.style.color = '#000';
   prog.textContent = '0%';
 
-  // Seek-based offline analysis: step through video at ~10fps
-  const FPS_STEP = 1/10; // analyse 10 frames per second of video
+  const FPS_STEP = 1/30; // 30fps analysis
   vid.pause();
   vid.currentTime = 0;
-
   AT._analysisCursor = 0;
   AT._analysisDuration = vid.duration || 10;
 
   const doNextFrame = () => {
-    if(!AT.rafRunning[view]) return; // aborted
-
+    if(!AT.rafRunning[view]) return;
     const cursor = AT._analysisCursor;
-    if(cursor >= AT._analysisDuration + 0.01){
-      // Done — finalize
+    if(cursor >= AT._analysisDuration + 0.001){
       atFinalizeAnalysis(view);
       return;
     }
-    // Seek to next frame
     vid.currentTime = Math.min(cursor, AT._analysisDuration);
     AT._analysisCursor += FPS_STEP;
   };
-
   AT._doNextFrame = doNextFrame;
 
-  // On each seeked event: draw + send to MediaPipe
   vid.onseeked = () => {
     if(!AT.rafRunning[view]) return;
     const canvas = document.getElementById('atCanvas'+cap(view));
-    canvas.width  = vid.videoWidth  || canvas.width;
-    canvas.height = vid.videoHeight || canvas.height;
+    // Use native video dimensions for pixel-perfect drawing
+    const W = vid.videoWidth  || 640;
+    const H = vid.videoHeight || 360;
+    canvas.width  = W;
+    canvas.height = H;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(vid, 0, 0, W, H);
 
-    // Update progress bar
+    // Update progress
     const pct = Math.min(100, Math.round(vid.currentTime / AT._analysisDuration * 100));
     const prog2 = document.getElementById('atProg'+cap(view));
     if(prog2) prog2.textContent = pct+'%';
@@ -4680,8 +4702,7 @@ function atStartAnalysis(view){
       AT.sending[view] = true;
       AT.poseDetectors[view].send({image: canvas}).catch(()=>{
         AT.sending[view] = false;
-        // Even without pose save blank frame and continue
-        AT.annotFrames[view].push(canvas.toDataURL('image/jpeg',0.6));
+        AT.annotFrames[view].push(canvas.toDataURL('image/jpeg', 0.72));
         doNextFrame();
       });
     }
@@ -4702,10 +4723,17 @@ function atOnResults(view, results){
   if(!AT.rafRunning[view]){ AT.sending[view]=false; return; }
 
   const canvas = document.getElementById('atCanvas'+cap(view));
+  const vid    = document.getElementById('atVideo'+cap(view));
+  const ctx    = canvas.getContext('2d');
+
+  // Re-draw the video frame first (canvas must already have the right size from onseeked)
+  const W = canvas.width  || vid.videoWidth  || 640;
+  const H = canvas.height || vid.videoHeight || 360;
+  ctx.drawImage(vid, 0, 0, W, H);
 
   if(results.poseLandmarks && results.poseLandmarks.length){
     AT.poses[view] = results.poseLandmarks;
-    // Draw pose overlays on top of the already-drawn frame
+    // Draw all selected overlays on top of the video frame
     atDrawPose(view, results.poseLandmarks);
     // Accumulate angles
     const ang = atCalcAngles(results.poseLandmarks, view);
@@ -4713,11 +4741,11 @@ function atOnResults(view, results){
     AT.analysisCount[view]++;
   }
 
-  // Save this annotated frame
-  AT.annotFrames[view].push(canvas.toDataURL('image/jpeg', 0.65));
+  // Save this annotated frame (video + overlays)
+  AT.annotFrames[view].push(canvas.toDataURL('image/jpeg', 0.75));
   AT.sending[view] = false;
 
-  // Continue to next frame
+  // Advance to next frame
   if(AT.rafRunning[view] && AT._doNextFrame) AT._doNextFrame();
 }
 
@@ -4725,16 +4753,21 @@ function atFinalizeAnalysis(view){
   AT.rafRunning[view] = false;
   AT.analyzed[view] = true;
 
-  const btn = document.getElementById('atBtnAnalyze'+cap(view));
-  const prog= document.getElementById('atProg'+cap(view));
+  const btn  = document.getElementById('atBtnAnalyze'+cap(view));
+  const prog = document.getElementById('atProg'+cap(view));
+  const vid  = document.getElementById('atVideo'+cap(view));
+
   if(btn){ btn.textContent='▶ PLAY'; btn.disabled=false; btn.style.background='var(--green)'; btn.style.color='#000'; }
-  if(prog) prog.textContent = `✓ ${AT.annotFrames[view].length} frame analizzati`;
+  if(prog) prog.textContent = '✓ '+AT.annotFrames[view].length+' frame analizzati';
+
+  // Hide original video — canvas shows annotated frames
+  if(vid) vid.style.display = 'none';
 
   // Show step buttons
   document.getElementById('atBtnPrev'+cap(view)).style.display='';
   document.getElementById('atBtnNext'+cap(view)).style.display='';
 
-  // Build final report
+  // Build qualitative report
   atBuildFinalReport(view);
 
   // Show first annotated frame
@@ -4752,14 +4785,13 @@ function atStartPlayback(view){
   const btn = document.getElementById('atBtnAnalyze'+cap(view));
   if(btn){ btn.textContent='⏸ PAUSA'; btn.style.background='var(--amber)'; btn.style.color='#000'; }
 
-  const FPS = 10; // same fps used in analysis
+  const FPS = 30; // 30fps playback
   AT.playTimer[view] = setInterval(()=>{
     const frames = AT.annotFrames[view];
     if(!frames.length){ atStopPlayback(view); return; }
     AT.playIdx[view] = (AT.playIdx[view] + 1) % frames.length;
     atShowAnnotatedFrame(view, AT.playIdx[view]);
-    // Update timeline
-    const pct = (AT.playIdx[view] / (frames.length-1) * 100).toFixed(1);
+    const pct = (AT.playIdx[view] / Math.max(1,frames.length-1) * 100).toFixed(1);
     const fill = document.getElementById('atFill'+cap(view));
     const time = document.getElementById('atTime'+cap(view));
     if(fill) fill.style.width = pct+'%';
@@ -4775,13 +4807,20 @@ function atStopPlayback(view){
 
 function atShowAnnotatedFrame(view, idx){
   const canvas = document.getElementById('atCanvas'+cap(view));
+  const wrap   = document.getElementById('atVideoWrap'+cap(view));
   const frames = AT.annotFrames[view];
   if(!frames[idx]) return;
   const img = new Image();
   img.onload = () => {
     canvas.width  = img.naturalWidth;
     canvas.height = img.naturalHeight;
-    canvas.getContext('2d').drawImage(img,0,0);
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    // Make canvas define wrap height (video is hidden)
+    // Use padding-bottom trick: canvas is absolute, so set wrap min-height
+    const ratio = img.naturalHeight / Math.max(1, img.naturalWidth);
+    // We know wrap is full-width — set its height proportionally
+    const wrapW = wrap.offsetWidth || canvas.width;
+    wrap.style.height = Math.round(wrapW * ratio) + 'px';
   };
   img.src = frames[idx];
 }
