@@ -1184,7 +1184,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 
     <!-- Info box -->
     <div class="at-info-box">
-      🎯 <strong>Come funziona:</strong> carica un video frontale e/o laterale del tuo tiro. L'app rileva automaticamente la posa del corpo frame per frame, traccia le articolazioni e misura gli angoli chiave. Usa i controlli per navigare nel video e catturare il frame di massimo interesse.
+      🎯 <strong>Come funziona:</strong> carica un video frontale e/o laterale del tuo tiro. L'app rileva automaticamente la posa del corpo frame per frame, traccia le articolazioni e misura gli angoli chiave. Usa i controlli per navigare nel video e leggi il resoconto per scoprire i tuoi <strong>"Punti di Forza"</strong> su cui fare affidamento e i tuoi <strong>"Punti Deboli"</strong> su cui lavorare per migliorarti.
     </div>
 
     <!-- Arm selector -->
@@ -1194,16 +1194,18 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
         <div class="at-arm-btn on" id="armBtnR" onclick="setArm('right')">🖐 DESTRO</div>
         <div class="at-arm-btn" id="armBtnL" onclick="setArm('left')">🤚 SINISTRO</div>
       </div>
-      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px;margin-top:14px">Sovrapposizioni visive</div>
-      <div class="at-checks" id="atOverlayChecks">
-        <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('skeleton',this)"> 🦴 Scheletro completo</label>
-        <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('arm',this)"> 💪 Linea braccio</label>
-        <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('forearm',this)"> 🦾 Avambraccio</label>
-        <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('wrist',this)"> ✋ Polso/mano</label>
-        <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('angles',this)"> 📐 Angoli</label>
-        <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('spine',this)"> 🫀 Colonna/busto</label>
-        <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('hips',this)"> 🦵 Fianchi/gambe</label>
-        <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('aimline',this)"> 🎯 Linea di mira</label>
+      <!-- Sovrapposizioni visive: sempre tutte attive, nascoste all'utente -->
+      <div style="display:none" aria-hidden="true">
+        <div class="at-checks" id="atOverlayChecks">
+          <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('skeleton',this)"> 🦴 Scheletro completo</label>
+          <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('arm',this)"> 💪 Linea braccio</label>
+          <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('forearm',this)"> 🦾 Avambraccio</label>
+          <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('wrist',this)"> ✋ Polso/mano</label>
+          <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('angles',this)"> 📐 Angoli</label>
+          <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('spine',this)"> 🫀 Colonna/busto</label>
+          <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('hips',this)"> 🦵 Fianchi/gambe</label>
+          <label class="at-check on"><input type="checkbox" checked onchange="atToggleOverlay('aimline',this)"> 🎯 Linea di mira</label>
+        </div>
       </div>
     </div>
 
@@ -4607,6 +4609,8 @@ function atRemoveVideo(view){
   const finp = document.getElementById('atFile'+cap(view));
   vid.pause(); vid.src = '';
   vid.style.display = ''; // restore visibility
+  const cv = document.getElementById('atCanvas'+cap(view));
+  if(cv) cv.style.visibility = 'visible';
   wrap.style.display = 'none';
   ctrl.style.display = 'none';
   tl.style.display   = 'none';
@@ -4662,6 +4666,10 @@ function atStartAnalysis(view){
   btn.style.background = 'var(--amber)';
   btn.style.color = '#000';
   prog.textContent = '0%';
+
+  // Hide canvas visually during analysis (still used for processing behind the scenes)
+  const canvas = document.getElementById('atCanvas'+cap(view));
+  canvas.style.visibility = 'hidden';
 
   const FPS_STEP = 1/30; // 30fps analysis
   vid.pause();
@@ -4762,6 +4770,10 @@ function atFinalizeAnalysis(view){
 
   // Hide original video — canvas shows annotated frames
   if(vid) vid.style.display = 'none';
+
+  // Reveal canvas now that analysis is complete
+  const canvas = document.getElementById('atCanvas'+cap(view));
+  canvas.style.visibility = 'visible';
 
   // Show step buttons
   document.getElementById('atBtnPrev'+cap(view)).style.display='';
@@ -5090,10 +5102,10 @@ function atDrawPose(view, lm){
   function label(cx,cy,text,color){
     ctx.save();
     ctx.fillStyle=color;
-    ctx.font=`bold ${Math.round(11*scale)}px DM Sans,sans-serif`;
+    ctx.font=`bold ${Math.round(20*scale)}px DM Sans,sans-serif`;
     ctx.textAlign='center';
-    ctx.shadowColor='rgba(0,0,0,0.9)';
-    ctx.shadowBlur=4*scale;
+    ctx.shadowColor='rgba(0,0,0,0.95)';
+    ctx.shadowBlur=6*scale;
     ctx.fillText(text,cx,cy);
     ctx.restore();
   }
