@@ -4875,14 +4875,17 @@ function atPlayPause(view){ atMainBtn(view); }
 // REPORT: Punti di Forza / Punti Deboli
 // ══════════════════════
 function atBuildFinalReport(view){
-  const accum = AT.anglesAccum[view];
-  if(!accum.length) return;
-  const keys = Object.keys(AT_ANGLE_REFS);
+  const accum = AT.anglesAccum[view] || [];
+  const keys  = Object.keys(AT_ANGLE_REFS);
   const averaged = {};
-  keys.forEach(k=>{
-    const vals = accum.map(a=>a[k]).filter(v=>v!=null&&!isNaN(v));
-    averaged[k] = vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : null;
-  });
+
+  if(accum.length > 0){
+    keys.forEach(k=>{
+      const vals = accum.map(a=>a[k]).filter(v=>v!=null&&!isNaN(v));
+      averaged[k] = vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : null;
+    });
+  }
+
   // Merge other view
   const ov = view==='front'?'side':'front';
   if(AT.anglesAccum[ov]&&AT.anglesAccum[ov].length){
@@ -4893,6 +4896,8 @@ function atBuildFinalReport(view){
     });
     keys.forEach(k=>{ if(averaged[k]==null) averaged[k]=otherAvg[k]; });
   }
+
+  // Always show report (even if some angles are null)
   atShowReport(averaged);
 }
 
@@ -5030,7 +5035,153 @@ function atSelectSnapshot(view,idx){
   img.src=AT.snapshots[view][idx].url;
 }
 
-// ── Geometry helpers ──
+// ── Draw skeleton + overlays on canvas ──
+// lm = MediaPipe poseLandmarks (normalized 0–1 coords)
+// canvas must already have the correct native video dimensions as .width/.height
+function atDrawPose(view, lm){
+  const canvas = document.getElementById('atCanvas'+cap(view));
+  const ctx    = canvas.getContext('2d');
+  const W = canvas.width  || 640;
+  const H = canvas.height || 360;
+
+  // Scale line thickness with video resolution (base = 720p width 1280)
+  const scale = Math.max(0.5, Math.min(3, W / 800));
+
+  const pt = (i) => ({
+    x: lm[i].x * W,
+    y: lm[i].y * H,
+    v: lm[i].visibility || 0
+  });
+  const isRight = AT.arm === 'right';
+
+  const IDX = {
+    nose:0, lShoulder:11, rShoulder:12,
+    lElbow:13, rElbow:14, lWrist:15, rWrist:16,
+    lHip:23, rHip:24, lKnee:25, rKnee:26,
+    lAnkle:27, rAnkle:28, lIndex:19, rIndex:20,
+    lPinky:17, rPinky:18, lEar:7, rEar:8
+  };
+
+  const throwShoulder = isRight ? IDX.rShoulder : IDX.lShoulder;
+  const throwElbow    = isRight ? IDX.rElbow    : IDX.lElbow;
+  const throwWrist    = isRight ? IDX.rWrist    : IDX.lWrist;
+  const throwIndex    = isRight ? IDX.rIndex    : IDX.lIndex;
+
+  function bone(i1, i2, color='#22c55e', w=2.5, alpha=0.85){
+    const p1=pt(i1), p2=pt(i2);
+    if(p1.v<0.25 || p2.v<0.25) return;
+    ctx.save();
+    ctx.globalAlpha=alpha;
+    ctx.strokeStyle=color;
+    ctx.lineWidth=w*scale;
+    ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+    ctx.restore();
+  }
+  function dot(i, color='#22c55e', r=5){
+    const p=pt(i);
+    if(p.v<0.25) return;
+    ctx.save();
+    ctx.globalAlpha=0.92;
+    ctx.fillStyle=color;
+    ctx.beginPath(); ctx.arc(p.x,p.y,r*scale,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  function label(cx,cy,text,color){
+    ctx.save();
+    ctx.fillStyle=color;
+    ctx.font=`bold ${Math.round(11*scale)}px DM Sans,sans-serif`;
+    ctx.textAlign='center';
+    ctx.shadowColor='rgba(0,0,0,0.9)';
+    ctx.shadowBlur=4*scale;
+    ctx.fillText(text,cx,cy);
+    ctx.restore();
+  }
+
+  // ── Skeleton ──
+  if(AT.overlays.skeleton){
+    bone(IDX.lShoulder,IDX.rShoulder,'#94a3b8',2,0.5);
+    bone(IDX.lHip,IDX.rHip,'#94a3b8',2,0.5);
+    bone(IDX.lShoulder,IDX.lHip,'#94a3b8',2,0.5);
+    bone(IDX.rShoulder,IDX.rHip,'#94a3b8',2,0.5);
+    bone(IDX.nose,IDX.lShoulder,'#94a3b8',1.5,0.25);
+    bone(IDX.nose,IDX.rShoulder,'#94a3b8',1.5,0.25);
+    // Non-throw arm (muted)
+    const [na1,na2,na3]=isRight
+      ?[IDX.lShoulder,IDX.lElbow,IDX.lWrist]
+      :[IDX.rShoulder,IDX.rElbow,IDX.rWrist];
+    bone(na1,na2,'#475569',2,0.45); bone(na2,na3,'#475569',2,0.35);
+    dot(na1,'#475569',3); dot(na2,'#475569',3); dot(na3,'#475569',2.5);
+  }
+
+  // ── Hips/Legs ──
+  if(AT.overlays.hips){
+    bone(IDX.lHip,IDX.lKnee,'#64748b',2,0.5);
+    bone(IDX.rHip,IDX.rKnee,'#64748b',2,0.5);
+    bone(IDX.lKnee,IDX.lAnkle,'#64748b',2,0.4);
+    bone(IDX.rKnee,IDX.rAnkle,'#64748b',2,0.4);
+    dot(IDX.lKnee,'#64748b',3.5); dot(IDX.rKnee,'#64748b',3.5);
+    dot(IDX.lAnkle,'#64748b',3); dot(IDX.rAnkle,'#64748b',3);
+  }
+
+  // ── Spine ──
+  if(AT.overlays.spine){
+    const mShX=(pt(IDX.lShoulder).x+pt(IDX.rShoulder).x)/2;
+    const mShY=(pt(IDX.lShoulder).y+pt(IDX.rShoulder).y)/2;
+    const mHiX=(pt(IDX.lHip).x+pt(IDX.rHip).x)/2;
+    const mHiY=(pt(IDX.lHip).y+pt(IDX.rHip).y)/2;
+    ctx.save();
+    ctx.globalAlpha=0.6; ctx.strokeStyle='#60a5fa';
+    ctx.lineWidth=2*scale; ctx.setLineDash([4*scale,4*scale]);
+    ctx.beginPath(); ctx.moveTo(mShX,mShY); ctx.lineTo(mHiX,mHiY); ctx.stroke();
+    ctx.setLineDash([]); ctx.restore();
+  }
+
+  // ── Throw arm ──
+  if(AT.overlays.arm){
+    bone(throwShoulder,throwElbow,'#22c55e',3.5,0.95);
+    dot(throwShoulder,'#22c55e',6);
+    dot(throwElbow,'#4ade80',6);
+  }
+  if(AT.overlays.forearm){
+    bone(throwElbow,throwWrist,'#4ade80',3,0.95);
+  }
+  if(AT.overlays.wrist){
+    bone(throwWrist,throwIndex,'#facc15',2.5,0.9);
+    dot(throwWrist,'#facc15',5);
+    dot(throwIndex,'#facc15',4.5);
+  }
+
+  // ── Aim line ──
+  if(AT.overlays.aimline){
+    const pw=pt(throwWrist), pi=pt(throwIndex);
+    if(pw.v>0.25&&pi.v>0.25){
+      const dx=pi.x-pw.x, dy=pi.y-pw.y;
+      const len=Math.sqrt(dx*dx+dy*dy)||1;
+      const ext=W*0.18; // extension proportional to video width
+      ctx.save();
+      ctx.globalAlpha=0.72;
+      ctx.strokeStyle='#f59e0b'; ctx.lineWidth=2.5*scale; ctx.setLineDash([6*scale,5*scale]);
+      ctx.beginPath();
+      ctx.moveTo(pw.x,pw.y);
+      ctx.lineTo(pw.x+dx/len*ext, pw.y+dy/len*ext);
+      ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+    }
+  }
+
+  // ── Angle labels ──
+  if(AT.overlays.angles){
+    const ang=atCalcAngles(lm,view);
+    const pEl=pt(throwElbow), pWr=pt(throwWrist), pSh=pt(throwShoulder);
+    if(ang.elbow!=null&&pEl.v>0.25)
+      label(pEl.x+22*scale, pEl.y-8*scale, Math.round(ang.elbow)+'°', atAngleColor('elbow',ang.elbow));
+    if(ang.wristFlex!=null&&pWr.v>0.25)
+      label(pWr.x+22*scale, pWr.y-8*scale, Math.round(ang.wristFlex)+'°', atAngleColor('wristFlex',ang.wristFlex));
+    if(ang.shoulder!=null&&pSh.v>0.25)
+      label(pSh.x+22*scale, pSh.y-8*scale, Math.round(ang.shoulder)+'°', atAngleColor('shoulder',ang.shoulder));
+  }
+}
+
 // ── Geometry helpers ──
 function atAngle3(A,B,C){
   const AB={x:A.x-B.x,y:A.y-B.y};
