@@ -5117,20 +5117,20 @@ function atQualitativeReport(ang){
     const v=ang.shoulderLat;
     if(v>=54&&v<=65)
       strengths.push({icon:'✅',title:'Gomito sopra la spalla — posizione ideale',
-        text:''+Math.round(v)+'° di elevazione — il gomito è ben sopra il livello della spalla, esattamente come tutti e 6 i professionisti corretti analizzati (media 59.5°). Questo permette al gomito di fare da PERNO per l'avambraccio: il polso si proietta verso il bersaglio mentre il gomito rimane fermo. Fondamentale per la precisione.'});
+        text:''+Math.round(v)+'° di elevazione — il gomito è ben sopra il livello della spalla, esattamente come tutti e 6 i professionisti corretti analizzati (media 59.5°). Questo permette al gomito di fare da PERNO per l\'avambraccio: il polso si proietta verso il bersaglio mentre il gomito rimane fermo. Fondamentale per la precisione.'});
     else if(v>=47&&v<=72)
       strengths.push({icon:'👍',title:'Gomito sopra la spalla — nella norma',
         text:''+Math.round(v)+'° — accettabile. Gary Anderson (67°) e Luke Littler (54°) mostrano gli estremi: entrambi corretti se il gomito rimane fermo come perno durante la spinta.'});
     else if(v<47)
       weaknesses.push({icon:'🔴',title:'Gomito troppo basso — errore critico di perno',
-        text:''+Math.round(v)+'° — sotto il range di tutti i professionisti corretti (minimo 47°). Questo è l'errore di Stephen Bunting: quando il gomito è troppo basso in fase di mira, il braccio non può usarlo come perno. Durante il caricamento il gomito scende ulteriormente, e al momento della spinta il gomito sale assieme all'avambraccio anziché restare fermo — si ottiene una spinta "a palla" invece che "a catapulta". Correzione urgente: porta il gomito verso l'alto in fase di mira finché l'avambraccio punta chiaramente verso il bersaglio.'});
+        text:''+Math.round(v)+'° — sotto il range di tutti i professionisti corretti (minimo 47°). Questo è l\'errore di Stephen Bunting: quando il gomito è troppo basso in fase di mira, il braccio non può usarlo come perno. Durante il caricamento il gomito scende ulteriormente, e al momento della spinta il gomito sale assieme all\'avambraccio anziché restare fermo — si ottiene una spinta "a palla" invece che "a catapulta". Correzione urgente: porta il gomito verso l\'alto in fase di mira finché l\'avambraccio punta chiaramente verso il bersaglio.'});
   }
 
   if(ang.forearmLat!=null){
     const v=ang.forearmLat;
     if(v>=45&&v<=50)
       strengths.push({icon:'✅',title:'Avambraccio — angolo ottimale (vista laterale)',
-        text:''+Math.round(v)+'° dalla verticale — nella zona ideale (media professionale 47.5°, range 40–54°). L'avambraccio è inclinato correttamente in avanti, pronto per la fase di spinta verso il bersaglio.'});
+        text:''+Math.round(v)+'° dalla verticale — nella zona ideale (media professionale 47.5°, range 40–54°). L\'avambraccio è inclinato correttamente in avanti, pronto per la fase di spinta verso il bersaglio.'});
     else if(v>=41&&v<=54)
       strengths.push({icon:'👍',title:'Avambraccio nella norma (vista laterale)',
         text:''+Math.round(v)+'° — nel range professionale (40–54°). Gary Anderson (54°) più inclinato, Luke Littler (40°) più verticale: entrambi corretti.'});
@@ -5153,7 +5153,7 @@ function atQualitativeReport(ang){
         text:''+Math.round(v)+'° — nel range professionale corretto (3.6–14.6°). Attenzione: mantieni il peso distribuito anche in fase di tiro per evitare il sollevamento del piede posteriore.'});
     else if(v>15)
       weaknesses.push({icon:'🔴',title:'Inclinazione eccessiva — rischio piede pendolo',
-        text:''+Math.round(v)+'° — supera il massimo dei professionisti corretti (14.6°). Questo è il pattern che causa il PIEDE POSTERIORE PENDOLO: quando il busto è troppo proiettato verso il bersaglio (come Gian Van Veen, Jonny Clayton, Michele Turetta, Nathan Aspinall), il peso del corpo si sposta eccessivamente in avanti e la gamba posteriore deve sollevarsi per compensare l'equilibrio. Correzione: ridistribuisci il peso sulle due gambe restando più eretto. Il piede posteriore deve sempre mantenere il contatto con il suolo durante tutto il tiro.'});
+        text:''+Math.round(v)+'° — supera il massimo dei professionisti corretti (14.6°). Questo è il pattern che causa il PIEDE POSTERIORE PENDOLO: quando il busto è troppo proiettato verso il bersaglio (come Gian Van Veen, Jonny Clayton, Michele Turetta, Nathan Aspinall), il peso del corpo si sposta eccessivamente in avanti e la gamba posteriore deve sollevarsi per compensare l\'equilibrio. Correzione: ridistribuisci il peso sulle due gambe restando più eretto. Il piede posteriore deve sempre mantenere il contatto con il suolo durante tutto il tiro.'});
   }
 
   if(!strengths.length&&!weaknesses.length)
