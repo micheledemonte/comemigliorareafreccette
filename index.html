@@ -1184,7 +1184,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 
     <!-- Info box -->
     <div class="at-info-box">
-      🎯 <strong>Come funziona:</strong> carica un video frontale e/o laterale del tuo tiro. L'app rileva automaticamente la posa del corpo frame per frame, traccia le articolazioni e misura gli angoli chiave. Usa i controlli per navigare nel video e leggi il resoconto per scoprire i tuoi <strong>"Punti di Forza"</strong> su cui fare affidamento e i tuoi <strong>"Punti Deboli"</strong> su cui lavorare per migliorarti.
+      🎯 <strong>Come funziona:</strong> carica un video frontale e/o laterale del tuo tiro. L'app rileva automaticamente la posa del corpo frame per frame, traccia le articolazioni e misura gli angoli chiave. Il sistema è stato calibrato su 16 giocatori analizzati con intelligenza artificiale: 8 con tecnica corretta e 8 con errori tecnici noti (deviazione laterale del gomito, rotazione esterna del polso, linea spalla-gomito chiusa, compensazioni della schiena e altro). Leggi il resoconto per scoprire i tuoi <strong>"Punti di Forza"</strong> e i tuoi <strong>"Punti Deboli"</strong> con suggerimenti specifici di correzione.
     </div>
 
     <!-- Arm selector -->
@@ -4495,16 +4495,30 @@ const AT = {
   anglesHistory: []
 };
 
-// Angles reference ranges for darts (degrees) — based on biomechanics literature
+// Angles reference ranges — PyTorch KeypointRCNN on 16 players (8 correct + 8 with known errors)
+// PyTorch KeypointRCNN calibration — 22 players total:
+// FRONTAL correct (8): Chris Dobey, Beau Greaves, Damon Heta, Gerwyn Price,
+//   Josh Rock, Kevin Doets, Luke Littler, Michele Turetta
+// FRONTAL errors (8): Danny Noppert, Gary Anderson, Gian Van Veen, Jonny Clayton,
+//   Luke Humphries, Michael Van Gerwen, Stephen Bunting, Nathan Aspinall
+// LATERAL correct (6): Gary Anderson, Beau Greaves, Gerwyn Price,
+//   Josh Rock, Luke Humphries, Luke Littler
+// ideal = mean ± 0.7σ | good = p25–p75 ± 5°
 const AT_ANGLE_REFS = {
-  elbow:    {label:'Gomito',        ideal:[85,105], good:[75,115],  unit:'°', view:'both'},
-  shoulder: {label:'Spalla',        ideal:[30,60],  good:[20,75],   unit:'°', view:'side'},
-  forearmV: {label:'Avambraccio V', ideal:[70,90],  good:[55,95],   unit:'°', view:'side'},
-  wristFlex:{label:'Polso',         ideal:[160,180],good:[145,180], unit:'°', view:'both'},
-  bodyLean: {label:'Inclinazione',  ideal:[5,20],   good:[0,30],    unit:'°', view:'side'},
-  hipAlign: {label:'Fianchi',       ideal:[0,15],   good:[0,25],    unit:'°', view:'front'},
-  shoulderH:{label:'Spalla H',      ideal:[0,10],   good:[0,18],    unit:'°', view:'front'},
-  releaseH: {label:'Release H',     ideal:[75,95],  good:[65,105],  unit:'°', view:'side'},
+  // ── FRONTAL VIEW ──
+  elbow:     {label:'Gomito (mira)',     ideal:[113,138], good:[103,142], unit:'°', view:'front'},
+  shoulder:  {label:'Spalla',            ideal:[77,85],   good:[72,90],   unit:'°', view:'front'},
+  forearmV:  {label:'Avambraccio front.',ideal:[44,64],   good:[36,74],   unit:'°', view:'front'},
+  shoulderH: {label:'Rotaz. spalle',     ideal:[12,19],   good:[7,25],    unit:'°', view:'front'},
+  hipAlign:  {label:'Fianchi',           ideal:[0,10],    good:[0,18],    unit:'°', view:'front'},
+  // ── LATERAL VIEW ──
+  elbowLat:  {label:'Gomito lat.',       ideal:[99,107],  good:[96,111],  unit:'°', view:'side'},
+  shoulderLat:{label:'Spalla lat.',      ideal:[54,65],   good:[47,72],   unit:'°', view:'side'},
+  forearmLat: {label:'Avambr. lat.',     ideal:[45,50],   good:[41,54],   unit:'°', view:'side'},
+  // ── SHARED ──
+  wristFlex: {label:'Polso',             ideal:[163,167], good:[155,175], unit:'°', view:'both'},
+  bodyLean:  {label:'Inclinazione',      ideal:[3,8],     good:[0,12],    unit:'°', view:'both'},
+  releaseH:  {label:'Release',           ideal:[144,159], good:[135,168], unit:'°', view:'side'},
 };
 
 function setArm(side){
@@ -4956,62 +4970,194 @@ function atShowReport(averaged){
 }
 
 function atQualitativeReport(ang){
-  const strengths = [];
-  const weaknesses = [];
+  const strengths=[], weaknesses=[];
 
-  // ── Gomito ──
+  // ── GOMITO ──
+  // Correct pros: mean=125.4° ±18° range=[103–155°]
+  // Error players: no specific elbow angle error but compensation patterns
   if(ang.elbow!=null){
     const v=ang.elbow;
-    if(v>=85&&v<=105) strengths.push({icon:'✅',title:'Gomito in posizione ottimale',text:`L'angolo di gomito (${Math.round(v)}°) è nella zona ideale 85–105°. Questo garantisce una spinta lineare potente e controllata verso il bersaglio.`});
-    else if(v<75) weaknesses.push({icon:'🔴',title:'Gomito troppo chiuso',text:`Il gomito è eccessivamente piegato (${Math.round(v)}°). Questo accorcia la traiettoria di spinta e riduce la potenza. Lavora ad aprire leggermente il gomito nella fase di caricamento, puntando al range 85–105°.`});
-    else if(v>115) weaknesses.push({icon:'🔴',title:'Gomito troppo aperto',text:`Il braccio è quasi disteso già in fase di caricamento (${Math.round(v)}°). Perdi potenza e controllo nella spinta finale. Prova a piegare maggiormente il gomito prima del lancio.`});
-    else strengths.push({icon:'👍',title:'Gomito nella norma',text:`Angolo di gomito a ${Math.round(v)}° — nella norma. Una piccola correzione verso 90–100° potrebbe affinare ulteriormente la linearità del gesto.`});
+    if(v>=113&&v<=138)
+      strengths.push({icon:'✅',title:'Angolo di gomito ideale',
+        text:''+Math.round(v)+'° — nella zona ottimale misurata su 8 professionisti corretti (media 125°). Gerwyn Price (103°), Luke Littler (110°), Beau Greaves (122°) mostrano valori simili. Il gomito è posizionato correttamente per una spinta lineare verso il bersaglio.'});
+    else if(v>=103&&v<=142)
+      strengths.push({icon:'👍',title:'Angolo di gomito nella norma',
+        text:''+Math.round(v)+'° — nel range professionale (103–155°). Ogni giocatore ha il proprio stile. L\'importante è che il gomito si apra linearmente verso il bersaglio senza deviazioni laterali durante la spinta.'});
+    else if(v<103)
+      weaknesses.push({icon:'⚠️',title:'Gomito troppo chiuso',
+        text:''+Math.round(v)+'° — sotto il range dei professionisti corretti (minimo 103°, Gerwyn Price). Un gomito così chiuso riduce la distanza di spinta utile. Apri leggermente il gomito nella fase di mira, puntando a 110–130°. Attenzione: un gomito troppo chiuso spesso causa anche deviazioni laterali durante la spinta (errore di Danny Noppert).'});
+    else
+      weaknesses.push({icon:'⚠️',title:'Gomito troppo aperto',
+        text:''+Math.round(v)+'° — sopra il massimo dei professionisti (155°, Chris Dobey). Il braccio è già quasi esteso: poco margine di spinta. Porta il gomito verso 120–135° nella fase di mira. Nota: gomito molto aperto può indicare anche una linea spalla-gomito troppo aperta verso sinistra (errore di Gary Anderson - linea verso il 13).'});
   }
 
-  // ── Polso ──
+  // ── POLSO ──
+  // Critical: ALL correct pros 160-170°. Error players show wrist deviation (toward 13 = Bunting, Humphries)
   if(ang.wristFlex!=null){
     const v=ang.wristFlex;
-    if(v>=160&&v<=180) strengths.push({icon:'✅',title:'Rilascio del polso pulito',text:`Il polso è ben esteso nel momento del rilascio (${Math.round(v)}°). Questo è uno dei punti più importanti della tecnica: garantisce traiettoria stabile e prevedibile.`});
-    else if(v<145) weaknesses.push({icon:'🔴',title:'Polso non completamente esteso al rilascio',text:`Il polso rimane flesso (${Math.round(v)}°) durante il rilascio. Questo causa variabilità nel punto di uscita della freccetta e spesso produce lanci troppo alti. Esercitati a "spingere con le dita" verso il bersaglio completando il gesto oltre la freccetta.`});
-    else weaknesses.push({icon:'⚠️',title:'Estensione del polso migliorabile',text:`Il polso è quasi esteso ma non completamente (${Math.round(v)}°). Un piccolo lavoro sulla finitura del gesto porterà maggiore consistenza nel rilascio.`});
+    if(v>=163&&v<=167)
+      strengths.push({icon:'✅',title:'Estensione del polso perfetta al rilascio',
+        text:''+Math.round(v)+'° — identico alla media dei professionisti corretti (165°). Questo è l\'indicatore più affidabile: tutti i pro con tecnica corretta mostrano 160–170° al rilascio, indipendentemente dallo stile. Garantisce traiettoria pulita e ripetibile.'});
+    else if(v>=155&&v<=175)
+      strengths.push({icon:'👍',title:'Polso correttamente esteso',
+        text:''+Math.round(v)+'° — nel range accettabile. Continua a lavorare sul completare il gesto verso il bersaglio.'});
+    else if(v<155)
+      weaknesses.push({icon:'🔴',title:'Polso flesso al rilascio — errore critico',
+        text:''+Math.round(v)+'° — sotto la soglia di tutti i professionisti analizzati. Un polso flesso al rilascio è spesso la conseguenza di un percorso di caricamento laterale (come Luke Humphries che porta il polso fuori dalla linea di mira in fase di caricamento, causando compensazioni al rilascio). Verifica che nella fase di caricamento il polso segua esattamente la linea occhio-bersaglio e non si sposti lateralmente.'});
+    else
+      weaknesses.push({icon:'⚠️',title:'Polso iper-esteso',text:''+Math.round(v)+'° — sopra il range professionale. Rilassa leggermente la finitura.'});
   }
 
-  // ── Spalla ──
+  // ── SPALLA (elevazione) ──
+  // Correct pros: mean=81° range=[71–88°]. Nathan Aspinall error: shoulder angle <60° = closed line toward 11
   if(ang.shoulder!=null){
     const v=ang.shoulder;
-    if(v>=30&&v<=60) strengths.push({icon:'✅',title:'Altezza della spalla corretta',text:`La spalla di tiro è posizionata all'altezza ideale (${Math.round(v)}°). Mirare risulta naturale e non devi compensare con la testa o il busto.`});
-    else if(v<20) weaknesses.push({icon:'⚠️',title:'Spalla di tiro troppo bassa',text:`Il braccio è tenuto basso rispetto alla linea di mira (${Math.round(v)}°). Devi compensare alzando il polso, il che introduce instabilità. Prova ad alzare il punto di mira e a portare il gomito leggermente in avanti.`});
-    else if(v>75) weaknesses.push({icon:'⚠️',title:'Spalla di tiro troppo alta',text:`Il braccio è alzato eccessivamente (${Math.round(v)}°). Questo crea tensione nel deltoide e riduce la precisione. Rilassa la spalla abbassando leggermente il punto di mira.`});
+    if(v>=77&&v<=85)
+      strengths.push({icon:'✅',title:'Altezza della spalla ottimale',
+        text:''+Math.round(v)+'° — nella zona ideale (media 81° su 8 pro corretti). Il braccio è alla giusta altezza per mirare naturalmente verso il 20. Valori simili: Kevin Doets (88°), Damon Heta (86°), Luke Littler (83°).'});
+    else if(v>=72&&v<=90)
+      strengths.push({icon:'👍',title:'Altezza della spalla nella norma',
+        text:''+Math.round(v)+'° — nel range professionale (71–88°). Stabile e funzionale.'});
+    else if(v<60)
+      weaknesses.push({icon:'🔴',title:'Linea spalla-gomito troppo chiusa — punta verso il 11',
+        text:''+Math.round(v)+'° — questo è il pattern identificato nell\'analisi di Nathan Aspinall: quando la spalla è così bassa e il gomito troppo interno, la linea spalla-gomito non punta verso il 20 ma verso il settore 11 (a sinistra per il destrorso). Questo causa tensioni muscolari alla schiena (dorsale, dentato posteriore) e spesso costringe a compensare con un\'inarcatura della schiena o un saltino del piede anteriore durante il tiro. Correzione: apri il gomito verso l\'esterno alzando il braccio per portare la linea spalla-gomito direttamente verso il 20.'});
+    else if(v<72)
+      weaknesses.push({icon:'⚠️',title:'Spalla di tiro troppo bassa',
+        text:''+Math.round(v)+'° — sotto il range professionale. Il punto di mira è troppo basso. Rischi di compensare con il polso o con il busto. Porta il gomito verso l\'altezza degli occhi.'});
+    else
+      weaknesses.push({icon:'⚠️',title:'Spalla di tiro troppo alta',
+        text:''+Math.round(v)+'° — sopra il range. Tensione muscolare e riduzione della fluidità. Abbassa leggermente il gomito.'});
   }
 
-  // ── Inclinazione busto ──
-  if(ang.bodyLean!=null){
-    const v=ang.bodyLean;
-    if(v>=5&&v<=20) strengths.push({icon:'✅',title:'Postura del busto equilibrata',text:`L'inclinazione in avanti è naturale (${Math.round(v)}°). Ti avvicini al bersaglio senza perdere l'equilibrio, il che favorisce la consistenza nel tiro.`});
-    else if(v>30) weaknesses.push({icon:'⚠️',title:'Busto troppo inclinato in avanti',text:`Ti sporgi eccessivamente verso il bersaglio (${Math.round(v)}°). Questo può causare instabilità posturale e affaticamento muscolare nel corso della partita. Cerca di mantenere una posizione più eretta con una leggera inclinazione naturale (5–15°).`});
-    else if(v<3) weaknesses.push({icon:'💡',title:'Postura troppo eretta',text:`Stai tirando quasi in verticale (${Math.round(v)}°). Una piccola inclinazione in avanti (5–15°) ti aiuterebbe ad allineare meglio l'occhio con la freccetta e il bersaglio.`});
-  }
-
-  // ── Allineamento spalle (vista frontale) ──
-  if(ang.shoulderH!=null){
-    const v=ang.shoulderH;
-    if(v<=10) strengths.push({icon:'✅',title:'Spalle ben allineate',text:`La differenza di altezza tra le due spalle è minima (${Math.round(v)}°). Questo indica una postura stabile senza rotazioni compensatorie che potrebbero alterare la direzione del tiro.`});
-    else if(v>20) weaknesses.push({icon:'⚠️',title:'Rotazione delle spalle eccessiva',text:`C'è un dislivello significativo tra le spalle (${Math.round(v)}°). Una rotazione eccessiva può deviare la direzione del tiro. Concentrati a tenere la spalla non dominante ferma e leggermente abbassata durante il lancio.`});
-  }
-
-  // ── Avambraccio verticale ──
+  // ── AVAMBRACCIO ──
+  // Correct pros: mean=54° range=[37–77°]
+  // Gian Van Veen error: forearm deviates LEFT during loading causing external wrist rotation at release
   if(ang.forearmV!=null){
     const v=ang.forearmV;
-    if(v>=70&&v<=90) strengths.push({icon:'✅',title:'Avambraccio verticale ottimale',text:`L'avambraccio è quasi perpendicolare al suolo (${Math.round(v)}° dalla verticale). Questa posizione massimizza la lunghezza utile del gesto di spinta, aumentando precisione e potenza.`});
-    else if(v<55) weaknesses.push({icon:'⚠️',title:'Avambraccio troppo orizzontale',text:`L'avambraccio è inclinato orizzontalmente (${Math.round(v)}°) nella fase di caricamento. Questo riduce la distanza di spinta. Porta il gomito più in alto per raddrizzare l'avambraccio.`});
+    if(v>=44&&v<=64)
+      strengths.push({icon:'✅',title:'Angolo avambraccio corretto',
+        text:''+Math.round(v)+'° — nella zona ottimale dei professionisti (media 54°). Il piano di movimento dell\'avambraccio è lineare. Tutti i pro corretti mantengono 37–77°.'});
+    else if(v>=36&&v<=74)
+      strengths.push({icon:'👍',title:'Angolo avambraccio nella norma',
+        text:''+Math.round(v)+'° — nel range professionale. Beau Greaves (77°) e Damon Heta (41°) dimostrano che entrambi gli estremi sono validi se il movimento è lineare.'});
+    else if(v<36)
+      weaknesses.push({icon:'⚠️',title:'Avambraccio troppo orizzontale — rischio deviazione',
+        text:''+Math.round(v)+'° — sotto il range professionale. Un avambraccio molto orizzontale può favorire movimenti laterali durante il caricamento. Ricorda: l\'errore di Gian Van Veen nasce esattamente qui — l\'avambraccio si sposta lateralmente verso l\'occhio destro durante il caricamento, causando una rotazione esterna del polso al rilascio che devia la freccia. Porta il gomito più in alto per mantenere l\'avambraccio nel piano corretto.'});
   }
 
-  // ── Fianchi ──
+  // ── INCLINAZIONE BUSTO ──
+  // Correct pros: mean=5.4° range=[1.8–12.3°]
+  // Nathan Aspinall compensates with excessive back arch (>12°)
+  if(ang.bodyLean!=null){
+    const v=ang.bodyLean;
+    if(v>=3&&v<=8)
+      strengths.push({icon:'✅',title:'Inclinazione del busto ideale',
+        text:''+Math.round(v)+'° — nella zona ottimale (media pro 5.4°). I professionisti con tecnica corretta si inclinano poco: Damon Heta 1.8°, Chris Dobey 3.9°. Un\'inclinazione contenuta protegge la schiena e mantiene la stabilità in partita.'});
+    else if(v<=12)
+      strengths.push({icon:'👍',title:'Postura del busto corretta',
+        text:''+Math.round(v)+'° — accettabile. Michele Turetta (12.3°) e Gerwyn Price (8.1°) mostrano i valori più alti tra i pro corretti.'});
+    else if(v>12)
+      weaknesses.push({icon:'⚠️',title:'Inclinazione eccessiva — possibile compensazione',
+        text:''+Math.round(v)+'° — oltre il massimo dei professionisti corretti (12.3°). Un\'inclinazione così marcata può essere una compensazione causata da altri problemi tecnici: quando la linea spalla-gomito non punta correttamente verso il 20 (come Nathan Aspinall), il corpo è costretto ad inarcare la schiena per correggere la traiettoria. Verifica prima che la linea spalla-gomito sia dritta verso il bersaglio.'});
+    else
+      weaknesses.push({icon:'💡',title:'Postura troppo eretta',
+        text:''+Math.round(v)+'° — una piccola inclinazione in avanti (3–8°) allinea meglio occhio e bersaglio.'});
+  }
+
+  // ── ROTAZIONE SPALLE ──
+  // Correct pros: mean=15.6° range=[8.5–22.9°]
+  // Gary Anderson error: shoulder-elbow line open toward 13 (shoulderH very high)
+  // Jonny Clayton/MVG: body too far right, requires internal elbow compensation
+  if(ang.shoulderH!=null){
+    const v=ang.shoulderH;
+    if(v>=12&&v<=19)
+      strengths.push({icon:'✅',title:'Rotazione delle spalle ideale',
+        text:''+Math.round(v)+'° — nella zona ottimale (media pro 15.6°). Questa rotazione permette alla linea spalla-gomito di puntare naturalmente verso il 20.'});
+    else if(v>=7&&v<=25)
+      strengths.push({icon:'👍',title:'Rotazione delle spalle nella norma',
+        text:''+Math.round(v)+'° — nel range professionale (8.5–22.9°). Gerwyn Price (8.5°) più quadrato, Luke Littler (22.9°) più ruotato: entrambi corretti.'});
+    else if(v>25)
+      weaknesses.push({icon:'⚠️',title:'Rotazione eccessiva — linea di tiro deviata',
+        text:''+Math.round(v)+'° — supera il massimo professionale (22.9°). Attenzione: una rotazione troppo ampia può portare la linea spalla-gomito ad aprirsi verso il settore 13 (a sinistra del 20), come osservato in Gary Anderson (71.6° visivo). In questo caso il gomito deve rientrare durante la spinta per correggere, introducendo variabilità. Riduci la rotazione per permettere un movimento lineare naturale verso il 20.'});
+    else if(v<7)
+      weaknesses.push({icon:'💡',title:'Spalle troppo frontali',
+        text:''+Math.round(v)+'° — i professionisti mostrano sempre una minima rotazione (8.5–22.9°). Una postura frontale molto estrema può costringere il gomito a spostarsi internamente durante la spinta per raggiungere il 20 (errore di Jonny Clayton e Michael Van Gerwen: quando si è troppo spostati a destra sulla pedana, il gomito deve compensare verso sinistra). Verifica anche la tua posizione sulla pedana di tiro.'});
+  }
+
+  // ── FIANCHI ──
   if(ang.hipAlign!=null){
     const v=ang.hipAlign;
-    if(v<=15) strengths.push({icon:'✅',title:'Base stabile',text:`I fianchi sono ben in equilibrio (${Math.round(v)}° di dislivello). Una base solida e simmetrica è fondamentale per la ripetibilità del gesto.`});
-    else if(v>25) weaknesses.push({icon:'💡',title:'Base di appoggio asimmetrica',text:`I fianchi mostrano un certo dislivello (${Math.round(v)}°). Una distribuzione del peso più uniforme sulle due gambe potrebbe migliorare la stabilità del tiro, soprattutto in partita prolungata.`});
+    if(v<=10) strengths.push({icon:'✅',title:'Base di appoggio stabile',text:''+Math.round(v)+'° — base simmetrica. Fondamentale per la ripetibilità.'});
+    else if(v>18) weaknesses.push({icon:'💡',title:'Asimmetria della base',text:''+Math.round(v)+'° — distribuisci meglio il peso. Può influenzare la posizione del busto e quindi l\'allineamento della linea di tiro.'});
   }
+
+  // ── SEZIONE VISIONE LATERALE ──
+  // Calibrated on 6 correct pros + 6 error players (lateral right-side view)
+  // Key lateral metrics: elbow 92-111°, shoulder 47-72°, forearmV 41-54°, bodyLean 3-15°
+  // Error patterns: rear foot pendulum, elbow rise during push, excessive trunk lean,
+  //                 elbow too low at aim/drops during loading (Bunting), front foot on toes (MVG)
+
+  if(ang.elbowLat!=null){
+    const v=ang.elbowLat;
+    if(v>=99&&v<=107)
+      strengths.push({icon:'✅',title:'Gomito — angolo ideale (vista laterale)',
+        text:''+Math.round(v)+'° — nella zona ottimale misurata su 6 professionisti dalla vista laterale (media 103° ±5.6°). Range compatto: Gerwyn Price 93° (stile compatto), Luke Humphries 111° (stile esteso). Il tuo valore è perfettamente nella media.'});
+    else if(v>=96&&v<=111)
+      strengths.push({icon:'👍',title:'Gomito nella norma (vista laterale)',
+        text:''+Math.round(v)+'° — nel range professionale (96–111°). La vista laterale mostra un range più stretto rispetto alla frontale: tutti i professionisti corretti sono tra 93° e 111°.'});
+    else if(v<96)
+      weaknesses.push({icon:'⚠️',title:'Gomito troppo chiuso (vista laterale)',
+        text:''+Math.round(v)+'° — sotto il range dei professionisti corretti laterali (minimo 93°, Gerwyn Price). Poca distanza di spinta disponibile. Apri leggermente il gomito verso 100–107°.'});
+    else
+      weaknesses.push({icon:'⚠️',title:'Gomito troppo aperto (vista laterale)',
+        text:''+Math.round(v)+'° — sopra il massimo professionale laterale (111°, Luke Humphries). Il braccio è quasi esteso prima del lancio. Porta il gomito verso 100–107° per avere più corsa di spinta.'});
+  }
+
+  if(ang.shoulderLat!=null){
+    const v=ang.shoulderLat;
+    if(v>=54&&v<=65)
+      strengths.push({icon:'✅',title:'Gomito sopra la spalla — posizione ideale',
+        text:''+Math.round(v)+'° di elevazione — il gomito è ben sopra il livello della spalla, esattamente come tutti e 6 i professionisti corretti analizzati (media 59.5°). Questo permette al gomito di fare da PERNO per l'avambraccio: il polso si proietta verso il bersaglio mentre il gomito rimane fermo. Fondamentale per la precisione.'});
+    else if(v>=47&&v<=72)
+      strengths.push({icon:'👍',title:'Gomito sopra la spalla — nella norma',
+        text:''+Math.round(v)+'° — accettabile. Gary Anderson (67°) e Luke Littler (54°) mostrano gli estremi: entrambi corretti se il gomito rimane fermo come perno durante la spinta.'});
+    else if(v<47)
+      weaknesses.push({icon:'🔴',title:'Gomito troppo basso — errore critico di perno',
+        text:''+Math.round(v)+'° — sotto il range di tutti i professionisti corretti (minimo 47°). Questo è l'errore di Stephen Bunting: quando il gomito è troppo basso in fase di mira, il braccio non può usarlo come perno. Durante il caricamento il gomito scende ulteriormente, e al momento della spinta il gomito sale assieme all'avambraccio anziché restare fermo — si ottiene una spinta "a palla" invece che "a catapulta". Correzione urgente: porta il gomito verso l'alto in fase di mira finché l'avambraccio punta chiaramente verso il bersaglio.'});
+  }
+
+  if(ang.forearmLat!=null){
+    const v=ang.forearmLat;
+    if(v>=45&&v<=50)
+      strengths.push({icon:'✅',title:'Avambraccio — angolo ottimale (vista laterale)',
+        text:''+Math.round(v)+'° dalla verticale — nella zona ideale (media professionale 47.5°, range 40–54°). L'avambraccio è inclinato correttamente in avanti, pronto per la fase di spinta verso il bersaglio.'});
+    else if(v>=41&&v<=54)
+      strengths.push({icon:'👍',title:'Avambraccio nella norma (vista laterale)',
+        text:''+Math.round(v)+'° — nel range professionale (40–54°). Gary Anderson (54°) più inclinato, Luke Littler (40°) più verticale: entrambi corretti.'});
+    else if(v<41)
+      weaknesses.push({icon:'⚠️',title:'Avambraccio troppo verticale (vista laterale)',
+        text:''+Math.round(v)+'° — avambraccio quasi perpendicolare al suolo, sotto il range professionale (minimo 40°). Meno proiezione verso il bersaglio. Inclina leggermente il gomito in avanti nella fase di mira.'});
+    else
+      weaknesses.push({icon:'⚠️',title:'Avambraccio troppo inclinato (vista laterale)',
+        text:''+Math.round(v)+'° — sopra il massimo professionale (54°). Il braccio è già proiettato verso il bersaglio prima del lancio: perdi distanza di spinta. Raddrizza leggermente il gomito nella fase di mira.'});
+  }
+
+  // Body lean: critical in lateral view — errors cause rear foot pendulum or front foot on toes
+  if(ang.bodyLean!=null){
+    const v=ang.bodyLean;
+    if(v>=3&&v<=8)
+      strengths.push({icon:'✅',title:'Inclinazione del busto ideale (vista laterale)',
+        text:''+Math.round(v)+'° — nella zona ottimale misurata su 12 professionisti (corretti e non). I professionisti con tecnica corretta mostrano 3.6–14.6° (media 9.8°). Questa inclinazione controllata mantiene il peso distribuito correttamente: il piede posteriore rimane a terra senza sollevarsi.'});
+    else if(v>=0&&v<=15)
+      strengths.push({icon:'👍',title:'Inclinazione del busto corretta (vista laterale)',
+        text:''+Math.round(v)+'° — nel range professionale corretto (3.6–14.6°). Attenzione: mantieni il peso distribuito anche in fase di tiro per evitare il sollevamento del piede posteriore.'});
+    else if(v>15)
+      weaknesses.push({icon:'🔴',title:'Inclinazione eccessiva — rischio piede pendolo',
+        text:''+Math.round(v)+'° — supera il massimo dei professionisti corretti (14.6°). Questo è il pattern che causa il PIEDE POSTERIORE PENDOLO: quando il busto è troppo proiettato verso il bersaglio (come Gian Van Veen, Jonny Clayton, Michele Turetta, Nathan Aspinall), il peso del corpo si sposta eccessivamente in avanti e la gamba posteriore deve sollevarsi per compensare l'equilibrio. Correzione: ridistribuisci il peso sulle due gambe restando più eretto. Il piede posteriore deve sempre mantenere il contatto con il suolo durante tutto il tiro.'});
+  }
+
+  if(!strengths.length&&!weaknesses.length)
+    weaknesses.push({icon:'🔍',title:'Dati insufficienti',text:'Assicurati che il video abbia buona illuminazione, tutto il torso visibile e l\'inquadratura corretta (frontale con telecamera all\'altezza del bersaglio, oppure laterale con telecamera alla destra del bersaglio).'});
 
   return {strengths, weaknesses};
 }
@@ -5270,6 +5416,11 @@ function atCalcAngles(lm, view){
 
   // Release angle (upper arm vs vertical at release = forearmV)
   out.releaseH = out.forearmV;
+
+  // Lateral-view specific aliases (same metrics, different reference ranges)
+  out.elbowLat   = out.elbow;
+  out.shoulderLat= out.shoulder;
+  out.forearmLat = out.forearmV;
 
   return out;
 }
