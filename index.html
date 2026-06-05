@@ -1489,42 +1489,45 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 </div>
 
 <!-- ═══════════════════════ PRESSURE GAME OVERLAY ═══════════════════════ -->
-<div id="pgOverlay" style="position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center">
-  <div style="background:var(--d2);border:1.5px solid var(--green);border-radius:20px;padding:24px 20px;width:min(420px,92vw);position:relative;display:flex;flex-direction:column;gap:14px">
-    <button class="g501-close" onclick="pgClose()" style="position:absolute;top:12px;right:12px">ESCI ×</button>
-    <!-- Title -->
-    <div style="text-align:center;padding-top:4px">
-      <div id="pgTitle" style="font-family:'Bebas Neue',sans-serif;font-size:clamp(20px,5vw,32px);color:#fff;letter-spacing:.05em">PRESSURE</div>
-      <div id="pgSector" style="font-size:12px;color:#7fffb5;margin-top:2px"></div>
+<div id="pgOverlay" style="position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden">
+  <div class="g501-inner">
+    <button class="g501-close" onclick="pgClose()">ESCI ×</button>
+    <div class="g501-score-area">
+      <div id="pgTitle" class="g501-pts" style="font-size:clamp(20px,5vw,34px)">PRESSURE</div>
+      <div id="pgSector" style="font-size:13px;color:#7fffb5;margin-top:2px"></div>
     </div>
-    <!-- Stats bar -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;background:var(--d3);border:1px solid var(--green);border-radius:12px;overflow:hidden">
+    <div class="g501-stats">
       <div class="g501-stat"><div class="gsl">Turno</div><div class="gsv" id="pgTurn">0</div></div>
       <div class="g501-stat"><div class="gsl">Completati</div><div class="gsv" id="pgCompleted">0</div></div>
       <div class="g501-stat"><div class="gsl">❤️ Vite</div><div class="gsv" id="pgLives" style="color:#f87171">10</div></div>
     </div>
-    <!-- Score input row — same style as TRIPLO 20 -->
-    <div style="display:flex;align-items:center;justify-content:center;gap:10px">
-      <button onclick="pgPrev()" style="background:#1c1c1c;border:1px solid #333;color:#e5e5e5;padding:10px 14px;border-radius:999px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap">TURNO PREC.</button>
-      <input id="pgInput" type="text" inputmode="decimal" pattern="[0-9]*"
-        style="width:80px;height:46px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:28px;background:#000;border:1.5px solid var(--green);border-radius:10px;color:#fff;outline:none"
-        placeholder="0" autocomplete="off"
-        onkeydown="if(event.key==='Enter')pgConfirm()">
-      <button onclick="pgClear()" style="background:#1c1c1c;border:1px solid #333;color:#e5e5e5;padding:10px 14px;border-radius:999px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer">CANCELLA</button>
+    <div class="g501-display-row">
+      <button class="g501-prev-btn" onclick="pgPrev()">TURNO PREC.</button>
+      <div class="g501-display" id="pgDisplay">—</div>
+      <button class="g501-clr-btn" onclick="pgClear()">CANCELLA</button>
     </div>
-    <!-- Action buttons -->
-    <div style="display:flex;gap:10px">
-      <button onclick="pgNoScore()" style="flex:1;background:#3d0c0c;border:1px solid #7f1d1d;color:#ff7070;padding:14px;border-radius:999px;font-size:15px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer">NO SCORE</button>
-      <button onclick="pgConfirm()" style="flex:1;background:#0d2e1c;border:1px solid var(--green);color:#4ade80;padding:14px;border-radius:999px;font-size:18px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer">OK</button>
+    <div class="g501-pad">
+      <button class="g501-key" onclick="pgDigit('1')">1</button>
+      <button class="g501-key" onclick="pgDigit('2')">2</button>
+      <button class="g501-key" onclick="pgDigit('3')">3</button>
+      <button class="g501-key" onclick="pgDigit('4')">4</button>
+      <button class="g501-key" onclick="pgDigit('5')">5</button>
+      <button class="g501-key" onclick="pgDigit('6')">6</button>
+      <button class="g501-key" onclick="pgDigit('7')">7</button>
+      <button class="g501-key" onclick="pgDigit('8')">8</button>
+      <button class="g501-key" onclick="pgDigit('9')">9</button>
+      <button class="g501-key noscore-left" onclick="pgNoScore()">NO SCORE</button>
+      <button class="g501-key" onclick="pgDigit('0')">0</button>
+      <button class="g501-key ok-btn" onclick="pgConfirm()">OK</button>
     </div>
-    <!-- Result overlay shown at game end -->
-    <div id="pgResultBox" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.95);flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:10;border-radius:20px">
+    <!-- Result overlay at game end -->
+    <div id="pgResultBox" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.93);flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:10;border-radius:0">
       <div id="pgResultGold" style="display:none;font-size:36px">👑</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#86efac;letter-spacing:.1em">PARTITA COMPLETATA</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:72px;color:#fff;line-height:1" id="pgResultVal">0</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:80px;color:#fff;line-height:1" id="pgResultVal">0</div>
       <div style="font-size:13px;color:var(--muted)">COMPLETATI</div>
-      <button id="pgNextBtn" onclick="pgNextGame()" style="width:220px;padding:14px;border-radius:999px;background:#0d2e1c;border:1px solid var(--green);color:#4ade80;font-size:18px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer">▶ PARTITA 2</button>
-      <button id="pgDoneBtn" onclick="pgClose()" style="width:220px;padding:14px;border-radius:999px;background:#166534;border:none;color:#fff;font-size:18px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer">✓ FINE</button>
+      <button id="pgNextBtn" onclick="pgNextGame()" class="g501-key ok-btn" style="width:220px;height:54px;aspect-ratio:unset;font-size:18px">▶ PARTITA 2</button>
+      <button id="pgDoneBtn" onclick="pgClose()" class="g501-key ok-btn" style="width:220px;height:54px;aspect-ratio:unset;font-size:18px">✓ FINE</button>
     </div>
   </div>
 </div>
@@ -2378,45 +2381,45 @@ function showTab(name,silent=false){
 // SESSIONS
 // ══════════════════════════════════════════════════
 const SESS={
-"1-1":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"record",tg:"20"},{t:"pressure",v:"60"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
-"1-2":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"s201"},{t:"co_table",nums:[40,51,53,55,58,59,60,46,57,54]}]},
-"1-3":{title:"Scoring (19)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"19"},{t:"record",tg:"19"},{t:"pressure",v:"57"},{t:"co_table",nums:[38,59,79,89,117,126,107,97]},{t:"s501"}]},
+"1-1":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"pressure",v:"60"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
+"1-2":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"s201"}]},
+"1-3":{title:"Scoring (19)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"19"},{t:"pressure",v:"57"},{t:"co_table",nums:[38,59,79,89,117,126,107,97]},{t:"s501"}]},
 "1-4":{title:"Checkout (50-70)",type:"checkouts",games:[{t:"wu_d"},{t:"s201"},{t:"co_table",nums:[51,68,79,53,62,76,58,64]},{t:"co_table",nums:[59,63,74,56,67,72,55,65]},{t:"s501"}]},
-"1-5":{title:"Scoring (20,19,18)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20,19,18"},{t:"record",tg:"20,19,18"},{t:"pressure",v:"mix"},{t:"co_table",nums:[43,61,78,111,56,170,82,96]},{t:"s501"}]},
-"2-1":{title:"Doppie (16,8,4)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:16},{t:"dbl",n:8},{t:"dbl",n:4},{t:"fin41",v:"D16"},{t:"s201"},{t:"co_table",nums:[32,52,48,64,50,116,80,8,82,16]}]},
-"2-2":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"record",tg:"20"},{t:"shanghai"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
+"1-5":{title:"Scoring (20,19,18)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20,19,18"},{t:"pressure",v:"mix"},{t:"co_table",nums:[43,61,78,111,56,170,82,96]},{t:"s501"}]},
+"2-1":{title:"Doppie (16,8,4)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:16},{t:"dbl",n:8},{t:"dbl",n:4},{t:"fin41",v:"D16"},{t:"s201"}]},
+"2-2":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"shanghai"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
 "2-3":{title:"Checkout (60-80)",type:"checkouts",games:[{t:"wu_d"},{t:"s201"},{t:"co_table",nums:[61,74,80,66,86,77,62,84]},{t:"co_table",nums:[62,75,83,67,89,76,63,71]},{t:"s501"}]},
-"2-4":{title:"Scoring (19)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"19"},{t:"record",tg:"19"},{t:"co_table",nums:[38,59,79,89,117,126,107,97]},{t:"s501"}]},
-"2-5":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"s201"},{t:"co_table",nums:[40,51,53,55,58,59,60,46,57,54]}]},
-"3-1":{title:"Scoring (20,19,18)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20,19,18"},{t:"record",tg:"20,19,18"},{t:"pressure",v:"mix"},{t:"co_table",nums:[66,79,87,110,75,124,76,98]},{t:"s501"}]},
+"2-4":{title:"Scoring (19)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"19"},{t:"pressure",v:"57"},{t:"co_table",nums:[38,59,79,89,117,126,107,97]},{t:"s501"}]},
+"2-5":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"s201"}]},
+"3-1":{title:"Scoring (20,19,18)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20,19,18"},{t:"pressure",v:"mix"},{t:"co_table",nums:[66,79,87,110,75,124,76,98]},{t:"s501"}]},
 "3-2":{title:"Checkout (70-90)",type:"checkouts",games:[{t:"wu_s"},{t:"s201"},{t:"co_table",nums:[72,81,99,75,84,76,97,83]},{t:"co_table",nums:[88,95,74,80,73,85,96,71]},{t:"s501"}]},
-"3-3":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"record",tg:"20"},{t:"pressure",v:"60"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
-"3-4":{title:"Doppie (18,9,4)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:18},{t:"dbl",n:9},{t:"dbl",n:4},{t:"fin41",v:"D18"},{t:"s201"},{t:"co_table",nums:[36,54,96,122,66,56,18,124,72,8]}]},
-"3-5":{title:"Scoring (19)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"19"},{t:"record",tg:"19"},{t:"pressure",v:"57"},{t:"co_table",nums:[38,59,79,89,117,126,107,97]},{t:"s501"}]},
+"3-3":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"pressure",v:"60"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
+"3-4":{title:"Doppie (18,9,4)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:18},{t:"dbl",n:9},{t:"dbl",n:4},{t:"fin41",v:"D18"},{t:"s201"}]},
+"3-5":{title:"Scoring (19)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"19"},{t:"pressure",v:"57"},{t:"co_table",nums:[38,59,79,89,117,126,107,97]},{t:"s501"}]},
 "4-1":{title:"Checkout (80-120)",type:"checkouts",games:[{t:"wu_s"},{t:"s201"},{t:"co_table",nums:[80,90,100,110,87,92,108,117]},{t:"co_table",nums:[82,97,106,118,86,95,103,114]},{t:"s501"}]},
-"4-2":{title:"Scoring (20,19,18)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20,19,18"},{t:"record",tg:"20,19,18"},{t:"shanghai"},{t:"co_table",nums:[66,79,87,110,75,124,76,98]},{t:"s501"}]},
-"4-3":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"s201"},{t:"co_table",nums:[40,60,80,55,58,59,20,10,57,54]}]},
-"4-4":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"record",tg:"20"},{t:"pressure",v:"60"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
+"4-2":{title:"Scoring (20,19,18)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20,19,18"},{t:"shanghai"},{t:"co_table",nums:[66,79,87,110,75,124,76,98]},{t:"s501"}]},
+"4-3":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"s201"}]},
+"4-4":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"pressure",v:"60"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
 "4-5":{title:"Checkout Mix (50-120)",type:"checkouts",games:[{t:"wu_d"},{t:"s201"},{t:"co_table",nums:[51,82,97,118,62,76,53,92]},{t:"co_table",nums:[59,77,112,88,66,72,90,65]},{t:"s501"}]},
-"5-1":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"record",tg:"20"},{t:"pressure",v:"60"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
-"5-2":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"s201"},{t:"co_table",nums:[40,51,53,55,58,59,60,46,57,54]}]},
-"5-3":{title:"Scoring (19)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"19"},{t:"record",tg:"19"},{t:"pressure",v:"57"},{t:"co_table",nums:[38,59,79,89,117,126,107,97]},{t:"s501"}]},
+"5-1":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"pressure",v:"60"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
+"5-2":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"s201"}]},
+"5-3":{title:"Scoring (19)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"19"},{t:"pressure",v:"57"},{t:"co_table",nums:[38,59,79,89,117,126,107,97]},{t:"s501"}]},
 "5-4":{title:"Checkout (50-70)",type:"checkouts",games:[{t:"wu_d"},{t:"s201"},{t:"co_table",nums:[51,68,79,53,62,76,58,64]},{t:"co_table",nums:[59,63,74,56,67,72,55,65]},{t:"s501"}]},
-"5-5":{title:"Scoring (20,19,18)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20,19,18"},{t:"record",tg:"20,19,18"},{t:"pressure",v:"mix"},{t:"co_table",nums:[43,61,78,111,56,170,82,96]},{t:"s501"}]},
-"6-1":{title:"Doppie (16,8,4)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:16},{t:"dbl",n:8},{t:"dbl",n:4},{t:"fin41",v:"D16"},{t:"s201"},{t:"co_table",nums:[32,52,48,64,50,116,80,8,82,16]}]},
-"6-2":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"record",tg:"20"},{t:"shanghai"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
+"5-5":{title:"Scoring (20,19,18)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20,19,18"},{t:"pressure",v:"mix"},{t:"co_table",nums:[43,61,78,111,56,170,82,96]},{t:"s501"}]},
+"6-1":{title:"Doppie (16,8,4)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:16},{t:"dbl",n:8},{t:"dbl",n:4},{t:"fin41",v:"D16"},{t:"s201"}]},
+"6-2":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"shanghai"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
 "6-3":{title:"Checkout (60-80)",type:"checkouts",games:[{t:"wu_d"},{t:"s201"},{t:"co_table",nums:[61,74,80,66,86,77,62,84]},{t:"co_table",nums:[62,75,83,67,89,76,63,71]},{t:"s501"}]},
-"6-4":{title:"Scoring (19)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"19"},{t:"record",tg:"19"},{t:"pressure",v:"57"},{t:"co_table",nums:[38,59,79,89,117,126,107,97]},{t:"s501"}]},
-"6-5":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"s201"},{t:"co_table",nums:[40,51,53,55,58,59,60,46,57,54]}]},
-"7-1":{title:"Scoring (20,19,18)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20,19,18"},{t:"record",tg:"20,19,18"},{t:"pressure",v:"mix"},{t:"co_table",nums:[66,79,87,110,75,124,76,98]},{t:"s501"}]},
+"6-4":{title:"Scoring (19)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"19"},{t:"pressure",v:"57"},{t:"co_table",nums:[38,59,79,89,117,126,107,97]},{t:"s501"}]},
+"6-5":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"s201"}]},
+"7-1":{title:"Scoring (20,19,18)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20,19,18"},{t:"pressure",v:"mix"},{t:"co_table",nums:[66,79,87,110,75,124,76,98]},{t:"s501"}]},
 "7-2":{title:"Checkout (70-90)",type:"checkouts",games:[{t:"wu_d"},{t:"s201"},{t:"co_table",nums:[72,81,99,75,84,76,97,83]},{t:"co_table",nums:[88,95,74,80,73,85,96,71]},{t:"s501"}]},
-"7-3":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"record",tg:"20"},{t:"shanghai"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
-"7-4":{title:"Doppie (18,9,4)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:18},{t:"dbl",n:9},{t:"dbl",n:4},{t:"fin41",v:"D18"},{t:"s201"},{t:"co_table",nums:[36,54,96,122,66,56,18,124,72,8]}]},
-"7-5":{title:"Scoring (19)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"19"},{t:"record",tg:"19"},{t:"pressure",v:"57"},{t:"co_table",nums:[38,59,79,89,117,126,107,97]},{t:"s501"}]},
+"7-3":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"shanghai"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
+"7-4":{title:"Doppie (18,9,4)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:18},{t:"dbl",n:9},{t:"dbl",n:4},{t:"fin41",v:"D18"},{t:"s201"}]},
+"7-5":{title:"Scoring (19)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"19"},{t:"pressure",v:"57"},{t:"co_table",nums:[38,59,79,89,117,126,107,97]},{t:"s501"}]},
 "8-1":{title:"Checkout (80-120)",type:"checkouts",games:[{t:"wu_s"},{t:"s201"},{t:"co_table",nums:[80,90,100,110,87,92,108,117]},{t:"co_table",nums:[82,97,106,118,86,95,103,114]},{t:"s501"}]},
-"8-2":{title:"Scoring (20,19,18)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20,19,18"},{t:"record",tg:"20,19,18"},{t:"shanghai"},{t:"co_table",nums:[66,79,87,110,75,124,76,98]},{t:"s501"}]},
-"8-3":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"s201"},{t:"co_table",nums:[40,60,80,55,58,59,20,10,57,54]}]},
-"8-4":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"record",tg:"20"},{t:"pressure",v:"60"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
+"8-2":{title:"Scoring (20,19,18)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20,19,18"},{t:"shanghai"},{t:"co_table",nums:[66,79,87,110,75,124,76,98]},{t:"s501"}]},
+"8-3":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"s201"}]},
+"8-4":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"pressure",v:"60"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
 "8-5":{title:"Checkout Mix (50-120)",type:"checkouts",games:[{t:"wu_d"},{t:"s201"},{t:"co_table",nums:[51,82,97,118,62,76,53,92]},{t:"co_table",nums:[59,77,112,88,66,72,90,65]},{t:"s501"}]}
 };
 
@@ -2687,12 +2690,12 @@ function rPressure(gid, variant, sv){
   const cells=`
     <div class="ic" style="position:relative">
       <label>Partita 1</label>
-      <input type="number" min="0" class="gi ${cellClass(v0)}" data-gid="${gid}" data-key="0" value="${v0}" placeholder="Completati" style="width:90px" autocomplete="off">
+      ${mkI(gid,'0',v0,'—','width:72px',nm)}
       ${isCrown(v0)?'<span style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:11px">👑</span>':''}
     </div>
     <div class="ic" style="position:relative">
       <label>Partita 2</label>
-      <input type="number" min="0" class="gi ${cellClass(v1)}" data-gid="${gid}" data-key="1" value="${v1}" placeholder="Completati" style="width:90px" autocomplete="off">
+      ${mkI(gid,'1',v1,'—','width:72px',nm)}
       ${isCrown(v1)?'<span style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:11px">👑</span>':''}
     </div>`;
   const n0=parseFloat(v0)||0, n1=parseFloat(v1)||0;
@@ -2724,25 +2727,22 @@ function openPressureGame(gid, variant){
   document.getElementById('pgSector').textContent=cfg.sector==='20+19+18'?'1 freccia sul 20 · 1 sul 19 · 1 sul 18':`3 frecce sul ${cfg.sector}`;
   pgRefresh();
   document.getElementById('pgOverlay').style.display='flex';
-  setTimeout(()=>{const i=document.getElementById('pgInput');if(i)i.focus();},100);
 }
 
 function pgRefresh(){
   document.getElementById('pgLives').textContent=_PG.lives;
   document.getElementById('pgTurn').textContent=_PG.turn;
   document.getElementById('pgCompleted').textContent=_PG.completed;
-  const inp=document.getElementById('pgInput');
-  if(inp){inp.value='';inp.focus();}
+  document.getElementById('pgDisplay').textContent='—';
 }
 
 function pgDigit(d){
-  const inp=document.getElementById('pgInput');
-  if(inp) inp.value=(inp.value||'')+d;
+  const disp=document.getElementById('pgDisplay');
+  const cur=disp.textContent==='—'?'':disp.textContent;
+  if(cur.length>=3) return;
+  disp.textContent=(cur+d)||'—';
 }
-function pgClear(){
-  const inp=document.getElementById('pgInput');
-  if(inp) inp.value='';
-}
+function pgClear(){document.getElementById('pgDisplay').textContent='—';}
 function pgPrev(){
   if(_PG.turn<=0) return;
   _PG.turn--;_PG.darts=Math.max(0,_PG.darts-3);
@@ -2751,9 +2751,8 @@ function pgPrev(){
   pgRefresh();
 }
 function pgConfirm(){
-  const inp=document.getElementById('pgInput');
-  const raw=inp?inp.value.trim():'';
-  const score=parseInt(raw);
+  const raw=document.getElementById('pgDisplay').textContent;
+  const score=parseInt(raw==='—'?'':raw);
   if(isNaN(score)||score<0) return;
   _PG.turn++;
   _PG.darts+=3;
@@ -2768,8 +2767,7 @@ function pgConfirm(){
   pgRefresh();
 }
 function pgNoScore(){
-  const inp=document.getElementById('pgInput');
-  if(inp) inp.value='0';
+  document.getElementById('pgDisplay').textContent='0';
   pgConfirm();
 }
 function pgEndGame(){
