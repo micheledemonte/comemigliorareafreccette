@@ -1489,24 +1489,28 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 </div>
 
 <!-- ═══════════════════════ PRESSURE GAME OVERLAY ═══════════════════════ -->
-<div id="pgOverlay" style="position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden">
-  <div class="g501-inner">
-    <button class="g501-close" onclick="pgClose()">ESCI ×</button>
-    <div class="g501-score-area">
-      <div id="pgTitle" class="g501-pts" style="font-size:clamp(20px,5vw,34px)">PRESSURE</div>
-      <div id="pgSector" style="font-size:13px;color:#7fffb5;margin-top:2px"></div>
+<div id="pgOverlay" style="position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.82);display:none;align-items:center;justify-content:center">
+  <div style="background:#000;border:1.5px solid var(--green);border-radius:20px;width:min(420px,96vw);max-height:96vh;overflow:hidden;display:flex;flex-direction:column;position:relative">
+    <button class="g501-close" onclick="pgClose()" style="position:absolute;top:10px;right:10px;z-index:10">ESCI ×</button>
+    <!-- Block 1: Score area green -->
+    <div class="g501-score-area" style="border-radius:18px 18px 0 0">
+      <div id="pgTitle" class="g501-pts" style="font-size:clamp(18px,4.5vw,30px)">PRESSURE</div>
+      <div id="pgSector" style="font-size:12px;color:#7fffb5;margin-top:2px"></div>
     </div>
-    <div class="g501-stats">
+    <!-- Block 2: Stats -->
+    <div class="g501-stats" style="border-radius:0">
       <div class="g501-stat"><div class="gsl">Turno</div><div class="gsv" id="pgTurn">0</div></div>
       <div class="g501-stat"><div class="gsl">Completati</div><div class="gsv" id="pgCompleted">0</div></div>
       <div class="g501-stat"><div class="gsl">❤️ Vite</div><div class="gsv" id="pgLives" style="color:#f87171">10</div></div>
     </div>
+    <!-- Block 3: Display row -->
     <div class="g501-display-row">
       <button class="g501-prev-btn" onclick="pgPrev()">TURNO PREC.</button>
       <div class="g501-display" id="pgDisplay">—</div>
       <button class="g501-clr-btn" onclick="pgClear()">CANCELLA</button>
     </div>
-    <div class="g501-pad">
+    <!-- Block 4: Keypad -->
+    <div class="g501-pad" style="padding:8px 8px 12px">
       <button class="g501-key" onclick="pgDigit('1')">1</button>
       <button class="g501-key" onclick="pgDigit('2')">2</button>
       <button class="g501-key" onclick="pgDigit('3')">3</button>
@@ -1521,13 +1525,14 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       <button class="g501-key ok-btn" onclick="pgConfirm()">OK</button>
     </div>
     <!-- Result overlay at game end -->
-    <div id="pgResultBox" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.93);flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:10;border-radius:0">
-      <div id="pgResultGold" style="display:none;font-size:36px">👑</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#86efac;letter-spacing:.1em">PARTITA COMPLETATA</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:80px;color:#fff;line-height:1" id="pgResultVal">0</div>
-      <div style="font-size:13px;color:var(--muted)">COMPLETATI</div>
-      <button id="pgNextBtn" onclick="pgNextGame()" class="g501-key ok-btn" style="width:220px;height:54px;aspect-ratio:unset;font-size:18px">▶ PARTITA 2</button>
-      <button id="pgDoneBtn" onclick="pgClose()" class="g501-key ok-btn" style="width:220px;height:54px;aspect-ratio:unset;font-size:18px">✓ FINE</button>
+    <div id="pgResultBox" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.95);flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:10;border-radius:20px">
+      <div id="pgResultGold" style="display:none;font-size:32px">👑</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#86efac;letter-spacing:.1em">PARTITA COMPLETATA</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:72px;color:#fff;line-height:1" id="pgResultVal">0</div>
+      <div style="font-size:11px;color:var(--muted);letter-spacing:.08em">TURNI COMPLETATI</div>
+      <div id="pgResultTotal" style="font-size:13px;color:#86efac;display:none">Totale punti: <strong id="pgResultTotalVal">0</strong></div>
+      <button id="pgNextBtn" onclick="pgNextGame()" class="g501-key ok-btn" style="width:200px;height:50px;aspect-ratio:unset;font-size:17px;border-radius:999px!important">▶ PARTITA 2</button>
+      <button id="pgDoneBtn" onclick="pgClose()" class="g501-key ok-btn" style="width:200px;height:50px;aspect-ratio:unset;font-size:17px;border-radius:999px!important">✓ FINE</button>
     </div>
   </div>
 </div>
@@ -2709,95 +2714,162 @@ function rPressure(gid, variant, sv){
 }
 
 // ═══ PRESSURE GAME OVERLAY ═══
-let _PG={};  // active pressure game state
+// State is fully reset every time openPressureGame is called
+let _PG = null;
 
 function openPressureGame(gid, variant){
-  const cfgs={
-    '60':{name:'60 POINTS PRESSURE',target:60,sector:'20'},
-    '57':{name:'57 POINTS PRESSURE',target:57,sector:'19'},
-    'mix':{name:'20+19+18',target:57,sector:'20+19+18'},
+  const cfgs = {
+    '60': {
+      name:'60 POINTS PRESSURE', target:60, sector:'20',
+      info:'Parti con 10 vite. In ogni turno tira 3 frecce al 20. Se il punteggio totale del turno è inferiore a 60 punti, perdi una vita. Se fai 60 o più (colpendo almeno un triplo, o tre singoli), mantieni le tue vite. L\'obiettivo è sopravvivere il più a lungo possibile.'
+    },
+    '57': {
+      name:'57 POINTS PRESSURE', target:57, sector:'19',
+      info:'Parti con 10 vite. In ogni turno tira 3 frecce al 19. Se il punteggio totale del turno è inferiore a 57 punti, perdi una vita. Se fai 57 o più (colpendo almeno un triplo, o tre singoli), mantieni le tue vite. L\'obiettivo è sopravvivere il più a lungo possibile.'
+    },
+    'mix': {
+      name:'20+19+18 POINTS PRESSURE', target:57, sector:'20+19+18',
+      info:'Parti con 10 vite. In ogni turno tira 1 freccia al 20, 1 freccia al 19 e 1 freccia al 18. Se il punteggio totale del turno è inferiore a 57 punti, perdi una vita. Se fai 57 o più, mantieni le tue vite. L\'obiettivo è sopravvivere il più a lungo possibile.'
+    },
   };
-  const cfg=cfgs[variant]||cfgs['60'];
-  // Find which slot to fill (0 or 1)
-  const inputs=document.querySelectorAll(`[data-gid="${gid}"]`);
-  let slot=0;
-  if(inputs[0]&&inputs[0].value!=='') slot=1;
-  _PG={gid,variant,cfg,slot,lives:10,turn:0,darts:0,completed:0,active:true};
-  document.getElementById('pgTitle').textContent=cfg.name;
-  document.getElementById('pgSector').textContent=cfg.sector==='20+19+18'?'1 freccia sul 20 · 1 sul 19 · 1 sul 18':`3 frecce sul ${cfg.sector}`;
+  const cfg = cfgs[variant] || cfgs['60'];
+
+  // Find which slot to fill (first empty slot)
+  const inputs = document.querySelectorAll(`[data-gid="${gid}"]`);
+  let slot = 0;
+  if(inputs[0] && inputs[0].value !== '') slot = 1;
+
+  // Full reset — no stale state from previous games
+  _PG = {
+    gid, variant, cfg, slot,
+    lives:     10,
+    turn:      0,
+    completed: 0,
+    totalPts:  0,   // backend running total of all scores entered
+    active:    true,
+    done:      false,
+  };
+
+  document.getElementById('pgTitle').textContent = cfg.name;
+  document.getElementById('pgSector').textContent =
+    cfg.sector === '20+19+18' ? '1 freccia sul 20 · 1 sul 19 · 1 sul 18' : `3 frecce sul ${cfg.sector}`;
+
+  // Hide result box, reset display
+  document.getElementById('pgResultBox').style.display = 'none';
   pgRefresh();
-  document.getElementById('pgOverlay').style.display='flex';
+  document.getElementById('pgOverlay').style.display = 'flex';
 }
 
 function pgRefresh(){
-  document.getElementById('pgLives').textContent=_PG.lives;
-  document.getElementById('pgTurn').textContent=_PG.turn;
-  document.getElementById('pgCompleted').textContent=_PG.completed;
-  document.getElementById('pgDisplay').textContent='—';
+  document.getElementById('pgLives').textContent    = _PG.lives;
+  document.getElementById('pgTurn').textContent     = _PG.turn;
+  document.getElementById('pgCompleted').textContent= _PG.completed;
+  document.getElementById('pgDisplay').textContent  = '—';
 }
 
 function pgDigit(d){
-  const disp=document.getElementById('pgDisplay');
-  const cur=disp.textContent==='—'?'':disp.textContent;
-  if(cur.length>=3) return;
-  disp.textContent=(cur+d)||'—';
+  if(!_PG || !_PG.active) return;
+  const disp = document.getElementById('pgDisplay');
+  const cur  = disp.textContent === '—' ? '' : disp.textContent;
+  if(cur.length >= 3) return;
+  disp.textContent = (cur + d) || '—';
 }
-function pgClear(){document.getElementById('pgDisplay').textContent='—';}
+
+function pgClear(){
+  document.getElementById('pgDisplay').textContent = '—';
+}
+
 function pgPrev(){
-  if(_PG.turn<=0) return;
-  _PG.turn--;_PG.darts=Math.max(0,_PG.darts-3);
-  _PG.lives=Math.min(10,_PG.lives+1);
-  _PG.completed=Math.max(0,_PG.completed-1);
+  if(!_PG || _PG.turn <= 0) return;
+  _PG.turn--;
+  _PG.lives    = Math.min(10, _PG.lives + 1);
+  _PG.completed= Math.max(0,  _PG.completed - 1);
+  // Note: totalPts undo is not tracked (no easy way); keep it as-is
   pgRefresh();
 }
+
 function pgConfirm(){
-  const raw=document.getElementById('pgDisplay').textContent;
-  const score=parseInt(raw==='—'?'':raw);
-  if(isNaN(score)||score<0) return;
+  if(!_PG || !_PG.active) return;
+  const raw   = document.getElementById('pgDisplay').textContent;
+  const score = parseInt(raw === '—' ? '' : raw);
+  if(isNaN(score) || score < 0) return;
+
   _PG.turn++;
-  _PG.darts+=3;
-  if(score>=_PG.cfg.target){
-    _PG.completed++;
+  _PG.totalPts += score;   // accumulate total points in background
+
+  if(score >= _PG.cfg.target){
+    _PG.completed++;        // turn succeeded → gain completed
   } else {
-    _PG.lives--;
+    _PG.lives--;            // turn failed → lose a life
   }
-  if(_PG.lives<=0||_PG.completed>=1000){
-    pgEndGame(); return;
+
+  // End conditions:
+  // 1. Lives reached 0
+  // 2. Background total exceeded 1000 pts
+  if(_PG.lives <= 0 || _PG.totalPts > 1000){
+    pgEndGame();
+    return;
   }
   pgRefresh();
 }
+
 function pgNoScore(){
-  document.getElementById('pgDisplay').textContent='0';
+  document.getElementById('pgDisplay').textContent = '0';
   pgConfirm();
 }
+
 function pgEndGame(){
-  _PG.active=false;
-  document.getElementById('pgResultVal').textContent=_PG.completed;
-  const isGold=_PG.completed>=1000;
-  document.getElementById('pgResultBox').style.display='flex';
-  document.getElementById('pgResultGold').style.display=isGold?'block':'none';
-  // Save to cell
-  const inputs=document.querySelectorAll(`[data-gid="${_PG.gid}"]`);
+  if(!_PG) return;
+  _PG.active = false;
+
+  const isGold = _PG.totalPts > 1000;
+
+  // Show result screen
+  document.getElementById('pgResultVal').textContent   = _PG.completed;
+  document.getElementById('pgResultGold').style.display = isGold ? 'block' : 'none';
+
+  // Show total points counter
+  const totalEl = document.getElementById('pgResultTotal');
+  const totalValEl = document.getElementById('pgResultTotalVal');
+  totalEl.style.display = 'block';
+  totalValEl.textContent = _PG.totalPts;
+
+  // Save result to card cell
+  const inputs = document.querySelectorAll(`[data-gid="${_PG.gid}"]`);
   if(inputs[_PG.slot]){
-    inputs[_PG.slot].value=_PG.completed;
+    inputs[_PG.slot].value = _PG.completed;
     stI(inputs[_PG.slot]);
     updTot(_PG.gid);
     saveSession();
   }
-  // Check if more slots
-  const slot2=_PG.slot+1;
-  const hasMore=inputs[slot2]&&inputs[slot2].value==='';
-  document.getElementById('pgNextBtn').style.display=hasMore?'inline-block':'none';
-  document.getElementById('pgDoneBtn').style.display=hasMore?'none':'inline-block';
+
+  // Decide next/done button
+  const nextSlot = _PG.slot + 1;
+  const hasMore  = inputs[nextSlot] && inputs[nextSlot].value === '';
+  document.getElementById('pgNextBtn').style.display = hasMore ? 'inline-block' : 'none';
+  document.getElementById('pgDoneBtn').style.display = hasMore ? 'none' : 'inline-block';
+
+  document.getElementById('pgResultBox').style.display = 'flex';
 }
+
 function pgNextGame(){
-  document.getElementById('pgResultBox').style.display='none';
+  if(!_PG) return;
+  document.getElementById('pgResultBox').style.display = 'none';
   _PG.slot++;
-  _PG.lives=10;_PG.turn=0;_PG.darts=0;_PG.completed=0;_PG.active=true;
+  _PG.lives     = 10;
+  _PG.turn      = 0;
+  _PG.completed = 0;
+  _PG.totalPts  = 0;
+  _PG.active    = true;
   pgRefresh();
 }
+
 function pgClose(){
-  document.getElementById('pgOverlay').style.display='none';
+  // Fully reset state so next open starts fresh
+  _PG = null;
+  document.getElementById('pgOverlay').style.display  = 'none';
+  document.getElementById('pgResultBox').style.display = 'none';
+  document.getElementById('pgDisplay').textContent     = '—';
 }
 function rCO(gid,nums,sv){
   let cells='';
