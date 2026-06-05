@@ -352,7 +352,7 @@ select:hover{border-color:var(--green)}
 .ic input:focus{outline:none;border-color:var(--green)}
 .ic input.ok{border-color:#166534;background:#052e16}
 .ic input.xx{border-color:#7f1d1d;background:#1c0404;color:#f87171}
-.ic input.gold{border-color:#b45309;background:#1c0e00;color:#fbbf24}
+.ic input.gold{border-color:#f59e0b;background:rgba(251,191,36,0.18);color:#fbbf24}
 .ic{position:relative}
 .ic:has(input.gold)::after{content:'👑';position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:11px;pointer-events:none;line-height:1;z-index:2}
 .wug{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin-bottom:10px}
@@ -1489,45 +1489,42 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 </div>
 
 <!-- ═══════════════════════ PRESSURE GAME OVERLAY ═══════════════════════ -->
-<div id="pgOverlay" style="position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden">
-  <div class="g501-inner">
-    <button class="g501-close" onclick="pgClose()">ESCI ×</button>
-    <div class="g501-score-area">
-      <div id="pgTitle" class="g501-pts" style="font-size:clamp(22px,5vw,38px)">PRESSURE</div>
-      <div id="pgSector" style="font-size:13px;color:#7fffb5;margin-top:4px"></div>
+<div id="pgOverlay" style="position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center">
+  <div style="background:var(--d2);border:1.5px solid var(--green);border-radius:20px;padding:24px 20px;width:min(420px,92vw);position:relative;display:flex;flex-direction:column;gap:14px">
+    <button class="g501-close" onclick="pgClose()" style="position:absolute;top:12px;right:12px">ESCI ×</button>
+    <!-- Title -->
+    <div style="text-align:center;padding-top:4px">
+      <div id="pgTitle" style="font-family:'Bebas Neue',sans-serif;font-size:clamp(20px,5vw,32px);color:#fff;letter-spacing:.05em">PRESSURE</div>
+      <div id="pgSector" style="font-size:12px;color:#7fffb5;margin-top:2px"></div>
     </div>
-    <div class="g501-stats">
+    <!-- Stats bar -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;background:var(--d3);border:1px solid var(--green);border-radius:12px;overflow:hidden">
       <div class="g501-stat"><div class="gsl">Turno</div><div class="gsv" id="pgTurn">0</div></div>
       <div class="g501-stat"><div class="gsl">Completati</div><div class="gsv" id="pgCompleted">0</div></div>
       <div class="g501-stat"><div class="gsl">❤️ Vite</div><div class="gsv" id="pgLives" style="color:#f87171">10</div></div>
     </div>
-    <div class="g501-display-row">
-      <button class="g501-prev-btn" onclick="pgPrev()">TURNO PREC.</button>
-      <div class="g501-display" id="pgDisplay">—</div>
-      <button class="g501-clr-btn" onclick="pgClear()">CANCELLA</button>
+    <!-- Score input row — same style as TRIPLO 20 -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px">
+      <button onclick="pgPrev()" style="background:#1c1c1c;border:1px solid #333;color:#e5e5e5;padding:10px 14px;border-radius:999px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap">TURNO PREC.</button>
+      <input id="pgInput" type="text" inputmode="decimal" pattern="[0-9]*"
+        style="width:80px;height:46px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:28px;background:#000;border:1.5px solid var(--green);border-radius:10px;color:#fff;outline:none"
+        placeholder="0" autocomplete="off"
+        onkeydown="if(event.key==='Enter')pgConfirm()">
+      <button onclick="pgClear()" style="background:#1c1c1c;border:1px solid #333;color:#e5e5e5;padding:10px 14px;border-radius:999px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer">CANCELLA</button>
     </div>
-    <div class="g501-pad" id="pgPad">
-      <button class="g501-key" onclick="pgDigit('1')">1</button>
-      <button class="g501-key" onclick="pgDigit('2')">2</button>
-      <button class="g501-key" onclick="pgDigit('3')">3</button>
-      <button class="g501-key" onclick="pgDigit('4')">4</button>
-      <button class="g501-key" onclick="pgDigit('5')">5</button>
-      <button class="g501-key" onclick="pgDigit('6')">6</button>
-      <button class="g501-key" onclick="pgDigit('7')">7</button>
-      <button class="g501-key" onclick="pgDigit('8')">8</button>
-      <button class="g501-key" onclick="pgDigit('9')">9</button>
-      <button class="g501-key noscore-left" onclick="pgNoScore()">NO SCORE</button>
-      <button class="g501-key" onclick="pgDigit('0')">0</button>
-      <button class="g501-key ok-btn" id="pgOkBtn" onclick="pgConfirm()">OK</button>
+    <!-- Action buttons -->
+    <div style="display:flex;gap:10px">
+      <button onclick="pgNoScore()" style="flex:1;background:#3d0c0c;border:1px solid #7f1d1d;color:#ff7070;padding:14px;border-radius:999px;font-size:15px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer">NO SCORE</button>
+      <button onclick="pgConfirm()" style="flex:1;background:#0d2e1c;border:1px solid var(--green);color:#4ade80;padding:14px;border-radius:999px;font-size:18px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer">OK</button>
     </div>
     <!-- Result overlay shown at game end -->
-    <div id="pgResultBox" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:10;border-radius:16px">
+    <div id="pgResultBox" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.95);flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:10;border-radius:20px">
       <div id="pgResultGold" style="display:none;font-size:36px">👑</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#86efac;letter-spacing:.1em">PARTITA COMPLETATA</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:72px;color:#fff;line-height:1" id="pgResultVal">0</div>
       <div style="font-size:13px;color:var(--muted)">COMPLETATI</div>
-      <button id="pgNextBtn" onclick="pgNextGame()" class="g501-key ok-btn" style="width:220px;height:52px;border-radius:999px;font-size:18px;aspect-ratio:unset">▶ PARTITA 2</button>
-      <button id="pgDoneBtn" onclick="pgClose()" class="g501-key ok-btn" style="width:220px;height:52px;border-radius:999px;font-size:18px;aspect-ratio:unset">✓ FINE</button>
+      <button id="pgNextBtn" onclick="pgNextGame()" style="width:220px;padding:14px;border-radius:999px;background:#0d2e1c;border:1px solid var(--green);color:#4ade80;font-size:18px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer">▶ PARTITA 2</button>
+      <button id="pgDoneBtn" onclick="pgClose()" style="width:220px;padding:14px;border-radius:999px;background:#166534;border:none;color:#fff;font-size:18px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer">✓ FINE</button>
     </div>
   </div>
 </div>
@@ -2727,41 +2724,39 @@ function openPressureGame(gid, variant){
   document.getElementById('pgSector').textContent=cfg.sector==='20+19+18'?'1 freccia sul 20 · 1 sul 19 · 1 sul 18':`3 frecce sul ${cfg.sector}`;
   pgRefresh();
   document.getElementById('pgOverlay').style.display='flex';
+  setTimeout(()=>{const i=document.getElementById('pgInput');if(i)i.focus();},100);
 }
 
 function pgRefresh(){
   document.getElementById('pgLives').textContent=_PG.lives;
   document.getElementById('pgTurn').textContent=_PG.turn;
-  document.getElementById('pgDarts').textContent=_PG.darts;
   document.getElementById('pgCompleted').textContent=_PG.completed;
-  document.getElementById('pgDisplay').textContent='—';
-  document.getElementById('pgOkBtn').className='g501-key ok-btn';
-  document.getElementById('pgOkBtn').textContent='OK';
-  document.getElementById('pgPad').querySelectorAll('.g501-key:not(.noscore-left):not(.ok-btn)').forEach(b=>{b.style.opacity='1';});
+  const inp=document.getElementById('pgInput');
+  if(inp){inp.value='';inp.focus();}
 }
 
 function pgDigit(d){
-  const disp=document.getElementById('pgDisplay');
-  const cur=disp.textContent==='—'?'':disp.textContent;
-  if(cur.length>=3) return;
-  disp.textContent=(cur+d)||'—';
+  const inp=document.getElementById('pgInput');
+  if(inp) inp.value=(inp.value||'')+d;
 }
-function pgClear(){document.getElementById('pgDisplay').textContent='—';}
+function pgClear(){
+  const inp=document.getElementById('pgInput');
+  if(inp) inp.value='';
+}
 function pgPrev(){
   if(_PG.turn<=0) return;
   _PG.turn--;_PG.darts=Math.max(0,_PG.darts-3);
-  // Restore one life (simple undo of last turn)
   _PG.lives=Math.min(10,_PG.lives+1);
   _PG.completed=Math.max(0,_PG.completed-1);
   pgRefresh();
 }
 function pgConfirm(){
-  const raw=document.getElementById('pgDisplay').textContent;
+  const inp=document.getElementById('pgInput');
+  const raw=inp?inp.value.trim():'';
   const score=parseInt(raw);
   if(isNaN(score)||score<0) return;
   _PG.turn++;
   _PG.darts+=3;
-  if(score>1000){pgEndGame();return;}
   if(score>=_PG.cfg.target){
     _PG.completed++;
   } else {
@@ -2773,7 +2768,8 @@ function pgConfirm(){
   pgRefresh();
 }
 function pgNoScore(){
-  document.getElementById('pgDisplay').textContent='0';
+  const inp=document.getElementById('pgInput');
+  if(inp) inp.value='0';
   pgConfirm();
 }
 function pgEndGame(){
