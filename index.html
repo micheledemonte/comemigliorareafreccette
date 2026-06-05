@@ -1056,7 +1056,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <button class="nav-tab" onclick="showTab('stats')">STATISTICHE</button>
     <button class="nav-tab" onclick="showTab('play501')">GIOCA A 501</button>
     <button class="nav-tab" onclick="showTab('checkout')">CHECKOUT</button>
-    <button class="nav-tab" onclick="showTab('shotanalysis')">ANALISI TIRO</button>
+    <button class="nav-tab" onclick="showTab('shotanalysis')" style="display:none">ANALISI TIRO</button>
     <button class="nav-tab" onclick="showTab('profile')">PROFILO</button>
     <button class="nav-tab" id="adminTabBtn" style="display:none" onclick="showTab('admin')">ADMIN</button>
     <button class="nav-tab" id="logoutTabBtn" onclick="confirmLogout()" style="margin-left:auto;color:var(--mu2)">LOGOUT</button>
@@ -1944,11 +1944,11 @@ const LD = {
     {id:'stats',       icon:'📊', label:'Statistiche'},
     {id:'play501',     icon:'🎲', label:'501'},
     {id:'checkout',    icon:'✅', label:'Checkout'},
-    {id:'shotanalysis',icon:'📹', label:'Analisi'},
     {id:'profile',     icon:'👤', label:'Profilo'},
   ],
-  adminTab:  {id:'admin',   icon:'⚙️', label:'Admin'},
-  logoutTab: {id:'__logout',icon:'⏻',  label:'Logout', isLogout:true},
+  adminTab:     {id:'admin',       icon:'⚙️', label:'Admin'},
+  analysisTab:  {id:'shotanalysis',icon:'📹', label:'Analisi'}, // admin-only
+  logoutTab:    {id:'__logout',    icon:'⏻',  label:'Logout', isLogout:true},
   showAdmin:  false,
   current:    'training',
   currentIdx: 0,
@@ -1974,7 +1974,10 @@ const LD = {
 function ldIsDesktop(){ return window.innerWidth > 768; }
 function ldAllTabs(){
   const all = [...LD.tabs];
-  if(LD.showAdmin) all.push(LD.adminTab);
+  if(LD.showAdmin){
+    all.push(LD.analysisTab); // ANALISI visible only to admins
+    all.push(LD.adminTab);
+  }
   all.push(LD.logoutTab);
   return all;
 }
