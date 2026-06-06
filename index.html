@@ -1662,18 +1662,35 @@ if(_fbAuth){
         const idx=users.findIndex(x=>x.id===u.id);
         if(idx>=0){ users[idx].firebaseUid=firebaseUser.uid; saveUsers(users); CU=users[idx]; }
       }
-      if(u.mustChangePw && !_justResetPassword){
+      // Show password creation only on the very first login (loginCount===0 or undefined AND mustChangePw)
+      // loginCount>=1 means the user has already set their password — never show the prompt again
+      const needsPwChange = (u.mustChangePw === true) && ((u.loginCount||0) === 0) && !_justResetPassword;
+      if(needsPwChange){
         document.getElementById('loadingOverlay').style.display='none';
         openLogin();
         document.getElementById('lv').classList.add('off');
         document.getElementById('cpv').classList.add('on');
       } else {
         if(_justResetPassword){
-          // Clear mustChangePw — user just set a definitive password via email reset
           const users=getUsers();
           const idx=users.findIndex(x=>x.id===u.id);
           if(idx>=0){ users[idx].mustChangePw=false; saveUsers(users); CU=users[idx]; }
           _justResetPassword=false;
+        }
+        // If loginCount is still 0 but mustChangePw is already false (edge case), ensure count is correct
+        if((u.loginCount||0) === 0 && !u.mustChangePw){
+          const users=getUsers();
+          const idx=users.findIndex(x=>x.id===u.id);
+          if(idx>=0){ users[idx].loginCount=1; saveUsers(users); CU=users[idx]; }
+        }
+        // Increment loginCount on every successful login (min 1 after first entry into app)
+        // This also backfills loginCount for existing users who predate this field
+        const users2=getUsers();
+        const idx2=users2.findIndex(x=>x.id===CU.id);
+        if(idx2>=0){
+          users2[idx2].loginCount = Math.max(1, (users2[idx2].loginCount||0)+1);
+          saveUsers(users2);
+          CU=users2[idx2];
         }
         enterApp();
       }
@@ -1950,7 +1967,13 @@ async function doChangePw(){
     }
     const users=getUsers();
     const idx=users.findIndex(u=>u.id===CU.id);
-    if(idx>=0){ users[idx].mustChangePw=false; delete users[idx].password; saveUsers(users); CU=users[idx]; }
+    if(idx>=0){
+      users[idx].mustChangePw=false;
+      users[idx].loginCount=1;  // marks that password has been set — never show prompt again
+      delete users[idx].password;
+      saveUsers(users);
+      CU=users[idx];
+    }
     _currentLoginPw = ''; // clear stored password — no longer needed
     enterApp();
   } catch(e){
@@ -3757,7 +3780,7 @@ async function addUser(){
       msg.className='amsg';
       msg.textContent='Creazione in corso…';
       if(!_fbAuth){
-        users.push({id:'u_'+Date.now(),firstName:fn,lastName:ln,email:em,phone:ph,password:pw,role,mustChangePw:true});
+        users.push({id:'u_'+Date.now(),firstName:fn,lastName:ln,email:em,phone:ph,password:pw,role,mustChangePw:true,loginCount:0});
         saveUsers(users);
         ['aFn','aLn','aEm','aPh','aPw'].forEach(id=>document.getElementById(id).value='');
         msg.textContent='Utente creato con successo!';msg.classList.add('ok');
@@ -3772,7 +3795,7 @@ async function addUser(){
         const result=await secondaryApp.auth().createUserWithEmailAndPassword(em,pw);
         const uid=result.user.uid;
         await secondaryApp.auth().signOut();
-        users.push({id:uid,firebaseUid:uid,firstName:fn,lastName:ln,email:em,phone:ph,role,mustChangePw:true});
+        users.push({id:uid,firebaseUid:uid,firstName:fn,lastName:ln,email:em,phone:ph,role,mustChangePw:true,loginCount:0});
         saveUsers(users);
         ['aFn','aLn','aEm','aPh','aPw'].forEach(id=>document.getElementById(id).value='');
         msg.textContent='Utente creato con successo!';msg.classList.add('ok');
