@@ -465,7 +465,7 @@ select:hover{border-color:var(--green)}
 
 /* Desktop: center a fixed-width column, natural height, centered vertically */
 @media(min-width:769px){
-  #g501overlay,#g201overlay{
+  #g501overlay,#g201overlay,#pgOverlay{
     background:#000!important;
     align-items:center;
     justify-content:center;
@@ -1527,15 +1527,15 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <div id="pgResultBox" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.97);flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:10">
       <div id="pgResultGold" style="display:none;font-size:36px">👑</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#86efac;letter-spacing:.1em">PARTITA COMPLETATA</div>
-      <!-- turni completati — grande, bianco -->
+      <!-- turni completati — dimensioni ridotte, bianco -->
       <div style="text-align:center">
-        <div style="font-size:clamp(16px,4vw,22px);color:#fff;font-weight:600">turni completati</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(72px,18vw,110px);color:#fff;line-height:1" id="pgResultVal">0</div>
+        <div style="font-size:clamp(12px,2.8vw,16px);color:#fff;font-weight:600">turni completati</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(44px,11vw,68px);color:#fff;line-height:1" id="pgResultVal">0</div>
       </div>
-      <!-- totale punti — stessa grandezza, bianco -->
-      <div style="text-align:center;margin-top:-4px">
-        <div style="font-size:clamp(16px,4vw,22px);color:#fff;font-weight:600">totale punti</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(72px,18vw,110px);color:#fff;line-height:1" id="pgResultTotal">0</div>
+      <!-- totale punti — stessa dimensione ridotta, bianco -->
+      <div style="text-align:center;margin-top:-2px">
+        <div style="font-size:clamp(12px,2.8vw,16px);color:#fff;font-weight:600">totale punti</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(44px,11vw,68px);color:#fff;line-height:1" id="pgResultTotal">0</div>
       </div>
       <button id="pgNextBtn" onclick="pgNextGame()" class="g501-key ok-btn" style="width:220px;height:54px;aspect-ratio:unset;font-size:18px;margin-top:8px">▶ PARTITA 2</button>
       <button id="pgDoneBtn" onclick="pgClose()" class="g501-key ok-btn" style="width:220px;height:54px;aspect-ratio:unset;font-size:18px">✓ FINE</button>
@@ -2832,7 +2832,7 @@ function pgNoScore(){
 function pgEndGame(){
   _PG.active = false;
 
-  const isGold = _PG.totalScore > 1000;
+  const isGold = _PG.totalScore > 1000 && _PG.completed === 6;
 
   // Update result screen
   document.getElementById('pgResultVal').textContent    = _PG.completed;
@@ -3158,6 +3158,53 @@ function extractPressure(g,gd){
   return vals.length?vals.reduce((a,b)=>a+b,0):null; // total completati
 }
 
+// Crown detection per game type — returns true if a value is a "crown" result
+function isGameCrown(nm, t, v){
+  const n = parseFloat(v);
+  if(isNaN(n)) return false;
+  if(t==='triplo') return n===9;
+  if(t==='dbl')    return n===3;
+  if(t==='s501')   return n===5;
+  if(t==='shanghai')  return n===1;
+  if(t==='pressure')  return false; // pressure crowns handled separately below
+  return false;
+}
+
+// Counts total crowns in a session (all games combined)
+function extractCrownsPerSession(uid){
+  const sessions = getAllSess(uid);
+  const points = [];
+  for(const s of sessions){
+    const si = SESS[s.key]; if(!si) continue;
+    let crowns = 0;
+    let gi = 0;
+    for(const g of si.games){
+      const gid = 'g' + (gi++);
+      const gd  = s.data[gid] || {};
+      // Pressure game crown: value>=6 when totalScore indication
+      // Since we only store 'completed', we use the gold class logic:
+      // gold = completed===6 (we store completed value in cell)
+      if(g.t==='pressure'){
+        Object.values(gd).forEach(v=>{
+          const n=parseFloat(v);
+          if(!isNaN(n)&&n===6) crowns++;
+        });
+        continue;
+      }
+      // Other games
+      Object.values(gd).forEach(v=>{
+        if(isGameCrown(null, g.t, v)) crowns++;
+      });
+    }
+    if(crowns > 0){
+      const d = new Date(s.meta.savedAt);
+      const label = `A${s.meta.week} S${s.meta.session}\n${d.toLocaleDateString('it-IT')}`;
+      points.push({label, value:crowns, date:d, week:s.meta.week, session:s.meta.session});
+    }
+  }
+  return points;
+}
+
 let _statsUID=null;
 
 function renderStats(uid){
@@ -3183,6 +3230,18 @@ function renderStats(uid){
   html+=buildChartCard(cid_(),'201 IN 9 FRECCE — Legs vinti per sessione',uid,(g,gd)=>extract201(g,gd),'#06b6d4','Legs vinti');
   html+=buildChartCard(cid_(),'CHECKOUT — Media frecce per numero',uid,(g,gd)=>extractCO(g,gd),'#f97316','Media frecce');
   html+=buildChartCard(cid_(),'501 CON CHIUSURA — Totale chiusure per sessione',uid,(g,gd)=>extract501(g,gd),'#ec4899','Chiusure');
+
+  // 👑 Crown chart — aggregated per session across all games
+  const crownPts = extractCrownsPerSession(uid);
+  if(crownPts.length){
+    const cid2 = cid_();
+    html+=`<div class="cw" style="margin-bottom:16px">
+      <h3>👑 CORONE PER SESSIONE — Totale corone ottenute in ogni allenamento</h3>
+      <canvas id="${cid2}" height="80"></canvas>
+    </div>`;
+    window._pendingCharts = window._pendingCharts || {};
+    window._pendingCharts[cid2] = {pts:crownPts, color:'#f59e0b', yLabel:'Corone'};
+  }
 
   // 501 free sessions
   const freeData=[];
