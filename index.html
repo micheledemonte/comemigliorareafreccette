@@ -470,6 +470,10 @@ select:hover{border-color:var(--green)}
     align-items:center;
     justify-content:center;
   }
+  /* pgOverlay desktop: slightly narrower than 501 */
+  #pgOverlay .g501-inner{
+    width:min(400px,calc(100vw - 48px));
+  }
   .g501-inner{
     width:min(480px,calc(100vw - 48px));
     height:auto;          /* natural height — no stretching */
@@ -2482,15 +2486,17 @@ function getInputClass(nm, v){
   if(nm==='501 CON CHIUSURA OGNI 100 PUNTI' && n===5) return 'gold';
   if(nm.startsWith('DOPPIO') && n===3) return 'gold';
   if(nm==='SHANGHAI' && n===1) return 'gold';
-  if(nm.startsWith('60 POINTS PRESSURE')||nm.startsWith('57 POINTS PRESSURE')||nm.startsWith('20+19+18 POINTS')) {
-    // Pressure games: gold if >=1000 completati (handled separately)
-  }
+  if(nm==='AROUND THE CLOCK (DOPPIE)' && n===3) return 'gold';
+  // Pressure games: value===6 means the player got the crown (totalScore>1000 with 6 completed)
+  // This persists across login/logout via the stored value
+  if((nm.startsWith('60 POINTS PRESSURE')||nm.startsWith('57 POINTS PRESSURE')||nm.startsWith('20+19+18')) && n===6) return 'gold';
   return 'ok';
 }
 
 function stI(inp){
   const v=inp.value.trim();
-  const nm=inp.closest('.gc')?.querySelector('.gc-name')?.textContent||'';
+  // Try data-nm first (set by mkI), then fall back to .gc-name
+  const nm=inp.dataset.nm||inp.closest('.gc')?.querySelector('.gc-name')?.textContent||'';
   inp.classList.remove('ok','xx','gold');
   if(v==='') return;
   inp.classList.add(getInputClass(nm,v));
@@ -2500,7 +2506,8 @@ function mkI(gid,k,val,ph='',st='',nm=''){
   const v=val!==undefined?String(val):'';
   const c=v!==''?getInputClass(nm,v):'';
   const crown=(c==='gold')?' data-crown="1"':'';
-  return `<input type="text" inputmode="decimal" pattern="[0-9X]*" class="gi ${c}" data-gid="${gid}" data-key="${k}" value="${v}" placeholder="${ph}" style="${st}" autocomplete="off"${crown}>`;
+  const dnm=nm?` data-nm="${nm.replace(/"/g,'&quot;')}"` :'';
+  return `<input type="text" inputmode="decimal" pattern="[0-9X]*" class="gi ${c}" data-gid="${gid}" data-key="${k}" value="${v}" placeholder="${ph}" style="${st}" autocomplete="off"${crown}${dnm}>`;
 }
 
 function gcrd(gid,name,sub,info,body,extraBtn=''){
@@ -2518,9 +2525,10 @@ function rWU(gid,mode,sv){
   const info=isS
     ?'Around the Clock: lancia 1 freccia su ogni settore 1-20. Triple e Doppie non contano. Scrivi quante frecce hai impiegato per colpire 1 volta ogni settore singolo.'
     :'Around the Clock: lancia 3 frecce sulla doppia di ogni settore 1-20. Scrivi quante frecce sei riuscito a tirare nella doppia. Se nessuna freccia ha colpito la doppia scrivi 0 e passa al settore successivo.';
+  const nm = `AROUND THE CLOCK (${isS?'SINGOLE':'DOPPIE'})`;
   let r1='',r2='';
-  for(let n=1;n<=10;n++) r1+=`<div class="wuc"><div class="wn">${n}</div>${mkI(gid,n,sv[n],'','width:100%;min-width:28px')}</div>`;
-  for(let n=11;n<=20;n++) r2+=`<div class="wuc"><div class="wn">${n}</div>${mkI(gid,n,sv[n],'','width:100%;min-width:28px')}</div>`;
+  for(let n=1;n<=10;n++) r1+=`<div class="wuc"><div class="wn">${n}</div>${mkI(gid,n,sv[n],'','width:100%;min-width:28px',nm)}</div>`;
+  for(let n=11;n<=20;n++) r2+=`<div class="wuc"><div class="wn">${n}</div>${mkI(gid,n,sv[n],'','width:100%;min-width:28px',nm)}</div>`;
   // compute totals from saved values
   const allVals=[];
   for(let n=1;n<=20;n++){const v=parseFloat(sv[n]);if(!isNaN(v))allVals.push(v);}
@@ -3162,11 +3170,12 @@ function extractPressure(g,gd){
 function isGameCrown(nm, t, v){
   const n = parseFloat(v);
   if(isNaN(n)) return false;
-  if(t==='triplo') return n===9;
-  if(t==='dbl')    return n===3;
-  if(t==='s501')   return n===5;
-  if(t==='shanghai')  return n===1;
-  if(t==='pressure')  return false; // pressure crowns handled separately below
+  if(t==='triplo')   return n===9;
+  if(t==='dbl')      return n===3;
+  if(t==='s501')     return n===5;
+  if(t==='shanghai') return n===1;
+  if(t==='wu_d')     return n===3;
+  if(t==='pressure') return n===6; // value 6 = crown (completed===6 with totalScore>1000)
   return false;
 }
 
@@ -3181,17 +3190,6 @@ function extractCrownsPerSession(uid){
     for(const g of si.games){
       const gid = 'g' + (gi++);
       const gd  = s.data[gid] || {};
-      // Pressure game crown: value>=6 when totalScore indication
-      // Since we only store 'completed', we use the gold class logic:
-      // gold = completed===6 (we store completed value in cell)
-      if(g.t==='pressure'){
-        Object.values(gd).forEach(v=>{
-          const n=parseFloat(v);
-          if(!isNaN(n)&&n===6) crowns++;
-        });
-        continue;
-      }
-      // Other games
       Object.values(gd).forEach(v=>{
         if(isGameCrown(null, g.t, v)) crowns++;
       });
