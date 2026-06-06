@@ -356,7 +356,9 @@ select:hover{border-color:var(--green)}
 .ic{position:relative}
 .ic:has(input.gold)::after{content:'👑';position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:11px;pointer-events:none;line-height:1;z-index:2}
 .wug{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin-bottom:10px}
-.wuc{display:flex;flex-direction:column;align-items:center;gap:3px}
+.wuc{display:flex;flex-direction:column;align-items:center;gap:3px;position:relative}
+.wuc input.gold{border-color:#f59e0b!important;background:rgba(251,191,36,0.18)!important;color:#fbbf24!important}
+.wuc:has(input.gold)::after{content:'👑';position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:10px;pointer-events:none;line-height:1;z-index:2}
 .wuc .wn{font-size:11px;color:var(--muted)}
 .wuc input{width:100%;min-width:28px;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:5px 2px;text-align:center;font-size:13px;border-radius:4px}
 .wuc input:focus{outline:none;border-color:var(--green)}
