@@ -1489,28 +1489,27 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 </div>
 
 <!-- ═══════════════════════ PRESSURE GAME OVERLAY ═══════════════════════ -->
-<div id="pgOverlay" style="position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.82);display:none;align-items:center;justify-content:center">
-  <div style="background:#000;border:1.5px solid var(--green);border-radius:20px;width:min(420px,96vw);max-height:96vh;overflow:hidden;display:flex;flex-direction:column;position:relative">
-    <button class="g501-close" onclick="pgClose()" style="position:absolute;top:10px;right:10px;z-index:10">ESCI ×</button>
-    <!-- Block 1: Score area green -->
-    <div class="g501-score-area" style="border-radius:18px 18px 0 0">
-      <div id="pgTitle" class="g501-pts" style="font-size:clamp(18px,4.5vw,30px)">PRESSURE</div>
-      <div id="pgSector" style="font-size:12px;color:#7fffb5;margin-top:2px"></div>
+<div id="pgOverlay" style="position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden">
+  <div class="g501-inner">
+    <button class="g501-close" onclick="pgClose()">ESCI ×</button>
+    <!-- Block 1: Score area — punteggio inserito qui, come il 501 -->
+    <div class="g501-score-area" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0">
+      <div id="pgSector" style="font-size:clamp(11px,2.5vw,14px);color:#7fffb5;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px"></div>
+      <div class="g501-pts" id="pgDisplay" style="font-size:clamp(58px,14vw,96px);min-height:1em;line-height:1">—</div>
     </div>
     <!-- Block 2: Stats -->
-    <div class="g501-stats" style="border-radius:0">
+    <div class="g501-stats">
       <div class="g501-stat"><div class="gsl">Turno</div><div class="gsv" id="pgTurn">0</div></div>
       <div class="g501-stat"><div class="gsl">Completati</div><div class="gsv" id="pgCompleted">0</div></div>
       <div class="g501-stat"><div class="gsl">❤️ Vite</div><div class="gsv" id="pgLives" style="color:#f87171">10</div></div>
     </div>
-    <!-- Block 3: Display row -->
-    <div class="g501-display-row">
+    <!-- Block 3: TURNO PREC. / CANCELLA (no display between them) -->
+    <div class="g501-display-row" style="grid-template-columns:1fr 1fr;gap:8px">
       <button class="g501-prev-btn" onclick="pgPrev()">TURNO PREC.</button>
-      <div class="g501-display" id="pgDisplay">—</div>
       <button class="g501-clr-btn" onclick="pgClear()">CANCELLA</button>
     </div>
     <!-- Block 4: Keypad -->
-    <div class="g501-pad" style="padding:8px 8px 12px">
+    <div class="g501-pad">
       <button class="g501-key" onclick="pgDigit('1')">1</button>
       <button class="g501-key" onclick="pgDigit('2')">2</button>
       <button class="g501-key" onclick="pgDigit('3')">3</button>
@@ -1525,14 +1524,21 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       <button class="g501-key ok-btn" onclick="pgConfirm()">OK</button>
     </div>
     <!-- Result overlay at game end -->
-    <div id="pgResultBox" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.95);flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:10;border-radius:20px">
-      <div id="pgResultGold" style="display:none;font-size:32px">👑</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#86efac;letter-spacing:.1em">PARTITA COMPLETATA</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:72px;color:#fff;line-height:1" id="pgResultVal">0</div>
-      <div style="font-size:11px;color:var(--muted);letter-spacing:.08em">TURNI COMPLETATI</div>
-      <div id="pgResultTotal" style="font-size:13px;color:#86efac;display:none">Totale punti: <strong id="pgResultTotalVal">0</strong></div>
-      <button id="pgNextBtn" onclick="pgNextGame()" class="g501-key ok-btn" style="width:200px;height:50px;aspect-ratio:unset;font-size:17px;border-radius:999px!important">▶ PARTITA 2</button>
-      <button id="pgDoneBtn" onclick="pgClose()" class="g501-key ok-btn" style="width:200px;height:50px;aspect-ratio:unset;font-size:17px;border-radius:999px!important">✓ FINE</button>
+    <div id="pgResultBox" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.97);flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:10">
+      <div id="pgResultGold" style="display:none;font-size:36px">👑</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#86efac;letter-spacing:.1em">PARTITA COMPLETATA</div>
+      <!-- turni completati — grande, bianco -->
+      <div style="text-align:center">
+        <div style="font-size:clamp(16px,4vw,22px);color:#fff;font-weight:600">turni completati</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(72px,18vw,110px);color:#fff;line-height:1" id="pgResultVal">0</div>
+      </div>
+      <!-- totale punti — stessa grandezza, bianco -->
+      <div style="text-align:center;margin-top:-4px">
+        <div style="font-size:clamp(16px,4vw,22px);color:#fff;font-weight:600">totale punti</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(72px,18vw,110px);color:#fff;line-height:1" id="pgResultTotal">0</div>
+      </div>
+      <button id="pgNextBtn" onclick="pgNextGame()" class="g501-key ok-btn" style="width:220px;height:54px;aspect-ratio:unset;font-size:18px;margin-top:8px">▶ PARTITA 2</button>
+      <button id="pgDoneBtn" onclick="pgClose()" class="g501-key ok-btn" style="width:220px;height:54px;aspect-ratio:unset;font-size:18px">✓ FINE</button>
     </div>
   </div>
 </div>
@@ -2387,7 +2393,7 @@ function showTab(name,silent=false){
 // ══════════════════════════════════════════════════
 const SESS={
 "1-1":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"pressure",v:"60"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
-"1-2":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"s201"}]},
+"1-2":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"shanghai"},{t:"s201"}]},
 "1-3":{title:"Scoring (19)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"19"},{t:"pressure",v:"57"},{t:"co_table",nums:[38,59,79,89,117,126,107,97]},{t:"s501"}]},
 "1-4":{title:"Checkout (50-70)",type:"checkouts",games:[{t:"wu_d"},{t:"s201"},{t:"co_table",nums:[51,68,79,53,62,76,58,64]},{t:"co_table",nums:[59,63,74,56,67,72,55,65]},{t:"s501"}]},
 "1-5":{title:"Scoring (20,19,18)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20,19,18"},{t:"pressure",v:"mix"},{t:"co_table",nums:[43,61,78,111,56,170,82,96]},{t:"s501"}]},
@@ -2399,7 +2405,7 @@ const SESS={
 "3-1":{title:"Scoring (20,19,18)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20,19,18"},{t:"pressure",v:"mix"},{t:"co_table",nums:[66,79,87,110,75,124,76,98]},{t:"s501"}]},
 "3-2":{title:"Checkout (70-90)",type:"checkouts",games:[{t:"wu_s"},{t:"s201"},{t:"co_table",nums:[72,81,99,75,84,76,97,83]},{t:"co_table",nums:[88,95,74,80,73,85,96,71]},{t:"s501"}]},
 "3-3":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"pressure",v:"60"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
-"3-4":{title:"Doppie (18,9,4)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:18},{t:"dbl",n:9},{t:"dbl",n:4},{t:"fin41",v:"D18"},{t:"s201"}]},
+"3-4":{title:"Doppie (18,9,4)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:18},{t:"dbl",n:9},{t:"dbl",n:4},{t:"fin41",v:"D18"},{t:"shanghai"},{t:"s201"}]},
 "3-5":{title:"Scoring (19)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"19"},{t:"pressure",v:"57"},{t:"co_table",nums:[38,59,79,89,117,126,107,97]},{t:"s501"}]},
 "4-1":{title:"Checkout (80-120)",type:"checkouts",games:[{t:"wu_s"},{t:"s201"},{t:"co_table",nums:[80,90,100,110,87,92,108,117]},{t:"co_table",nums:[82,97,106,118,86,95,103,114]},{t:"s501"}]},
 "4-2":{title:"Scoring (20,19,18)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20,19,18"},{t:"shanghai"},{t:"co_table",nums:[66,79,87,110,75,124,76,98]},{t:"s501"}]},
@@ -2407,7 +2413,7 @@ const SESS={
 "4-4":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"pressure",v:"60"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
 "4-5":{title:"Checkout Mix (50-120)",type:"checkouts",games:[{t:"wu_d"},{t:"s201"},{t:"co_table",nums:[51,82,97,118,62,76,53,92]},{t:"co_table",nums:[59,77,112,88,66,72,90,65]},{t:"s501"}]},
 "5-1":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"pressure",v:"60"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
-"5-2":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"s201"}]},
+"5-2":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"shanghai"},{t:"s201"}]},
 "5-3":{title:"Scoring (19)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"19"},{t:"pressure",v:"57"},{t:"co_table",nums:[38,59,79,89,117,126,107,97]},{t:"s501"}]},
 "5-4":{title:"Checkout (50-70)",type:"checkouts",games:[{t:"wu_d"},{t:"s201"},{t:"co_table",nums:[51,68,79,53,62,76,58,64]},{t:"co_table",nums:[59,63,74,56,67,72,55,65]},{t:"s501"}]},
 "5-5":{title:"Scoring (20,19,18)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20,19,18"},{t:"pressure",v:"mix"},{t:"co_table",nums:[43,61,78,111,56,170,82,96]},{t:"s501"}]},
@@ -2423,7 +2429,7 @@ const SESS={
 "7-5":{title:"Scoring (19)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"19"},{t:"pressure",v:"57"},{t:"co_table",nums:[38,59,79,89,117,126,107,97]},{t:"s501"}]},
 "8-1":{title:"Checkout (80-120)",type:"checkouts",games:[{t:"wu_s"},{t:"s201"},{t:"co_table",nums:[80,90,100,110,87,92,108,117]},{t:"co_table",nums:[82,97,106,118,86,95,103,114]},{t:"s501"}]},
 "8-2":{title:"Scoring (20,19,18)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20,19,18"},{t:"shanghai"},{t:"co_table",nums:[66,79,87,110,75,124,76,98]},{t:"s501"}]},
-"8-3":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"s201"}]},
+"8-3":{title:"Doppie (20,10,5)",type:"doubles",games:[{t:"wu_d"},{t:"dbl",n:20},{t:"dbl",n:10},{t:"dbl",n:5},{t:"fin41",v:"D20"},{t:"shanghai"},{t:"s201"}]},
 "8-4":{title:"Scoring (20)",type:"scoring",games:[{t:"wu_s"},{t:"triplo",tg:"20"},{t:"pressure",v:"60"},{t:"co_table",nums:[40,60,80,100,70,120,76,96]},{t:"s501"}]},
 "8-5":{title:"Checkout Mix (50-120)",type:"checkouts",games:[{t:"wu_d"},{t:"s201"},{t:"co_table",nums:[51,82,97,118,62,76,53,92]},{t:"co_table",nums:[59,77,112,88,66,72,90,65]},{t:"s501"}]}
 };
@@ -2713,62 +2719,60 @@ function rPressure(gid, variant, sv){
   return gcrd(gid,nm,cfg.sub,cfg.info,body,playBtn);
 }
 
-// ═══ PRESSURE GAME OVERLAY ═══
-// State is fully reset every time openPressureGame is called
-let _PG = null;
+// ═══════════════════════════════════
+// PRESSURE GAME — complete logic
+// ═══════════════════════════════════
+let _PG = {active:false}; // reset state — always start fresh
 
 function openPressureGame(gid, variant){
-  const cfgs = {
-    '60': {
-      name:'60 POINTS PRESSURE', target:60, sector:'20',
-      info:'Parti con 10 vite. In ogni turno tira 3 frecce al 20. Se il punteggio totale del turno è inferiore a 60 punti, perdi una vita. Se fai 60 o più (colpendo almeno un triplo, o tre singoli), mantieni le tue vite. L\'obiettivo è sopravvivere il più a lungo possibile.'
-    },
-    '57': {
-      name:'57 POINTS PRESSURE', target:57, sector:'19',
-      info:'Parti con 10 vite. In ogni turno tira 3 frecce al 19. Se il punteggio totale del turno è inferiore a 57 punti, perdi una vita. Se fai 57 o più (colpendo almeno un triplo, o tre singoli), mantieni le tue vite. L\'obiettivo è sopravvivere il più a lungo possibile.'
-    },
-    'mix': {
-      name:'20+19+18 POINTS PRESSURE', target:57, sector:'20+19+18',
-      info:'Parti con 10 vite. In ogni turno tira 1 freccia al 20, 1 freccia al 19 e 1 freccia al 18. Se il punteggio totale del turno è inferiore a 57 punti, perdi una vita. Se fai 57 o più, mantieni le tue vite. L\'obiettivo è sopravvivere il più a lungo possibile.'
-    },
+  const cfgs={
+    '60':{name:'60 POINTS PRESSURE', target:60, sector:'20',
+      sectorLabel:'3 frecce sul 20'},
+    '57':{name:'57 POINTS PRESSURE', target:57, sector:'19',
+      sectorLabel:'3 frecce sul 19'},
+    'mix':{name:'20+19+18 PRESSURE', target:57, sector:'20+19+18',
+      sectorLabel:'1 freccia sul 20 · 1 sul 19 · 1 sul 18'},
   };
   const cfg = cfgs[variant] || cfgs['60'];
 
-  // Find which slot to fill (first empty slot)
+  // Find first empty slot (0 or 1)
   const inputs = document.querySelectorAll(`[data-gid="${gid}"]`);
   let slot = 0;
   if(inputs[0] && inputs[0].value !== '') slot = 1;
 
-  // Full reset — no stale state from previous games
+  // FULL STATE RESET — fixes the memory bug
   _PG = {
-    gid, variant, cfg, slot,
-    lives:     10,
-    turn:      0,
-    completed: 0,
-    totalPts:  0,   // backend running total of all scores entered
-    active:    true,
-    done:      false,
+    active:     true,
+    gid:        gid,
+    variant:    variant,
+    cfg:        cfg,
+    slot:       slot,
+    // Per-game counters
+    lives:      10,
+    turn:       0,
+    completed:  0,
+    // Backend total score accumulator (sum of all turn scores)
+    totalScore: 0,
+    // Undo support
+    prevLives:  10,
+    prevCompleted: 0,
+    prevTotalScore: 0,
   };
 
-  document.getElementById('pgTitle').textContent = cfg.name;
-  document.getElementById('pgSector').textContent =
-    cfg.sector === '20+19+18' ? '1 freccia sul 20 · 1 sul 19 · 1 sul 18' : `3 frecce sul ${cfg.sector}`;
-
-  // Hide result box, reset display
-  document.getElementById('pgResultBox').style.display = 'none';
+  document.getElementById('pgSector').textContent = cfg.sectorLabel;
+  document.getElementById('pgResultBox').style.display = 'none'; // always hide result on open
   pgRefresh();
   document.getElementById('pgOverlay').style.display = 'flex';
 }
 
 function pgRefresh(){
-  document.getElementById('pgLives').textContent    = _PG.lives;
-  document.getElementById('pgTurn').textContent     = _PG.turn;
-  document.getElementById('pgCompleted').textContent= _PG.completed;
-  document.getElementById('pgDisplay').textContent  = '—';
+  document.getElementById('pgLives').textContent     = _PG.lives;
+  document.getElementById('pgTurn').textContent      = _PG.turn;
+  document.getElementById('pgCompleted').textContent = _PG.completed;
+  document.getElementById('pgDisplay').textContent   = '—';
 }
 
 function pgDigit(d){
-  if(!_PG || !_PG.active) return;
   const disp = document.getElementById('pgDisplay');
   const cur  = disp.textContent === '—' ? '' : disp.textContent;
   if(cur.length >= 3) return;
@@ -2780,36 +2784,43 @@ function pgClear(){
 }
 
 function pgPrev(){
-  if(!_PG || _PG.turn <= 0) return;
+  if(_PG.turn <= 0) return;
+  // Restore state from before last confirm
   _PG.turn--;
-  _PG.lives    = Math.min(10, _PG.lives + 1);
-  _PG.completed= Math.max(0,  _PG.completed - 1);
-  // Note: totalPts undo is not tracked (no easy way); keep it as-is
+  _PG.lives       = _PG.prevLives;
+  _PG.completed   = _PG.prevCompleted;
+  _PG.totalScore  = _PG.prevTotalScore;
   pgRefresh();
 }
 
 function pgConfirm(){
-  if(!_PG || !_PG.active) return;
   const raw   = document.getElementById('pgDisplay').textContent;
   const score = parseInt(raw === '—' ? '' : raw);
   if(isNaN(score) || score < 0) return;
 
+  // Save undo snapshot
+  _PG.prevLives       = _PG.lives;
+  _PG.prevCompleted   = _PG.completed;
+  _PG.prevTotalScore  = _PG.totalScore;
+
+  // Advance counters
   _PG.turn++;
-  _PG.totalPts += score;   // accumulate total points in background
+  _PG.totalScore += score; // backend accumulator
 
   if(score >= _PG.cfg.target){
-    _PG.completed++;        // turn succeeded → gain completed
+    _PG.completed++;       // turn succeeded
   } else {
-    _PG.lives--;            // turn failed → lose a life
+    _PG.lives--;           // turn failed → lose a life
   }
 
   // End conditions:
-  // 1. Lives reached 0
-  // 2. Background total exceeded 1000 pts
-  if(_PG.lives <= 0 || _PG.totalPts > 1000){
+  // 1) Lives reached 0
+  // 2) Total accumulated score exceeded 1000 (champion mode)
+  if(_PG.lives <= 0 || _PG.totalScore > 1000){
     pgEndGame();
     return;
   }
+
   pgRefresh();
 }
 
@@ -2819,57 +2830,55 @@ function pgNoScore(){
 }
 
 function pgEndGame(){
-  if(!_PG) return;
   _PG.active = false;
 
-  const isGold = _PG.totalPts > 1000;
+  const isGold = _PG.totalScore > 1000;
 
-  // Show result screen
-  document.getElementById('pgResultVal').textContent   = _PG.completed;
+  // Update result screen
+  document.getElementById('pgResultVal').textContent    = _PG.completed;
+  document.getElementById('pgResultTotal').textContent  = _PG.totalScore;
   document.getElementById('pgResultGold').style.display = isGold ? 'block' : 'none';
+  document.getElementById('pgResultBox').style.display  = 'flex';
 
-  // Show total points counter
-  const totalEl = document.getElementById('pgResultTotal');
-  const totalValEl = document.getElementById('pgResultTotalVal');
-  totalEl.style.display = 'block';
-  totalValEl.textContent = _PG.totalPts;
-
-  // Save result to card cell
+  // Save to card cell — gold class if totalScore>1000, green otherwise
   const inputs = document.querySelectorAll(`[data-gid="${_PG.gid}"]`);
   if(inputs[_PG.slot]){
     inputs[_PG.slot].value = _PG.completed;
-    stI(inputs[_PG.slot]);
+    inputs[_PG.slot].classList.remove('ok','gold','xx');
+    if(isGold) inputs[_PG.slot].classList.add('gold');
+    else if(_PG.completed >= 0) inputs[_PG.slot].classList.add('ok');
     updTot(_PG.gid);
     saveSession();
   }
 
-  // Decide next/done button
+  // Show next or done button
   const nextSlot = _PG.slot + 1;
   const hasMore  = inputs[nextSlot] && inputs[nextSlot].value === '';
   document.getElementById('pgNextBtn').style.display = hasMore ? 'inline-block' : 'none';
   document.getElementById('pgDoneBtn').style.display = hasMore ? 'none' : 'inline-block';
-
-  document.getElementById('pgResultBox').style.display = 'flex';
 }
 
 function pgNextGame(){
-  if(!_PG) return;
-  document.getElementById('pgResultBox').style.display = 'none';
+  // Start game 2: full reset of per-game counters, advance slot
   _PG.slot++;
-  _PG.lives     = 10;
-  _PG.turn      = 0;
-  _PG.completed = 0;
-  _PG.totalPts  = 0;
-  _PG.active    = true;
+  _PG.lives       = 10;
+  _PG.turn        = 0;
+  _PG.completed   = 0;
+  _PG.totalScore  = 0;
+  _PG.prevLives   = 10;
+  _PG.prevCompleted  = 0;
+  _PG.prevTotalScore = 0;
+  _PG.active      = true;
+
+  document.getElementById('pgResultBox').style.display = 'none';
   pgRefresh();
 }
 
 function pgClose(){
-  // Fully reset state so next open starts fresh
-  _PG = null;
-  document.getElementById('pgOverlay').style.display  = 'none';
+  document.getElementById('pgOverlay').style.display = 'none';
   document.getElementById('pgResultBox').style.display = 'none';
-  document.getElementById('pgDisplay').textContent     = '—';
+  // Full state reset so next open always starts fresh
+  _PG = {active: false};
 }
 function rCO(gid,nums,sv){
   let cells='';
@@ -3133,6 +3142,21 @@ function extract501(g,gd){
   const closures=Object.values(gd).map(v=>parseFloat(v)).filter(n=>!isNaN(n)&&n>0);
   return closures.length?closures.reduce((a,b)=>a+b,0):null;
 }
+function extractShanghai(g,gd){
+  if(g.t!=='shanghai') return null;
+  const vals=Object.values(gd).map(v=>parseFloat(v)).filter(n=>!isNaN(n)&&n>=1&&n<=3);
+  return vals.length?vals.length:null; // number of Shanghai completed
+}
+function extractFin41(g,gd){
+  if(g.t!=='fin41') return null;
+  const vals=Object.values(gd).map(v=>parseFloat(v)).filter(n=>!isNaN(n)&&n>=1);
+  return vals.length?+(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):null;
+}
+function extractPressure(g,gd){
+  if(g.t!=='pressure') return null;
+  const vals=Object.values(gd).map(v=>parseFloat(v)).filter(n=>!isNaN(n)&&n>=0);
+  return vals.length?vals.reduce((a,b)=>a+b,0):null; // total completati
+}
 
 let _statsUID=null;
 
@@ -3153,7 +3177,9 @@ function renderStats(uid){
   html+=buildChartCard(cid_(),'AROUND THE CLOCK (DOPPIE) — Media frecce per settore',uid,(g,gd)=>extractATC_D(g,gd),'#4ade80','Media frecce');
   html+=buildChartCard(cid_(),'TRIPLO (tutte le varianti) — Media punti per turno',uid,(g,gd)=>extractTriplo(g,gd),'#f59e0b','Media punti');
   html+=buildChartCard(cid_(),'DOPPIO (tutte le varianti) — Totale punti per sessione',uid,(g,gd)=>extractDbl(g,gd),'#a855f7','Totale punti');
-  html+=buildChartCard(cid_(),"IT'S A RECORD! — Miglior risultato per sessione",uid,(g,gd)=>extractRecord(g,gd),'#3b82f6','Record frecce');
+  html+=buildChartCard(cid_(),'PRESSURE (tutte le varianti) — Totale completati per sessione',uid,(g,gd)=>extractPressure(g,gd),'#f43f5e','Completati');
+  html+=buildChartCard(cid_(),'SHANGHAI — Settori completati per sessione',uid,(g,gd)=>extractShanghai(g,gd),'#0ea5e9','Settori');
+  html+=buildChartCard(cid_(),'FINISH 41 (tutte le varianti) — Media frecce per chiusura',uid,(g,gd)=>extractFin41(g,gd),'#10b981','Media frecce');
   html+=buildChartCard(cid_(),'201 IN 9 FRECCE — Legs vinti per sessione',uid,(g,gd)=>extract201(g,gd),'#06b6d4','Legs vinti');
   html+=buildChartCard(cid_(),'CHECKOUT — Media frecce per numero',uid,(g,gd)=>extractCO(g,gd),'#f97316','Media frecce');
   html+=buildChartCard(cid_(),'501 CON CHIUSURA — Totale chiusure per sessione',uid,(g,gd)=>extract501(g,gd),'#ec4899','Chiusure');
