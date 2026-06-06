@@ -1033,6 +1033,10 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <div class="cpw-view" id="cpv">
       <div class="modal-title">Crea la tua password</div>
       <p style="font-size:13px;color:var(--mu2);text-align:center;margin-bottom:20px;line-height:1.65">Benvenuto! Prima di iniziare, crea una password personale sicura.</p>
+      <!-- Fallback re-auth field — shown only if Firebase requires recent login -->
+      <div class="fg" id="cpReAuthRow" style="display:none"><label>Password attuale (per verifica)</label>
+        <div class="pw-wrap"><input type="password" id="cpReAuthPw" placeholder="Inserisci la tua password attuale"><button type="button" class="pw-eye" onclick="togglePwVis('cpReAuthPw')">👁</button></div>
+      </div>
       <div class="fg"><label>Nuova password</label>
         <div class="pw-wrap"><input type="password" id="cpn" placeholder="Minimo 6 caratteri"><button type="button" class="pw-eye" onclick="togglePwVis('cpn')">👁</button></div>
       </div>
@@ -1869,6 +1873,8 @@ function closeLogin(){
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLogin()});
 
+let _currentLoginPw = ''; // stored temporarily for re-auth before updatePassword
+
 async function doLogin(){
   const em=document.getElementById('lemail').value.trim().toLowerCase();
   const pw=document.getElementById('lpw').value;
@@ -1895,10 +1901,12 @@ async function doLogin(){
     else enterApp();
     return;
   }
+  _currentLoginPw = pw; // save for possible re-auth in doChangePw
   try{
     await _fbAuth.signInWithEmailAndPassword(em,pw);
     // onAuthStateChanged handles the rest
   } catch(e){
+    _currentLoginPw = '';
     document.getElementById('loadingOverlay').style.display='none';
     openLogin();
     const code=e.code||'';
@@ -1922,16 +1930,36 @@ async function doChangePw(){
     document.getElementById('cpc').style.borderColor='var(--red)';return;}
   document.getElementById('cpc').style.borderColor='';
   try{
-    if(_fbAuth&&_fbAuth.currentUser){
+    if(_fbAuth && _fbAuth.currentUser){
+      // Re-authenticate first to get a fresh token — required by Firebase for updatePassword.
+      // Try 1: use password captured at login time
+      // Try 2: use password typed manually in the re-auth fallback field
+      const reAuthFieldPw = (document.getElementById('cpReAuthPw')?.value || '').trim();
+      const pwForReAuth = reAuthFieldPw || _currentLoginPw;
+      if(pwForReAuth && _fbAuth.currentUser.email){
+        try{
+          const credential = firebase.auth.EmailAuthProvider.credential(
+            _fbAuth.currentUser.email, pwForReAuth
+          );
+          await _fbAuth.currentUser.reauthenticateWithCredential(credential);
+        } catch(reAuthErr){
+          console.warn('Re-auth skipped:', reAuthErr.code);
+        }
+      }
       await _fbAuth.currentUser.updatePassword(n);
     }
     const users=getUsers();
     const idx=users.findIndex(u=>u.id===CU.id);
     if(idx>=0){ users[idx].mustChangePw=false; delete users[idx].password; saveUsers(users); CU=users[idx]; }
+    _currentLoginPw = ''; // clear stored password — no longer needed
     enterApp();
   } catch(e){
     if(e.code==='auth/requires-recent-login'){
-      err.textContent='⚠ Sessione scaduta. Effettua nuovamente il login.';
+      // Fallback: ask the user to re-enter their current password for re-auth
+      err.textContent='⚠ Per sicurezza inserisci prima la tua password attuale nel campo qui sotto, poi riprova.';
+      // Show re-auth field if not already visible
+      const reAuthRow = document.getElementById('cpReAuthRow');
+      if(reAuthRow) reAuthRow.style.display='flex';
     } else {
       err.textContent='⚠ Errore: '+(e.message||e);
     }
