@@ -76,7 +76,7 @@ button{cursor:pointer}
 @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
 
 /* ─── CAROUSEL SECTION ─── */
-.l-carousel-section{background:var(--d2);padding:100px 0 88px}
+.l-carousel-section{background:var(--d2);padding:100px 0 88px;border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
 .l-carousel-header{text-align:center;margin-bottom:24px;padding:0 24px}
 .l-carousel-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,7vw,48px);color:var(--light);letter-spacing:.04em;margin-bottom:6px}
 .l-carousel-sub{font-size:13px;color:var(--muted);line-height:1.7}
@@ -122,39 +122,40 @@ button{cursor:pointer}
 .l-section-sub{font-size:14px;color:var(--mu2);text-align:center;max-width:520px;margin:0 auto 56px;line-height:1.8}
 
 /* ─── PROBLEM SECTION ─── */
-.l-problem-section{padding:100px 24px;background:var(--dark)}
+.l-problem-section{padding:100px 24px;background:var(--d2);border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
 .l-problem-inner{max-width:960px;margin:0 auto}
 .l-problem-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
 @media(max-width:600px){.l-problem-grid{grid-template-columns:1fr}}
 .l-problem-card{
-  background:var(--d2);border:1px solid var(--d4);border-radius:16px;padding:28px 24px;
-  transition:border-color .25s, opacity .7s cubic-bezier(.4,0,.2,1), transform .7s cubic-bezier(.4,0,.2,1);
+  background:var(--d3);border:1px solid #7f1d1d;border-radius:16px;padding:28px 24px;
+  transition:opacity .7s cubic-bezier(.4,0,.2,1), transform .7s cubic-bezier(.4,0,.2,1);
   opacity:0;
 }
 .l-problem-card.from-left{ transform:translateX(-60px); }
 .l-problem-card.from-right{ transform:translateX(60px); }
 .l-problem-card.revealed{ opacity:1; transform:translateX(0) !important; }
-.l-problem-card:hover{border-color:#7f1d1d}
 .l-problem-icon{font-size:32px;margin-bottom:10px;text-align:center}
 .l-problem-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;color:var(--light);margin-bottom:8px;text-align:center}
 .l-problem-text{font-size:13px;color:var(--mu2);line-height:1.75}
 
 /* ─── SOLUTION SECTION ─── */
-.l-solution-section{padding:100px 24px;background:var(--d2);border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
+.l-solution-section{padding:100px 24px;background:#000;border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
 .l-solution-inner{max-width:760px;margin:0 auto}
 .l-solution-grid{display:flex;flex-direction:column;gap:24px}
 .l-solution-item{
   display:flex;flex-direction:column;align-items:center;text-align:center;
-  background:var(--d3);border:1px solid var(--d4);
-  border-radius:14px;padding:28px 24px;
-  transition:border-color .25s, opacity .65s cubic-bezier(.4,0,.2,1), transform .65s cubic-bezier(.4,0,.2,1);
+  background:var(--d3);border:1px solid #166534;
+  border-radius:14px;padding:28px 24px;position:relative;overflow:hidden;
+  transition:opacity .65s cubic-bezier(.4,0,.2,1), transform .65s cubic-bezier(.4,0,.2,1);
   opacity:0; transform:translateY(36px);
+  box-shadow:0 0 24px #22c55e12;
 }
+.l-solution-item::before{content:'';position:absolute;inset:0;border-radius:14px;background:radial-gradient(ellipse 70% 40% at 50% 0%,#052e1620,transparent);pointer-events:none}
+.l-solution-item-glow{position:absolute;top:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);border-radius:2px;opacity:1}
 .l-solution-item.revealed{ opacity:1; transform:translateY(0); }
-.l-solution-item:hover{border-color:#166534}
-.l-solution-icon{font-size:28px;text-align:center;margin-bottom:8px}
-.l-solution-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;color:var(--light);margin-bottom:6px;text-align:center}
-.l-solution-text{font-size:13px;color:var(--mu2);line-height:1.75}
+.l-solution-icon{font-size:28px;text-align:center;margin-bottom:8px;position:relative}
+.l-solution-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;color:var(--light);margin-bottom:6px;text-align:center;position:relative}
+.l-solution-text{font-size:13px;color:var(--mu2);line-height:1.75;position:relative}
 
 /* ─── SOLUTION CTA ─── */
 .l-solution-cta{text-align:center;margin-top:44px}
@@ -193,7 +194,7 @@ button{cursor:pointer}
 }
 
 /* ─── BOTTOM CTA ─── */
-.l-bot{padding:72px 24px 60px;text-align:center;background:var(--d2);border-top:1px solid var(--d4)}
+.l-bot{padding:72px 24px 60px;text-align:center;background:var(--d2);border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
 .l-bot-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:clamp(28px,7vw,48px);color:var(--light);margin-bottom:16px;letter-spacing:-.02em;line-height:1.1}
 .l-bot p{font-size:14px;color:var(--muted);max-width:500px;margin:0 auto 36px;line-height:1.8}
 .l-foot{padding:20px 24px;text-align:center;font-size:12px;color:var(--muted);border-top:1px solid var(--d4)}
@@ -955,31 +956,37 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       <p class="l-section-sub">Non si tratta di tirare più frecce. Si tratta di tirare le frecce giuste, nel modo giusto, e sapere ogni volta se stai crescendo.</p>
       <div class="l-solution-grid">
         <div class="l-solution-item">
+          <div class="l-solution-item-glow"></div>
           <div class="l-solution-icon">😄</div>
           <div class="l-solution-title">Progressione scientifica</div>
           <div class="l-solution-text">8 allenamenti progressivi con 5 sessioni ciascuno. Ogni settimana aumenta l'intensità e la specificità, esattamente come fa un atleta professionista.</div>
         </div>
         <div class="l-solution-item">
+          <div class="l-solution-item-glow"></div>
           <div class="l-solution-icon">😁</div>
           <div class="l-solution-title">Dati che parlano chiaro</div>
           <div class="l-solution-text">Ogni risultato viene registrato e trasformato in grafici temporali. Vedi con precisione dove migliori e dove hai ancora margine.</div>
         </div>
         <div class="l-solution-item">
+          <div class="l-solution-item-glow"></div>
           <div class="l-solution-icon">😎</div>
           <div class="l-solution-title">Allenamento sotto pressione</div>
           <div class="l-solution-text">Il Pressure Game simula i momenti decisivi di gara. Le partite a 501 con statistiche complete ti insegnano a chiudere quando conta davvero.</div>
         </div>
         <div class="l-solution-item">
+          <div class="l-solution-item-glow"></div>
           <div class="l-solution-icon">🤩</div>
           <div class="l-solution-title">Analisi biomeccanica del tiro</div>
           <div class="l-solution-text">La funzione di Analisi del Tiro usa l'intelligenza artificiale per analizzare il tuo video e misurare angoli di gomito, polso, spalla e postura, indicandoti esattamente cosa correggere.</div>
         </div>
         <div class="l-solution-item">
+          <div class="l-solution-item-glow"></div>
           <div class="l-solution-icon">😊</div>
           <div class="l-solution-title">Checkout sempre a portata di mano</div>
           <div class="l-solution-text">La guida checkout completa con tabelle Double Out, Master Out e Single Out, ti aiuterà a sapere dove tirare in ogni momento per usare le tue frecce al meglio.</div>
         </div>
         <div class="l-solution-item">
+          <div class="l-solution-item-glow"></div>
           <div class="l-solution-icon">😍</div>
           <div class="l-solution-title">Sempre con te, su tutti i dispositivi</div>
           <div class="l-solution-text">I dati vengono sincronizzati in tempo reale nel cloud. Accedi dal telefono al campo, dal computer a casa o da tablet al club. Il tuo allenamento non si ferma mai.</div>
@@ -2254,38 +2261,22 @@ function autoLoadNextSession(){
   const weeks=[1,2,3,4,5,6,7,8];
   const sessions=[1,2,3,4,5];
 
-  // Count how many input slots a session has (based on its games)
-  function countExpectedInputs(sessKey){
-    const sess=SESS[sessKey]; if(!sess) return 0;
-    let total=0;
+  // Check if a saved session is fully complete:
+  // A session is complete if every game in SESS[key].games has at least one non-empty value saved.
+  function isSessComplete(key, sessData){
+    const sess=SESS[key];
+    if(!sess) return true; // unknown session → treat as complete
     for(const g of sess.games){
-      if(g.t==='wu_s'||g.t==='wu_d') total+=20;
-      else if(g.t==='triplo') total+=33;
-      else if(g.t==='dbl') total+=10;
-      else if(g.t==='fin'||g.t==='fin41') total+=8;
-      else if(g.t==='s201') total+=10;
-      else if(g.t==='co_table') total+=(g.nums?.length||8);
-      else if(g.t==='s501') total+=3;
-      else if(g.t==='pressure') total+=2;
-      else if(g.t==='shanghai') total+=1;
-      else if(g.t==='record') total+=5;
+      const gid=g.id||g.k; // game identifier key used when saving
+      if(!gid) continue;
+      const gdata=sessData[gid];
+      // If no data at all for this game → incomplete
+      if(!gdata || typeof gdata!=='object') return false;
+      // If all values in this game are empty strings → incomplete
+      const vals=Object.values(gdata).map(v=>String(v).trim()).filter(v=>v!=='');
+      if(vals.length===0) return false;
     }
-    return total;
-  }
-
-  // Count filled inputs in saved session data (excluding __meta)
-  function countFilledInputs(sessData){
-    let filled=0;
-    for(const [gid, gdata] of Object.entries(sessData)){
-      if(gid==='__meta') continue;
-      if(typeof gdata==='object' && gdata!==null){
-        for(const v of Object.values(gdata)){
-          const s=String(v).trim();
-          if(s!=='') filled++;
-        }
-      }
-    }
-    return filled;
+    return true;
   }
 
   // Build flat ordered list of all session keys
@@ -2306,14 +2297,12 @@ function autoLoadNextSession(){
     return;
   }
 
-  // Check if last saved session is complete
+  // Check if last saved session is fully complete
   const lastEntry=allKeys[lastSavedIdx];
   const lastSessData=data[lastEntry.key];
-  const expected=countExpectedInputs(lastEntry.key);
-  const filled=countFilledInputs(lastSessData);
 
-  if(filled<expected){
-    // Last saved session still has empty fields → open it
+  if(!isSessComplete(lastEntry.key, lastSessData)){
+    // Last saved session still has incomplete games → open it
     document.getElementById('weekSel').value=String(lastEntry.w);
     document.getElementById('sessSel').value=String(lastEntry.s);
   } else {
