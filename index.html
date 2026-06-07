@@ -590,7 +590,9 @@ select:hover{border-color:var(--green)}
   min-height:0;
 }
 .g501-pts{font-family:'Bebas Neue',sans-serif;font-size:clamp(42px,10vh,80px);color:#fff;line-height:1;letter-spacing:-.02em}
-.g501-checkout{font-size:clamp(11px,2vh,16px);color:#7fffb5;font-weight:600;min-height:0;margin-top:1px}
+.g501-checkout{display:flex;flex-direction:column;align-items:flex-start;min-height:0;margin-top:2px;gap:0}
+.g501-co-label{font-size:clamp(8px,1.4vh,11px);color:#4ade80;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.7;line-height:1.2}
+.g501-co-dart{font-size:clamp(11px,2vh,16px);color:#7fffb5;font-weight:600;line-height:1.3}
 
 /* Block 2: Stats — dark bg, green border */
 .g501-stats{
@@ -646,37 +648,59 @@ select:hover{border-color:var(--green)}
 
 /* Keys: fill their grid cell; border-radius makes them visually round */
 .g501-key{
-  background:#1c1c1c;border:none;color:#fff;
+  background:#1c1c1c;
+  border:1px solid #3a3a3a;
+  color:#fff;
   font-family:'Bebas Neue',sans-serif;
   font-size:clamp(18px,5.5vw,34px);
   letter-spacing:.01em;
   border-radius:999px!important;
   display:flex;align-items:center;justify-content:center;
-  width:100%;height:100%;   /* fill cell completely */
+  width:100%;height:100%;
   cursor:pointer;
   transition:background .08s,transform .08s,box-shadow .08s;
-  box-shadow:0 2px 6px rgba(0,0,0,0.5);
+  box-shadow:0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12);
   -webkit-tap-highlight-color:transparent;
   min-width:0;min-height:0;
 }
 .g501-key:hover{background:#2a2a2a}
-.g501-key:active{background:#3d3d3d;transform:scale(1.08);box-shadow:0 4px 20px rgba(255,255,255,0.09)}
+.g501-key:active{background:#3d3d3d;transform:scale(1.08);box-shadow:0 4px 28px rgba(255,255,255,0.18),inset 0 1px 0 rgba(255,255,255,0.18)}
+
+/* TURNO PREC. and CANCELLA */
+.g501-prev-btn{
+  background:#1c1c1c;border:1px solid #3a3a3a;color:#e5e5e5;
+  padding:clamp(8px,1.5vh,12px) 6px;
+  font-size:clamp(11px,1.6vh,14px);font-weight:700;
+  font-family:'DM Sans',sans-serif;letter-spacing:.02em;
+  border-radius:999px!important;transition:background .1s,transform .08s;cursor:pointer;
+  box-shadow:0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+.g501-prev-btn:active{background:#333;transform:scale(0.93);box-shadow:0 4px 20px rgba(255,255,255,0.14),inset 0 1px 0 rgba(255,255,255,0.18)}
+.g501-clr-btn{
+  background:#1c1c1c;border:1px solid #3a3a3a;color:#e5e5e5;
+  padding:clamp(8px,1.5vh,12px) 6px;
+  font-size:clamp(11px,1.6vh,14px);font-weight:700;
+  font-family:'DM Sans',sans-serif;letter-spacing:.02em;
+  border-radius:999px!important;transition:background .1s,transform .08s;cursor:pointer;
+  box-shadow:0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+.g501-clr-btn:active{background:#333;transform:scale(0.93);box-shadow:0 4px 20px rgba(255,255,255,0.14),inset 0 1px 0 rgba(255,255,255,0.18)}
 
 /* NO SCORE */
-.g501-key.noscore-left{background:#3d0c0c;color:#ff7070;font-size:clamp(11px,2.2vh,16px)!important}
-.g501-key.noscore-left:active{background:#7a1515;color:#ffaaaa;transform:scale(1.08)}
+.g501-key.noscore-left{background:#3d0c0c;color:#ff7070;font-size:clamp(13px,2.6vh,19px)!important;border-color:#7f1d1d;box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,100,100,0.22)}
+.g501-key.noscore-left:active{background:#7a1515;color:#ffaaaa;transform:scale(1.08);box-shadow:0 4px 28px rgba(239,68,68,0.45),inset 0 1px 0 rgba(255,120,120,0.3)}
 
 /* OK */
-.g501-key.ok-btn{background:#0d2e1c;color:#4ade80;font-size:clamp(15px,3.5vh,26px)!important}
-.g501-key.ok-btn:active{background:#175c35;color:#86efac;transform:scale(1.08)}
+.g501-key.ok-btn{background:#0d2e1c;color:#4ade80;font-size:clamp(15px,3.5vh,26px)!important;border-color:#166534;box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(74,222,128,0.22)}
+.g501-key.ok-btn:active{background:#175c35;color:#86efac;transform:scale(1.08);box-shadow:0 4px 28px rgba(74,222,128,0.5),inset 0 1px 0 rgba(74,222,128,0.3)}
 
 /* CHECKOUT */
-.g501-key.checkout-btn{background:var(--green);color:#000;font-size:clamp(12px,2.8vh,18px)!important}
-.g501-key.checkout-btn:active{background:#4ade80;transform:scale(1.08)}
+.g501-key.checkout-btn{background:var(--green);color:#000;font-size:clamp(12px,2.8vh,18px)!important;border-color:#4ade80;box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(134,239,172,0.35)}
+.g501-key.checkout-btn:active{background:#4ade80;transform:scale(1.08);box-shadow:0 4px 28px rgba(74,222,128,0.55),inset 0 1px 0 rgba(134,239,172,0.4)}
 
 /* BUST */
-.g501-key.bust-btn{background:#3d0c0c;color:#ff7070;font-size:clamp(15px,3.5vh,26px)!important}
-.g501-key.bust-btn:active{background:#7a1515;color:#ffaaaa;transform:scale(1.08)}
+.g501-key.bust-btn{background:#3d0c0c;color:#ff7070;font-size:clamp(15px,3.5vh,26px)!important;border-color:#7f1d1d;box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,100,100,0.22)}
+.g501-key.bust-btn:active{background:#7a1515;color:#ffaaaa;transform:scale(1.08);box-shadow:0 4px 28px rgba(239,68,68,0.45),inset 0 1px 0 rgba(255,120,120,0.3)}
 
 /* Close button */
 .g501-close{
@@ -689,23 +713,23 @@ select:hover{border-color:var(--green)}
 
 /* Key press animation via JS class */
 @keyframes keyPressGlow{
-  0%  {transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5)}
-  35% {transform:scale(1.15); box-shadow:0 6px 24px rgba(255,255,255,0.15)}
-  100%{transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5)}
+  0%  {transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.12)}
+  30% {transform:scale(1.18); box-shadow:0 8px 32px rgba(255,255,255,0.28),inset 0 1px 0 rgba(255,255,255,0.22)}
+  100%{transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.12)}
 }
 @keyframes keyPressGlowRed{
-  0%  {transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5)}
-  35% {transform:scale(1.15); box-shadow:0 6px 24px rgba(239,68,68,0.35)}
-  100%{transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5)}
+  0%  {transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,100,100,0.22)}
+  30% {transform:scale(1.18); box-shadow:0 8px 36px rgba(239,68,68,0.6),inset 0 1px 0 rgba(255,120,120,0.35)}
+  100%{transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,100,100,0.22)}
 }
 @keyframes keyPressGlowGreen{
-  0%  {transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5)}
-  35% {transform:scale(1.15); box-shadow:0 6px 24px rgba(74,222,128,0.45)}
-  100%{transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5)}
+  0%  {transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(74,222,128,0.22)}
+  30% {transform:scale(1.18); box-shadow:0 8px 36px rgba(74,222,128,0.65),inset 0 1px 0 rgba(74,222,128,0.35)}
+  100%{transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(74,222,128,0.22)}
 }
-.g501-key.pressing        {animation:keyPressGlow      .22s cubic-bezier(.4,0,.2,1) forwards}
-.g501-key.pressing-red    {animation:keyPressGlowRed   .22s cubic-bezier(.4,0,.2,1) forwards}
-.g501-key.pressing-green  {animation:keyPressGlowGreen .22s cubic-bezier(.4,0,.2,1) forwards}
+.g501-key.pressing        {animation:keyPressGlow      .55s cubic-bezier(.4,0,.2,1) forwards}
+.g501-key.pressing-red    {animation:keyPressGlowRed   .55s cubic-bezier(.4,0,.2,1) forwards}
+.g501-key.pressing-green  {animation:keyPressGlowGreen .55s cubic-bezier(.4,0,.2,1) forwards}
 
 /* Miss doubles screen */
 .g501-miss-screen{position:fixed;inset:0;z-index:510;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
@@ -3471,12 +3495,12 @@ function initPendingCharts(){
 function extractATC_S(g,gd){
   if(g.t!=='wu_s') return null;
   const vals=Object.values(gd).map(v=>parseFloat(v)).filter(n=>!isNaN(n)&&n>0);
-  return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):null;
+  return vals.length?+(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):null;
 }
 function extractATC_D(g,gd){
   if(g.t!=='wu_d') return null;
   const vals=Object.values(gd).map(v=>parseFloat(v)).filter(n=>!isNaN(n)&&n>0);
-  return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):null;
+  return vals.length?+(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):null;
 }
 function extractTriplo(g,gd){
   if(g.t!=='triplo') return null;
@@ -4507,6 +4531,15 @@ function renderAdminList(users, listEl, pinnedId=null){
 // ══════════════════════════════════════════════════
 // 501 ENGINE
 // ══════════════════════════════════════════════════
+// Formats a CO checkout string like "T19 + T20 + D12" into vertical HTML
+// removing + signs and adding a CHECKOUT label on top
+function formatCoHint(coStr){
+  if(!coStr) return '';
+  const darts = coStr.split('+').map(s=>s.trim()).filter(Boolean);
+  const rows = darts.map(d=>`<span class="g501-co-dart">${d}</span>`).join('');
+  return `<span class="g501-co-label">CHECKOUT</span>${rows}`;
+}
+
 const CO={
   170:"T20 + T20 + DBull",167:"T19 + T20 + DBull",164:"T19 + T19 + DBull",
   161:"T19 + T18 + DBull",160:"T20 + T20 + D20",
@@ -4604,7 +4637,13 @@ function g501UpdateDisplay(){
   }
   // Checkout suggestion — only in free mode
   const coEl=document.getElementById('g501co');
-  if(coEl) coEl.textContent=G.mode==='free'&&G.score<=170&&CO[G.score]?CO[G.score]:'';
+  if(coEl){
+    if(G.mode==='free'&&G.score<=170&&CO[G.score]){
+      coEl.innerHTML=formatCoHint(CO[G.score]);
+    } else {
+      coEl.innerHTML='';
+    }
+  }
 
   // OK button state — preview what pressing it will do
   const btn=document.getElementById('g501okBtn');
@@ -5173,7 +5212,14 @@ function g201UpdateDisplay(){
   document.getElementById('g201legNum').textContent=G201.currentLeg+1;
   document.getElementById('g201darts').textContent=G201.legDarts; // per-leg count
   document.getElementById('g201wins').textContent=G201.winsCount;
-  document.getElementById('g201co').textContent=G201.score<=170&&CO[G201.score]?CO[G201.score]:'';
+  const coEl201=document.getElementById('g201co');
+  if(coEl201){
+    if(G201.score<=170&&CO[G201.score]){
+      coEl201.innerHTML=formatCoHint(CO[G201.score]);
+    } else {
+      coEl201.innerHTML='';
+    }
+  }
   const btn=document.getElementById('g201okBtn');
   if(!G201.enteredStr){btn.textContent='OK';btn.className='g501-key ok-btn';return;}
   const pts=parseInt(G201.enteredStr);
