@@ -2288,34 +2288,46 @@ function autoLoadNextSession(){
     return filled;
   }
 
-  // Find the LAST session (scanning forward) that has at least 1 empty field.
-  // A session "has empty fields" if: not saved at all, OR saved but filled < expected.
-  let bestW=null, bestS=null;
-  for(const w of weeks){
-    for(const s of sessions){
-      const key=w+'-'+s;
-      const sessData=data[key];
-      const expected=countExpectedInputs(key);
-      if(!sessData?.__meta){
-        // Not yet saved → definitely has empty fields
-        bestW=w; bestS=s;
-      } else {
-        // Already saved — check if any field is still empty
-        const filled=countFilledInputs(sessData);
-        if(filled<expected){
-          bestW=w; bestS=s;
-        }
-      }
-    }
+  // Build flat ordered list of all session keys
+  const allKeys=[];
+  for(const w of weeks) for(const s of sessions) allKeys.push({w,s,key:`${w}-${s}`});
+
+  // Find the index of the LAST saved session (__meta present)
+  let lastSavedIdx=-1;
+  for(let i=0;i<allKeys.length;i++){
+    if(data[allKeys[i].key]?.__meta) lastSavedIdx=i;
   }
 
-  if(bestW!==null){
-    document.getElementById('weekSel').value=String(bestW);
-    document.getElementById('sessSel').value=String(bestS);
-  } else {
-    // All sessions fully filled — default to 1-1
+  // No session saved at all → start from the beginning
+  if(lastSavedIdx===-1){
     document.getElementById('weekSel').value='1';
     document.getElementById('sessSel').value='1';
+    renderSession();
+    return;
+  }
+
+  // Check if last saved session is complete
+  const lastEntry=allKeys[lastSavedIdx];
+  const lastSessData=data[lastEntry.key];
+  const expected=countExpectedInputs(lastEntry.key);
+  const filled=countFilledInputs(lastSessData);
+
+  if(filled<expected){
+    // Last saved session still has empty fields → open it
+    document.getElementById('weekSel').value=String(lastEntry.w);
+    document.getElementById('sessSel').value=String(lastEntry.s);
+  } else {
+    // Last saved session is fully complete → open the next one
+    const nextIdx=lastSavedIdx+1;
+    if(nextIdx<allKeys.length){
+      const next=allKeys[nextIdx];
+      document.getElementById('weekSel').value=String(next.w);
+      document.getElementById('sessSel').value=String(next.s);
+    } else {
+      // All 40 sessions complete → stay on the last one
+      document.getElementById('weekSel').value=String(lastEntry.w);
+      document.getElementById('sessSel').value=String(lastEntry.s);
+    }
   }
   renderSession();
 }
