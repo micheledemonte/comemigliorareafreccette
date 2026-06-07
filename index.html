@@ -802,10 +802,19 @@ select:hover{border-color:var(--green)}
   flex-direction:column;
   box-shadow:0 0 0 1px rgba(34,197,94,.12),0 24px 64px rgba(0,0,0,.8);
 }
-/* Same height as keypad overlay on desktop */
+/* Mobile/tablet: full screen height */
+@media(max-width:768px){
+  .g501-dialog-card{
+    height:calc(100vh - 32px);
+  }
+}
+/* Desktop: natural content height with 250px top+bottom margin */
 @media(min-width:769px){
   .g501-dialog-card{
-    height:98vh;
+    height:auto;
+    margin-top:250px;
+    margin-bottom:250px;
+    max-height:calc(100vh - 500px);
   }
 }
 .g501-dialog-card::before{
