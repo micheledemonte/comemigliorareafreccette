@@ -2266,32 +2266,24 @@ function autoLoadNextSession(){
   const weeks=[1,2,3,4,5,6,7,8];
   const sessions=[1,2,3,4,5];
 
-  // Games are saved with keys g0, g1, g2... in order of rendering.
-  // A session is complete if every game slot gN has at least one non-empty value.
-  // Approach: count how many game slots gN in the saved data have at least one
-  // non-empty value (meaning the user actually filled something in that game).
-  // Compare against the number of games that produce inline inputs (all except s501).
-  // If fewer games have data than expected → session is incomplete.
+  // A session is complete only if every inline game has ALL its fields filled.
+  // A single empty field anywhere means the session is incomplete.
   function isSessComplete(sessKey, sessData){
     const sess = SESS[sessKey];
     if(!sess) return true;
-
-    // Count games that produce inline inputs (all except s501)
-    const inlineGames = sess.games.filter(g => g.t !== 's501').length;
-
-    // Count gN keys in saved data that have at least one non-empty value
-    let filledGames = 0;
     let gi = 0;
     for(const g of sess.games){
       const gid = 'g' + gi++;
-      if(g.t === 's501') continue;
+      if(g.t === 's501') continue; // overlay game, no inline fields
       const gdata = sessData[gid];
-      if(gdata && typeof gdata === 'object'){
-        const hasValue = Object.values(gdata).some(v => String(v).trim() !== '');
-        if(hasValue) filledGames++;
-      }
+      // No data saved for this game at all → incomplete
+      if(!gdata || typeof gdata !== 'object') return false;
+      // Any field empty → incomplete
+      const vals = Object.values(gdata);
+      if(vals.length === 0) return false;
+      if(vals.some(v => String(v).trim() === '')) return false;
     }
-    return filledGames >= inlineGames;
+    return true;
   }
 
   // Build flat ordered list of all session keys
