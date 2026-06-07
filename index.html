@@ -588,11 +588,19 @@ select:hover{border-color:var(--green)}
   padding:10px 16px 8px;
   text-align:center;position:relative;
   min-height:0;
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
 }
-.g501-pts{font-family:'Bebas Neue',sans-serif;font-size:clamp(42px,10vh,80px);color:#fff;line-height:1;letter-spacing:-.02em}
-.g501-checkout{display:flex;flex-direction:column;align-items:flex-start;min-height:0;margin-top:2px;gap:0}
+/* checkout hint: left column */
+.g501-checkout{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:0;gap:0;flex-shrink:0}
+.g501-checkout:empty{display:none}
 .g501-co-label{font-size:clamp(8px,1.4vh,11px);color:#4ade80;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.7;line-height:1.2}
 .g501-co-dart{font-size:clamp(11px,2vh,16px);color:#7fffb5;font-weight:600;line-height:1.3}
+/* score number: right — centered when no checkout */
+.g501-pts{font-family:'Bebas Neue',sans-serif;font-size:clamp(42px,10vh,80px);color:#fff;line-height:1;letter-spacing:-.02em;flex-shrink:0}
 
 /* Block 2: Stats — dark bg, green border */
 .g501-stats{
@@ -719,7 +727,7 @@ select:hover{border-color:var(--green)}
 }
 @keyframes keyPressGlowRed{
   0%  {transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,100,100,0.22)}
-  30% {transform:scale(1.18); box-shadow:0 8px 36px rgba(239,68,68,0.6),inset 0 1px 0 rgba(255,120,120,0.35)}
+  35% {transform:scale(1.12); box-shadow:0 8px 36px rgba(239,68,68,0.6),inset 0 1px 0 rgba(255,120,120,0.35)}
   100%{transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,100,100,0.22)}
 }
 @keyframes keyPressGlowGreen{
@@ -727,9 +735,47 @@ select:hover{border-color:var(--green)}
   30% {transform:scale(1.18); box-shadow:0 8px 36px rgba(74,222,128,0.65),inset 0 1px 0 rgba(74,222,128,0.35)}
   100%{transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(74,222,128,0.22)}
 }
+@keyframes keyPressGlowGray{
+  0%  {transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.12)}
+  30% {transform:scale(1.08); box-shadow:0 6px 24px rgba(255,255,255,0.18),inset 0 1px 0 rgba(255,255,255,0.18)}
+  100%{transform:scale(1);    box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.12)}
+}
+/* normal digit/ok-empty */
 .g501-key.pressing        {animation:keyPressGlow      .55s cubic-bezier(.4,0,.2,1) forwards}
-.g501-key.pressing-red    {animation:keyPressGlowRed   .55s cubic-bezier(.4,0,.2,1) forwards}
+/* bust/noscore — slower */
+.g501-key.pressing-red    {animation:keyPressGlowRed   .75s cubic-bezier(.4,0,.2,1) forwards}
+/* checkout/ok-with-score */
 .g501-key.pressing-green  {animation:keyPressGlowGreen .55s cubic-bezier(.4,0,.2,1) forwards}
+/* bust specifically — even slower for training */
+.g501-key.pressing-red-slow{animation:keyPressGlowRed  .85s cubic-bezier(.4,0,.2,1) forwards}
+/* checkout in training — slower */
+.g501-key.pressing-green-slow{animation:keyPressGlowGreen .75s cubic-bezier(.4,0,.2,1) forwards}
+/* prev/clr buttons */
+.g501-prev-btn.pressing-gray,.g501-clr-btn.pressing-gray{animation:keyPressGlowGray .45s cubic-bezier(.4,0,.2,1) forwards}
+
+/* Desktop hover for all game keys */
+@media(min-width:769px){
+  .g501-key:hover{background:#2e2e2e;box-shadow:0 4px 16px rgba(255,255,255,0.10),inset 0 1px 0 rgba(255,255,255,0.14)}
+  .g501-key.noscore-left:hover{background:#5a1212;box-shadow:0 4px 16px rgba(239,68,68,0.3),inset 0 1px 0 rgba(255,100,100,0.2)}
+  .g501-key.ok-btn:hover{background:#1a4a2a;box-shadow:0 4px 16px rgba(74,222,128,0.25),inset 0 1px 0 rgba(74,222,128,0.2)}
+  .g501-key.checkout-btn:hover{background:#2ade70;box-shadow:0 4px 16px rgba(74,222,128,0.4),inset 0 1px 0 rgba(255,255,255,0.15)}
+  .g501-key.bust-btn:hover{background:#5a1212;box-shadow:0 4px 16px rgba(239,68,68,0.3),inset 0 1px 0 rgba(255,100,100,0.2)}
+  .g501-prev-btn:hover{background:#2a2a2a;box-shadow:0 4px 14px rgba(255,255,255,0.10),inset 0 1px 0 rgba(255,255,255,0.14)}
+  .g501-clr-btn:hover{background:#2a2a2a;box-shadow:0 4px 14px rgba(255,255,255,0.10),inset 0 1px 0 rgba(255,255,255,0.14)}
+}
+
+/* Prevent double-tap zoom on all game overlay buttons */
+#g501overlay button,#g201overlay button,#pgOverlay button,
+#g501overlay .g501-key,#g201overlay .g501-key,#pgOverlay .g501-key,
+#g501overlay .g501-prev-btn,#g501overlay .g501-clr-btn,
+#g201overlay .g501-prev-btn,#g201overlay .g501-clr-btn,
+#pgOverlay .g501-prev-btn,#pgOverlay .g501-clr-btn,
+.g501-miss-screen button,.g501-co-screen button,.g501-2btn button,
+#g501cpAsk button{
+  touch-action:manipulation;
+  -webkit-user-select:none;
+  user-select:none;
+}
 
 /* Miss doubles screen */
 .g501-miss-screen{position:fixed;inset:0;z-index:510;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
@@ -1790,7 +1836,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   <div class="g501-inner">
     <button class="g501-close" onclick="pgClose()">ESCI ×</button>
     <!-- Block 1: Score area — punteggio inserito qui, come il 501 -->
-    <div class="g501-score-area" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0">
+    <div class="g501-score-area" style="flex-direction:column;">
       <div id="pgSector" style="font-size:clamp(11px,2.5vw,14px);color:#7fffb5;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px"></div>
       <div class="g501-pts" id="pgDisplay" style="font-size:clamp(58px,14vw,96px);min-height:1em;line-height:1">—</div>
     </div>
@@ -6590,27 +6636,47 @@ if(document.readyState==='loading'){
 // GAME KEYPAD — press animation via event delegation
 // ══════════════════════════════════════════════════
 (function(){
-  function addPressAnim(container){
+  function addPressAnim(container, opts){
     if(!container) return;
+    opts = opts || {};
     function onDown(e){
+      // ── .g501-key ──
       const key = e.target.closest('.g501-key');
-      if(!key) return;
-      // Determine glow color
-      let cls = 'pressing';
-      if(key.classList.contains('noscore-left')||key.classList.contains('bust-btn')) cls='pressing-red';
-      if(key.classList.contains('ok-btn')||key.classList.contains('checkout-btn')) cls='pressing-green';
-      // Remove then re-add to restart animation
-      key.classList.remove('pressing','pressing-red','pressing-green');
-      void key.offsetWidth; // reflow
-      key.classList.add(cls);
-      key.addEventListener('animationend',()=>{key.classList.remove(cls);},{once:true});
+      if(key){
+        let cls;
+        const isBust     = key.classList.contains('bust-btn');
+        const isNoScore  = key.classList.contains('noscore-left');
+        const isCheckout = key.classList.contains('checkout-btn');
+        const isOk       = key.classList.contains('ok-btn');
+        if(isBust)                                       cls = 'pressing-red-slow';
+        else if(isNoScore)                               cls = 'pressing-red';
+        else if(isCheckout && opts.slowCheckout)         cls = 'pressing-green-slow';
+        else if(isCheckout)                              cls = 'pressing-green';
+        else if(isOk)                                    cls = 'pressing-green'; // always green speed for OK
+        else                                             cls = 'pressing';
+        key.classList.remove('pressing','pressing-red','pressing-green','pressing-red-slow','pressing-green-slow');
+        void key.offsetWidth;
+        key.classList.add(cls);
+        key.addEventListener('animationend',()=>{key.classList.remove(cls);},{once:true});
+        return;
+      }
+      // ── TURNO PREC. / CANCELLA ──
+      const prev = e.target.closest('.g501-prev-btn');
+      const clr  = e.target.closest('.g501-clr-btn');
+      const btn  = prev || clr;
+      if(btn){
+        btn.classList.remove('pressing-gray');
+        void btn.offsetWidth;
+        btn.classList.add('pressing-gray');
+        btn.addEventListener('animationend',()=>{btn.classList.remove('pressing-gray');},{once:true});
+      }
     }
     container.addEventListener('pointerdown', onDown, {passive:true});
   }
-  // Apply to overlays once DOM ready
   function initKeyAnims(){
-    addPressAnim(document.getElementById('g501overlay'));
-    addPressAnim(document.getElementById('g201overlay'));
+    addPressAnim(document.getElementById('g501overlay'), {slowCheckout: true});
+    addPressAnim(document.getElementById('g201overlay'), {});
+    addPressAnim(document.getElementById('pgOverlay'),   {});
   }
   if(document.readyState==='loading'){
     document.addEventListener('DOMContentLoaded', initKeyAnims);
