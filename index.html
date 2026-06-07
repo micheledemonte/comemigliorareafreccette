@@ -94,10 +94,12 @@ button{cursor:pointer}
 .l-card-title{font-family:'Bebas Neue',sans-serif;font-size:23px;letter-spacing:.06em;color:var(--light);margin-bottom:10px}
 .l-card-desc{font-size:13px;color:var(--mu2);line-height:1.75;flex:1}
 .l-card-tag{margin-top:16px;display:inline-block;background:var(--gdim);border:1px solid #166534;color:var(--green);font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:4px 12px;border-radius:20px}
-.l-dot-wrap{display:flex;gap:14px;justify-content:center;margin-top:22px}
+.l-dot-wrap{display:flex;gap:14px;justify-content:center;align-items:center;margin-top:22px}
 .l-dot{width:14px;height:14px;border-radius:50%;background:var(--d5);transition:all .3s;cursor:pointer;border:none;padding:0;flex-shrink:0}
 .l-dot:hover{background:var(--mu2);transform:scale(1.15)}
 .l-dot.on{background:var(--green);width:36px;border-radius:7px}
+.l-carousel-arrow{background:transparent;border:1px solid var(--d4);color:var(--muted);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color .2s,color .2s}
+.l-carousel-arrow:hover{border-color:var(--green);color:var(--green)}
 .l-swipe-hint{margin-top:24px;margin-bottom:8px;font-size:12px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;text-align:center;animation:swipeHint 2s infinite}
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 @keyframes swipeHint{0%,100%{transform:translateX(0)}50%{transform:translateX(-10px)}}
@@ -136,7 +138,7 @@ button{cursor:pointer}
 .l-problem-card.from-right{ transform:translateX(60px); }
 .l-problem-card.revealed{ opacity:1; transform:translateX(0) !important; }
 .l-problem-card-glow{position:absolute;top:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,#ef4444,transparent);border-radius:2px;opacity:1}
-.l-problem-icon{font-size:32px;margin-bottom:10px;text-align:center}
+.l-problem-icon{font-size:64px;margin-bottom:12px;text-align:center}
 .l-problem-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;color:var(--light);margin-bottom:8px;text-align:center}
 .l-problem-text{font-size:13px;color:var(--mu2);line-height:1.75}
 
@@ -155,7 +157,7 @@ button{cursor:pointer}
 .l-solution-item::before{content:'';position:absolute;inset:0;border-radius:14px;background:radial-gradient(ellipse 70% 40% at 50% 0%,#052e1620,transparent);pointer-events:none}
 .l-solution-item-glow{position:absolute;top:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);border-radius:2px;opacity:1}
 .l-solution-item.revealed{ opacity:1; transform:translateY(0); }
-.l-solution-icon{font-size:28px;text-align:center;margin-bottom:8px;position:relative}
+.l-solution-icon{font-size:56px;text-align:center;margin-bottom:10px;position:relative}
 .l-solution-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;color:var(--light);margin-bottom:6px;text-align:center;position:relative}
 .l-solution-text{font-size:13px;color:var(--mu2);line-height:1.75;position:relative}
 
@@ -175,25 +177,25 @@ button{cursor:pointer}
   color:var(--light);text-align:left;
   transition:color 0s;
 }
-.l-faq-q:hover{ color:var(--green); transition:color .2s; }
+/* Desktop: hover verde */
+@media(min-width:769px){
+  .l-faq-q:hover{ color:var(--green); transition:color .2s; }
+}
+/* Aperta: verde su tutti i dispositivi */
 .l-faq-item.open .l-faq-q{ color:var(--green); transition:color .2s; }
 .l-faq-arrow{
   font-size:12px;color:var(--muted);flex-shrink:0;
   transition:transform .3s cubic-bezier(.4,0,.2,1), color .2s;
   display:inline-block;
 }
-.l-faq-item.open .l-faq-arrow{
-  transform:rotate(180deg);color:var(--green);
-}
+.l-faq-item.open .l-faq-arrow{ transform:rotate(180deg);color:var(--green); }
 .l-faq-a{
   font-size:13px;color:var(--mu2);line-height:1.8;
   overflow:hidden;max-height:0;
   transition:max-height .4s cubic-bezier(.4,0,.2,1), padding .4s cubic-bezier(.4,0,.2,1), opacity .3s;
   opacity:0;padding-bottom:0;
 }
-.l-faq-item.open .l-faq-a{
-  max-height:300px;opacity:1;padding-bottom:22px;
-}
+.l-faq-item.open .l-faq-a{ max-height:300px;opacity:1;padding-bottom:22px; }
 
 /* ─── BOTTOM CTA ─── */
 .l-bot{padding:72px 24px 60px;text-align:center;background:var(--d2);border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
@@ -1079,6 +1081,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       </div>
     </div>
     <div class="l-dot-wrap" id="carouselDots">
+      <button class="l-carousel-arrow" onclick="goToCard(window._carouselIdx-1)" aria-label="Precedente">&#8592;</button>
       <button class="l-dot on" onclick="goToCard(0)"></button>
       <button class="l-dot" onclick="goToCard(1)"></button>
       <button class="l-dot" onclick="goToCard(2)"></button>
@@ -1086,6 +1089,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       <button class="l-dot" onclick="goToCard(4)"></button>
       <button class="l-dot" onclick="goToCard(5)"></button>
       <button class="l-dot" onclick="goToCard(6)"></button>
+      <button class="l-carousel-arrow" onclick="goToCard(window._carouselIdx+1)" aria-label="Successivo">&#8594;</button>
     </div>
     <div class="l-swipe-hint">← SCORRI A SINISTRA →</div>
   </div>
@@ -6329,6 +6333,7 @@ function atFmtTime(s){
 
   function getOuter(){ return document.getElementById('carouselOuter'); }
   function getTrack(){ return document.getElementById('carouselTrack'); }
+  function isMobileView(){ return window.innerWidth <= 768; }
 
   function centerOffset(idx){
     const outer = getOuter();
@@ -6336,7 +6341,15 @@ function atFmtTime(s){
     if(!outer || !cards.length) return 0;
     const ow = outer.offsetWidth;
     const cw = cards[0].offsetWidth;
-    return ow/2 - cw/2 - idx*(cw+20);
+    const gap = 20;
+    if(isMobileView()){
+      // Left-aligned: card starts with a small left margin to show a peek of prev
+      // First card: flush left with padding; subsequent: show peek of prev (40px)
+      const peekLeft = 16; // left padding/margin on mobile
+      return peekLeft - idx*(cw+gap);
+    }
+    // Desktop: centred
+    return ow/2 - cw/2 - idx*(cw+gap);
   }
 
   function updateVisuals(idx){
@@ -6353,6 +6366,7 @@ function atFmtTime(s){
   window.goToCard = function(idx, animated){
     idx = Math.max(0, Math.min(CARDS-1, idx));
     curIdx = idx;
+    window._carouselIdx = curIdx; // expose for arrow buttons
     var track = getTrack();
     if(!track) return;
     if(animated !== false){
@@ -6366,7 +6380,7 @@ function atFmtTime(s){
 
   // ── Pointer/Mouse drag ──
   function onPointerDown(e){
-    if(e.touches) return; // handled by touch events
+    if(e.touches) return;
     isDragging = true; hasDragged = false;
     startX = e.clientX;
     var track = getTrack();
@@ -6405,7 +6419,6 @@ function atFmtTime(s){
   function onTouchMove(e){
     touchDx = e.touches[0].clientX - touchStartX;
     var dy = e.touches[0].clientY - touchStartY;
-    // Only handle horizontal swipes (prevent stealing vertical scroll)
     if(Math.abs(touchDx) > Math.abs(dy) && Math.abs(touchDx) > 5){
       e.preventDefault();
       getTrack().style.transform = 'translateX('+(startTranslate+touchDx)+'px)';
@@ -6420,6 +6433,7 @@ function atFmtTime(s){
   }
 
   function init(){
+    window._carouselIdx = 0;
     var outer = getOuter();
     if(!outer) return;
     outer.addEventListener('mousedown',  onPointerDown, {passive:false});
@@ -6444,29 +6458,33 @@ function atFmtTime(s){
 // SCROLL-REVEAL — Problem cards (alt left/right) & Solution items (bottom-up)
 // ══════════════════════════════════════════════════
 (function(){
-  function initReveal(){
-    // Problem cards: alternating from-left / from-right per column position
+  function assignProblemDirections(isMobile){
     var probCards = document.querySelectorAll('.l-problem-card');
     probCards.forEach(function(card, i){
-      // On desktop (2-col grid): col 0 = left, col 1 = right
-      // On mobile (1-col): all come from left
-      var isMobile = window.innerWidth <= 600;
-      var col = isMobile ? 0 : i % 2;
-      card.classList.add(col === 0 ? 'from-left' : 'from-right');
+      if(card.classList.contains('revealed')) return;
+      card.classList.remove('from-left','from-right');
+      // Desktop (2-col): col position = i%2
+      // Mobile (1-col): alternate by card index regardless of column
+      var isLeft = isMobile ? (i % 2 === 0) : (i % 2 === 0);
+      card.classList.add(isLeft ? 'from-left' : 'from-right');
     });
+  }
 
+  function initReveal(){
+    var isMobile = window.innerWidth <= 600;
+    assignProblemDirections(isMobile);
+
+    var probCards = document.querySelectorAll('.l-problem-card');
     var probObserver = new IntersectionObserver(function(entries){
       entries.forEach(function(entry){
         if(entry.isIntersecting){
           var el = entry.target;
           var idx = Array.from(probCards).indexOf(el);
-          // Stagger: each card slightly delayed
           setTimeout(function(){ el.classList.add('revealed'); }, idx * 120);
           probObserver.unobserve(el);
         }
       });
     }, { threshold: 0.15 });
-
     probCards.forEach(function(card){ probObserver.observe(card); });
 
     // Solution items: fade up from bottom, staggered
@@ -6481,22 +6499,14 @@ function atFmtTime(s){
         }
       });
     }, { threshold: 0.12 });
-
     solItems.forEach(function(item){ solObserver.observe(item); });
 
-    // Re-assign from-left/from-right on resize (mobile ↔ desktop switch)
+    // Re-assign directions on resize
     var resizeTimer;
     window.addEventListener('resize', function(){
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(function(){
-        var nowMobile = window.innerWidth <= 600;
-        probCards.forEach(function(card, i){
-          if(!card.classList.contains('revealed')){
-            card.classList.remove('from-left','from-right');
-            var col = nowMobile ? 0 : i % 2;
-            card.classList.add(col === 0 ? 'from-left' : 'from-right');
-          }
-        });
+        assignProblemDirections(window.innerWidth <= 600);
       }, 200);
     }, {passive:true});
   }
