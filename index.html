@@ -808,13 +808,14 @@ select:hover{border-color:var(--green)}
     height:calc(100vh - 32px);
   }
 }
-/* Desktop: natural content height with 250px top+bottom margin */
+/* Desktop: natural content height with 250px internal padding top+bottom */
 @media(min-width:769px){
   .g501-dialog-card{
     height:auto;
-    margin-top:250px;
-    margin-bottom:250px;
-    max-height:calc(100vh - 500px);
+  }
+  .g501-dialog-body{
+    padding-top:250px;
+    padding-bottom:250px;
   }
 }
 .g501-dialog-card::before{
