@@ -553,10 +553,7 @@ select:hover{border-color:var(--green)}
     align-items:center;
     justify-content:center;
   }
-  /* pgOverlay desktop: slightly narrower than 501 */
-  #pgOverlay .g501-inner{
-    width:min(400px,calc(100vw - 48px));
-  }
+
   .g501-inner{
     width:min(480px,calc(100vw - 48px));
     height:auto;          /* natural height — no stretching */
@@ -782,22 +779,53 @@ select:hover{border-color:var(--green)}
 }
 
 /* Miss doubles screen */
-.g501-miss-screen{position:fixed;inset:0;z-index:510;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
-.g501-miss-screen.open{display:flex}
-.g501-miss-title{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--light);margin-bottom:24px}
-.g501-radio-group{display:flex;gap:20px;justify-content:center;margin-bottom:20px}
+/* ─── DIALOG SCREENS (miss doubles, checkout, checkpoint) ─── */
+.g501-dialog-screen{
+  position:fixed;inset:0;z-index:510;
+  background:#000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+}
+.g501-dialog-screen.open{display:flex}
+/* green-bordered card matching keypad overlay */
+.g501-dialog-card{
+  position:relative;
+  width:min(480px,calc(100vw - 32px));
+  background:#0a0a0a;
+  border:1.5px solid var(--green);
+  border-radius:20px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  box-shadow:0 0 0 1px rgba(34,197,94,.12),0 24px 64px rgba(0,0,0,.8);
+}
+.g501-dialog-card::before{
+  content:'';
+  display:block;
+  height:3px;
+  background:linear-gradient(90deg,transparent,var(--green),transparent);
+  flex-shrink:0;
+}
+.g501-dialog-body{
+  padding:28px 24px 0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+}
+.g501-2btn{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:24px;border-top:1px solid #166534}
+.g501-annulla{background:#3d0c0c;border:none;border-right:1px solid #166534;color:#ff7070;font-size:clamp(18px,4vw,24px);padding:20px;font-family:'Bebas Neue',sans-serif;letter-spacing:.05em;cursor:pointer;transition:background .15s;touch-action:manipulation}
+.g501-annulla:hover{background:#5a1212}
+.g501-ok{background:#0d2e1c;border:none;color:#4ade80;font-size:clamp(18px,4vw,24px);padding:20px;font-family:'Bebas Neue',sans-serif;letter-spacing:.05em;cursor:pointer;transition:background .15s;touch-action:manipulation}
+.g501-ok:hover{background:#175c35}
+.g501-miss-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(16px,3.5vw,22px);color:var(--light);margin-bottom:20px;letter-spacing:.04em}
+.g501-radio-group{display:flex;gap:20px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
 .g501-radio-opt{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:16px;color:var(--light)}
 .g501-radio-opt input{width:20px;height:20px;accent-color:var(--green);cursor:pointer}
-.g501-2btn{display:grid;grid-template-columns:1fr 1fr;gap:0;position:absolute;bottom:0;left:0;right:0}
-.g501-annulla{background:var(--red);border:none;color:#fff;font-size:clamp(20px,5vw,28px);padding:20px;font-family:'Bebas Neue',sans-serif;letter-spacing:.05em}
-.g501-ok{background:var(--green);border:none;color:#000;font-size:clamp(20px,5vw,28px);padding:20px;font-family:'Bebas Neue',sans-serif;letter-spacing:.05em}
-.g501-miss-screen{padding-bottom:90px}
-
-/* Checkout screen */
-.g501-co-screen{position:fixed;inset:0;z-index:510;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px 24px 90px;text-align:center}
-.g501-co-screen.open{display:flex}
-.g501-leg-done{font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,8vw,52px);color:var(--green);margin-bottom:8px}
-.g501-section-title{font-family:'Bebas Neue',sans-serif;font-size:17px;color:var(--light);margin-bottom:16px;margin-top:14px}
+.g501-leg-done{font-family:'Bebas Neue',sans-serif;font-size:clamp(24px,5vw,36px);color:var(--green);margin-bottom:6px}
+.g501-section-title{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--light);margin-bottom:14px;margin-top:18px;letter-spacing:.04em}
 
 /* ═══ ANALISI TIRO ═══ */
 .at-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
@@ -1798,40 +1826,48 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 </div>
 
 <!-- Miss doubles screen (free 501 only, score <= 50) -->
-<div class="g501-miss-screen" id="g501missScreen">
-  <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,8vw,52px);color:var(--light);margin-bottom:8px" id="g501missScore">40</div>
-  <div class="g501-miss-title">Quante frecce hai tirato alla Doppia?</div>
-  <div class="g501-radio-group" id="g501missRadios">
-    <label class="g501-radio-opt"><input type="radio" name="missD" value="0" checked> 0</label>
-    <label class="g501-radio-opt"><input type="radio" name="missD" value="1"> 1</label>
-    <label class="g501-radio-opt"><input type="radio" name="missD" value="2"> 2</label>
-    <label class="g501-radio-opt"><input type="radio" name="missD" value="3"> 3</label>
-  </div>
-  <div class="g501-2btn">
-    <button class="g501-annulla" onclick="g501MissCancel()">Annulla</button>
-    <button class="g501-ok" onclick="g501MissOK()">OK</button>
+<div class="g501-dialog-screen" id="g501missScreen">
+  <div class="g501-dialog-card">
+    <div class="g501-dialog-body">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(48px,12vw,72px);color:var(--light);line-height:1;margin-bottom:4px" id="g501missScore">40</div>
+      <div class="g501-miss-title">Frecce tirate alla Doppia?</div>
+      <div class="g501-radio-group" id="g501missRadios">
+        <label class="g501-radio-opt"><input type="radio" name="missD" value="0" checked> 0</label>
+        <label class="g501-radio-opt"><input type="radio" name="missD" value="1"> 1</label>
+        <label class="g501-radio-opt"><input type="radio" name="missD" value="2"> 2</label>
+        <label class="g501-radio-opt"><input type="radio" name="missD" value="3"> 3</label>
+      </div>
+    </div>
+    <div class="g501-2btn">
+      <button class="g501-annulla" onclick="g501MissCancel()">Annulla</button>
+      <button class="g501-ok" onclick="g501MissOK()">OK</button>
+    </div>
   </div>
 </div>
 
 <!-- Checkout (leg done) screen -->
-<div class="g501-co-screen" id="g501coScreen">
-  <div class="g501-leg-done">🎯 LEG COMPLETATO!</div>
-  <div id="g501coLegInfo" style="font-size:13px;color:var(--mu2);margin-bottom:8px"></div>
-  <div class="g501-section-title">Quante frecce hai tirato alla Doppia?</div>
-  <div class="g501-radio-group" id="g501coDoubles">
-    <label class="g501-radio-opt"><input type="radio" name="coD" value="1" checked> 1</label>
-    <label class="g501-radio-opt"><input type="radio" name="coD" value="2"> 2</label>
-    <label class="g501-radio-opt"><input type="radio" name="coD" value="3"> 3</label>
-  </div>
-  <div class="g501-section-title">Quante frecce hai usato per il checkout?</div>
-  <div class="g501-radio-group" id="g501coDarts">
-    <label class="g501-radio-opt"><input type="radio" name="coCK" value="1" checked> 1</label>
-    <label class="g501-radio-opt"><input type="radio" name="coCK" value="2"> 2</label>
-    <label class="g501-radio-opt"><input type="radio" name="coCK" value="3"> 3</label>
-  </div>
-  <div class="g501-2btn">
-    <button class="g501-annulla" onclick="g501CoCancel()">Annulla</button>
-    <button class="g501-ok" onclick="g501CoOK()">OK</button>
+<div class="g501-dialog-screen" id="g501coScreen">
+  <div class="g501-dialog-card">
+    <div class="g501-dialog-body">
+      <div class="g501-leg-done">🎯 LEG COMPLETATO!</div>
+      <div id="g501coLegInfo" style="font-size:13px;color:var(--mu2);margin-bottom:4px"></div>
+      <div class="g501-section-title">Frecce tirate alla Doppia?</div>
+      <div class="g501-radio-group" id="g501coDoubles">
+        <label class="g501-radio-opt"><input type="radio" name="coD" value="1" checked> 1</label>
+        <label class="g501-radio-opt"><input type="radio" name="coD" value="2"> 2</label>
+        <label class="g501-radio-opt"><input type="radio" name="coD" value="3"> 3</label>
+      </div>
+      <div class="g501-section-title">Frecce usate per il checkout?</div>
+      <div class="g501-radio-group" id="g501coDarts">
+        <label class="g501-radio-opt"><input type="radio" name="coCK" value="1" checked> 1</label>
+        <label class="g501-radio-opt"><input type="radio" name="coCK" value="2"> 2</label>
+        <label class="g501-radio-opt"><input type="radio" name="coCK" value="3"> 3</label>
+      </div>
+    </div>
+    <div class="g501-2btn">
+      <button class="g501-annulla" onclick="g501CoCancel()">Annulla</button>
+      <button class="g501-ok" onclick="g501CoOK()">OK</button>
+    </div>
   </div>
 </div>
 
@@ -1928,12 +1964,16 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 </div>
 
 <!-- Checkpoint SI/NO dialog (training 501) -->
-<div id="g501cpAsk" style="position:fixed;inset:0;z-index:520;background:rgba(0,0,0,.88);display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center">
-  <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(20px,5vw,32px);color:var(--light);margin-bottom:8px">CHIUSURA RAGGIUNTA?</div>
-  <div id="g501cpAskText" style="font-size:16px;color:var(--mu2);margin-bottom:32px"></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;width:100%;max-width:400px;position:fixed;bottom:0;left:0;right:0">
-    <button onclick="g501CpNo()" style="background:#7f1d1d;border:none;color:#fff;font-family:'DM Sans',sans-serif;font-weight:700;font-size:28px;padding:22px">NO</button>
-    <button onclick="g501CpYes()" style="background:var(--green);border:none;color:#000;font-family:'DM Sans',sans-serif;font-weight:700;font-size:28px;padding:22px">SÌ</button>
+<div id="g501cpAsk" style="position:fixed;inset:0;z-index:520;background:#000;display:none;align-items:center;justify-content:center;padding:16px">
+  <div class="g501-dialog-card">
+    <div class="g501-dialog-body">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(20px,5vw,30px);color:var(--light);margin-bottom:10px;letter-spacing:.04em">CHIUSURA RAGGIUNTA?</div>
+      <div id="g501cpAskText" style="font-size:15px;color:var(--mu2);margin-bottom:24px;line-height:1.5"></div>
+    </div>
+    <div class="g501-2btn">
+      <button onclick="g501CpNo()" class="g501-annulla" style="color:#ff7070;font-size:clamp(18px,4vw,24px)">NO</button>
+      <button onclick="g501CpYes()" class="g501-ok" style="color:#4ade80;font-size:clamp(18px,4vw,24px)">SÌ</button>
+    </div>
   </div>
 </div>
 
