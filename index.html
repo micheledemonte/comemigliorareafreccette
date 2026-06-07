@@ -599,7 +599,8 @@ select:hover{border-color:var(--green)}
   display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
   gap:0;
 }
-.g501-checkout:empty{display:none}
+.g501-checkout{visibility:hidden}
+.g501-checkout.has-hint{visibility:visible}
 .g501-co-label{font-size:clamp(8px,1.4vh,11px);color:#4ade80;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.7;line-height:1.2}
 .g501-co-dart{font-size:clamp(11px,2vh,16px);color:#7fffb5;font-weight:600;line-height:1.3}
 /* score number: centered */
@@ -4683,8 +4684,10 @@ function g501UpdateDisplay(){
   if(coEl){
     if(G.mode==='free'&&G.score<=170&&CO[G.score]){
       coEl.innerHTML=formatCoHint(CO[G.score]);
+      coEl.classList.add('has-hint');
     } else {
       coEl.innerHTML='';
+      coEl.classList.remove('has-hint');
     }
   }
 
@@ -4846,6 +4849,8 @@ function g501OKBtn(){
 
   // ── CHECKOUT (score reaches 0) — FREE MODE ──
   if(newScore===0){
+    // Save pre-checkout state so ANNULLA can fully restore it
+    G._preCheckoutSnap = g501Snap();
     G.turns.push(g501Snap());
     G.score=0; G.legScores.push(pts); G.legDartsThrown+=3; G.totalDarts+=3; G.round++;
     G.enteredStr='';
@@ -4983,8 +4988,18 @@ function showMissDoublesScreen(currentScore){
   document.getElementById('g501missRadios').innerHTML=opts.map((o,i)=>`<label class="g501-radio-opt"><input type="radio" name="missD" value="${o.v}"${i===0?' checked':''}> ${o.lbl}</label>`).join('');
   document.getElementById('g501missScreen').classList.add('open');
 }
-function g501CoCancel(){ document.getElementById('g501coScreen').classList.remove('open'); }
+function g501CoCancel(){
+  document.getElementById('g501coScreen').classList.remove('open');
+  // Restore state to exactly before CHECKOUT was pressed
+  if(G._preCheckoutSnap){
+    g501Restore(G._preCheckoutSnap);
+    G.enteredStr='';
+    G._preCheckoutSnap=null;
+    g501UpdateDisplay();
+  }
+}
 function g501CoOK(){
+  G._preCheckoutSnap=null; // clear — checkout confirmed
   const dbl=parseInt(document.querySelector('[name="coD"]:checked')?.value||'1');
   const ck=parseInt(document.querySelector('[name="coCK"]:checked')?.value||'1');
   // Add the actual darts used in checkout turn (user selected 1, 2 or 3)
@@ -5259,8 +5274,10 @@ function g201UpdateDisplay(){
   if(coEl201){
     if(G201.score<=170&&CO[G201.score]){
       coEl201.innerHTML=formatCoHint(CO[G201.score]);
+      coEl201.classList.add('has-hint');
     } else {
       coEl201.innerHTML='';
+      coEl201.classList.remove('has-hint');
     }
   }
   const btn=document.getElementById('g201okBtn');
@@ -6631,82 +6648,42 @@ if(document.readyState==='loading'){
 
 // ══════════════════════════════════════════════════
 // GAME KEYPAD — press animation via event delegation
+// Pure visual feedback only — no action interception
 // ══════════════════════════════════════════════════
 (function(){
-  // Duration map (ms) — must match CSS animation durations
-  const DUR = {
-    'pressing':            550,
-    'pressing-green':      550,
-    'pressing-red':        550,
-    'pressing-red-slow':   550,
-    'pressing-green-slow': 550,
-    'pressing-gray':       450,
-  };
+  var ALL_ANIM = ['pressing','pressing-green','pressing-red','pressing-gray'];
 
-  function getAnimClass(key, opts){
-    // Read the class at the moment of press — this is what matters
-    const isBust     = key.classList.contains('bust-btn');
-    const isNoScore  = key.classList.contains('noscore-left');
-    const isCheckout = key.classList.contains('checkout-btn');
-    const isOk       = key.classList.contains('ok-btn');
-    if(isBust)                              return 'pressing-red';
-    if(isNoScore)                           return 'pressing-red';
-    if(isCheckout && opts.slowCheckout)     return 'pressing-green';
-    if(isCheckout)                          return 'pressing-green';
-    if(isOk)                                return 'pressing-green';
+  function playAnim(el, cls){
+    el.classList.remove.apply(el.classList, ALL_ANIM);
+    void el.offsetWidth; // reflow to restart
+    el.classList.add(cls);
+    el.addEventListener('animationend', function(){ el.classList.remove(cls); }, {once:true});
+    // Safety fallback
+    setTimeout(function(){ el.classList.remove(cls); }, 600);
+  }
+
+  function getKeyClass(key){
+    if(key.classList.contains('noscore-left')) return 'pressing-red';
+    if(key.classList.contains('bust-btn'))     return 'pressing-red';
+    if(key.classList.contains('ok-btn'))       return 'pressing-green';
+    if(key.classList.contains('checkout-btn')) return 'pressing-green';
     return 'pressing';
   }
 
-  function playAnim(el, cls, cb){
-    el.classList.remove('pressing','pressing-red','pressing-green','pressing-red-slow','pressing-green-slow','pressing-gray');
-    void el.offsetWidth;
-    el.classList.add(cls);
-    const cleanup = ()=>{ el.classList.remove(cls); if(cb) cb(); };
-    el.addEventListener('animationend', cleanup, {once:true});
-    // Safety fallback in case animationend doesn't fire
-    setTimeout(()=>{ if(el.classList.contains(cls)){ el.classList.remove(cls); if(cb) cb(); } }, DUR[cls]||550);
-  }
-
-  function addPressAnim(container, opts){
+  function addPressAnim(container){
     if(!container) return;
-    opts = opts || {};
-
-    // Animate on pointerdown (visual feedback immediately)
     container.addEventListener('pointerdown', function(e){
-      const key = e.target.closest('.g501-key');
-      if(key){
-        playAnim(key, getAnimClass(key, opts), null);
-        return;
-      }
-      const btn = e.target.closest('.g501-prev-btn') || e.target.closest('.g501-clr-btn');
-      if(btn) playAnim(btn, 'pressing-gray', null);
+      var key = e.target.closest('.g501-key');
+      if(key){ playAnim(key, getKeyClass(key)); return; }
+      var btn = e.target.closest('.g501-prev-btn') || e.target.closest('.g501-clr-btn');
+      if(btn) playAnim(btn, 'pressing-gray');
     }, {passive: true});
-
-    // For BUST and CHECKOUT: intercept click, delay action until animation ends
-    container.addEventListener('click', function(e){
-      const key = e.target.closest('.g501-key');
-      if(!key) return;
-      const isBust     = key.classList.contains('bust-btn');
-      const isCheckout = key.classList.contains('checkout-btn');
-      if(!isBust && !isCheckout) return;
-      // If still animating, wait for it then re-fire; otherwise proceed normally
-      const animCls = ['pressing','pressing-green','pressing-red','pressing-red-slow','pressing-green-slow'].find(c=>key.classList.contains(c));
-      if(!animCls) return; // animation already done, let onclick fire normally
-      // Block this click — will re-fire after animation
-      e.stopImmediatePropagation();
-      e.preventDefault();
-      const savedOnclick = key.getAttribute('onclick');
-      key.addEventListener('animationend', function onEnd(){
-        key.removeEventListener('animationend', onEnd);
-        try{ new Function(savedOnclick)(); }catch(err){ console.warn(err); }
-      }, {once:true});
-    }, {capture: true});
   }
 
   function initKeyAnims(){
-    addPressAnim(document.getElementById('g501overlay'), {slowCheckout: true});
-    addPressAnim(document.getElementById('g201overlay'), {});
-    addPressAnim(document.getElementById('pgOverlay'),   {});
+    addPressAnim(document.getElementById('g501overlay'));
+    addPressAnim(document.getElementById('g201overlay'));
+    addPressAnim(document.getElementById('pgOverlay'));
   }
   if(document.readyState==='loading'){
     document.addEventListener('DOMContentLoaded', initKeyAnims);
