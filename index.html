@@ -2267,61 +2267,65 @@ function autoLoadNextSession(){
   const weeks=[1,2,3,4,5,6,7,8];
   const sessions=[1,2,3,4,5];
 
-  // Check if a saved session is fully complete:
-  // A session is complete if every game in SESS[key].games has at least one non-empty value saved.
-  function isSessComplete(key, sessData){
-    const sess=SESS[key];
-    if(!sess) return true; // unknown session → treat as complete
+  // Games are saved with keys g0, g1, g2... in order of rendering.
+  // A session is complete if every game slot gN has at least one non-empty value.
+  // Only 's501' opens a separate overlay with no inline .gi inputs → skip it.
+  // pressure and s201 DO have inline inputs via mkI() and must be checked.
+  const SKIP_TYPES = new Set(['s501']);
+
+  function isSessComplete(sessKey, sessData){
+    const sess = SESS[sessKey];
+    if(!sess) return true;
+    let gi = 0;
     for(const g of sess.games){
-      const gid=g.id||g.k; // game identifier key used when saving
-      if(!gid) continue;
-      const gdata=sessData[gid];
-      // If no data at all for this game → incomplete
-      if(!gdata || typeof gdata!=='object') return false;
-      // If all values in this game are empty strings → incomplete
-      const vals=Object.values(gdata).map(v=>String(v).trim()).filter(v=>v!=='');
-      if(vals.length===0) return false;
+      const gid = 'g' + gi;
+      gi++;
+      if(SKIP_TYPES.has(g.t)) continue; // these games open overlays, not inline inputs
+      const gdata = sessData[gid];
+      if(!gdata || typeof gdata !== 'object') return false; // game not saved at all
+      const vals = Object.values(gdata).map(v => String(v).trim()).filter(v => v !== '');
+      if(vals.length === 0) return false; // game saved but all empty
     }
     return true;
   }
 
   // Build flat ordered list of all session keys
-  const allKeys=[];
-  for(const w of weeks) for(const s of sessions) allKeys.push({w,s,key:`${w}-${s}`});
+  const allKeys = [];
+  for(const w of weeks) for(const s of sessions) allKeys.push({w, s, key:`${w}-${s}`});
 
   // Find the index of the LAST saved session (__meta present)
-  let lastSavedIdx=-1;
-  for(let i=0;i<allKeys.length;i++){
-    if(data[allKeys[i].key]?.__meta) lastSavedIdx=i;
+  let lastSavedIdx = -1;
+  for(let i = 0; i < allKeys.length; i++){
+    if(data[allKeys[i].key]?.__meta) lastSavedIdx = i;
   }
 
   // No session saved at all → start from the beginning
-  if(lastSavedIdx===-1){
-    document.getElementById('weekSel').value='1';
-    document.getElementById('sessSel').value='1';
+  if(lastSavedIdx === -1){
+    document.getElementById('weekSel').value = '1';
+    document.getElementById('sessSel').value = '1';
     renderSession();
     return;
   }
 
   // Check if last saved session is fully complete
-  const lastEntry=allKeys[lastSavedIdx];
-  const lastSessData=data[lastEntry.key];
+  const lastEntry = allKeys[lastSavedIdx];
+  const lastSessData = data[lastEntry.key];
 
   if(!isSessComplete(lastEntry.key, lastSessData)){
-    // Last saved session still has incomplete games → open it
-    document.getElementById('weekSel').value=String(lastEntry.w);
-    document.getElementById('sessSel').value=String(lastEntry.s);
+    // Incomplete → reopen it
+    document.getElementById('weekSel').value = String(lastEntry.w);
+    document.getElementById('sessSel').value = String(lastEntry.s);
   } else {
-    // Last saved session is fully complete → open the next one
-    const nextIdx=lastSavedIdx+1;
-    if(nextIdx<allKeys.length){
-      const next=allKeys[nextIdx];
-      document.getElementById('weekSel').value=String(next.w);
-      document.getElementById('sessSel').value=String(next.s);
+    // Complete → open the next session
+    const nextIdx = lastSavedIdx + 1;
+    if(nextIdx < allKeys.length){
+      const next = allKeys[nextIdx];
+      document.getElementById('weekSel').value = String(next.w);
+      document.getElementById('sessSel').value = String(next.s);
     } else {
-      // All 40 sessions complete → stay on the last one
-      document.getElementById('weekSel').value=String(lastEntry.w);
-      document.getElementById('sessSel').value=String(lastEntry.s);
+      // All 40 sessions complete → stay on the last
+      document.getElementById('weekSel').value = String(lastEntry.w);
+      document.getElementById('sessSel').value = String(lastEntry.s);
     }
   }
   renderSession();
