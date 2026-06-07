@@ -2267,18 +2267,15 @@ function autoLoadNextSession(){
   const sessions=[1,2,3,4,5];
 
   // A session is complete only if every inline game has ALL its fields filled.
-  // A single empty field anywhere means the session is incomplete.
   function isSessComplete(sessKey, sessData){
     const sess = SESS[sessKey];
     if(!sess) return true;
     let gi = 0;
     for(const g of sess.games){
       const gid = 'g' + gi++;
-      if(g.t === 's501') continue; // overlay game, no inline fields
+      if(g.t === 's501') continue;
       const gdata = sessData[gid];
-      // No data saved for this game at all → incomplete
       if(!gdata || typeof gdata !== 'object') return false;
-      // Any field empty → incomplete
       const vals = Object.values(gdata);
       if(vals.length === 0) return false;
       if(vals.some(v => String(v).trim() === '')) return false;
@@ -2286,45 +2283,51 @@ function autoLoadNextSession(){
     return true;
   }
 
-  // Build flat ordered list of all session keys
+  // Build flat ordered list of all 40 session keys
   const allKeys = [];
   for(const w of weeks) for(const s of sessions) allKeys.push({w, s, key:`${w}-${s}`});
 
-  // Find the index of the LAST saved session (__meta present)
+  // Strategy:
+  // 1. Find the first SAVED session that is INCOMPLETE → open it
+  // 2. If all saved sessions are complete → open the one right after the last saved
+  // 3. If nothing saved → open 1-1
+  let firstIncompleteEntry = null;
   let lastSavedIdx = -1;
+
   for(let i = 0; i < allKeys.length; i++){
-    if(data[allKeys[i].key]?.__meta) lastSavedIdx = i;
-  }
-
-  // No session saved at all → start from the beginning
-  if(lastSavedIdx === -1){
-    document.getElementById('weekSel').value = '1';
-    document.getElementById('sessSel').value = '1';
-    renderSession();
-    return;
-  }
-
-  // Check if last saved session is fully complete
-  const lastEntry = allKeys[lastSavedIdx];
-  const lastSessData = data[lastEntry.key];
-
-  if(!isSessComplete(lastEntry.key, lastSessData)){
-    // Incomplete → reopen it
-    document.getElementById('weekSel').value = String(lastEntry.w);
-    document.getElementById('sessSel').value = String(lastEntry.s);
-  } else {
-    // Complete → open the next session
-    const nextIdx = lastSavedIdx + 1;
-    if(nextIdx < allKeys.length){
-      const next = allKeys[nextIdx];
-      document.getElementById('weekSel').value = String(next.w);
-      document.getElementById('sessSel').value = String(next.s);
-    } else {
-      // All 40 sessions complete → stay on the last
-      document.getElementById('weekSel').value = String(lastEntry.w);
-      document.getElementById('sessSel').value = String(lastEntry.s);
+    const entry = allKeys[i];
+    const sessData = data[entry.key];
+    if(!sessData?.__meta) continue; // not saved, skip
+    lastSavedIdx = i;
+    if(!firstIncompleteEntry && !isSessComplete(entry.key, sessData)){
+      firstIncompleteEntry = entry;
     }
   }
+
+  let targetW, targetS;
+
+  if(lastSavedIdx === -1){
+    // Nothing saved → start from beginning
+    targetW = '1'; targetS = '1';
+  } else if(firstIncompleteEntry){
+    // Found a saved session with empty fields → open it
+    targetW = String(firstIncompleteEntry.w);
+    targetS = String(firstIncompleteEntry.s);
+  } else {
+    // All saved sessions complete → open the next one after the last saved
+    const nextIdx = lastSavedIdx + 1;
+    if(nextIdx < allKeys.length){
+      targetW = String(allKeys[nextIdx].w);
+      targetS = String(allKeys[nextIdx].s);
+    } else {
+      // All 40 complete → stay on the last
+      targetW = String(allKeys[lastSavedIdx].w);
+      targetS = String(allKeys[lastSavedIdx].s);
+    }
+  }
+
+  document.getElementById('weekSel').value = targetW;
+  document.getElementById('sessSel').value = targetS;
   renderSession();
 }
 
