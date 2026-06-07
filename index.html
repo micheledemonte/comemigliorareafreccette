@@ -2269,24 +2269,30 @@ function autoLoadNextSession(){
 
   // Games are saved with keys g0, g1, g2... in order of rendering.
   // A session is complete if every game slot gN has at least one non-empty value.
-  // Only 's501' opens a separate overlay with no inline .gi inputs → skip it.
-  // pressure and s201 DO have inline inputs via mkI() and must be checked.
-  const SKIP_TYPES = new Set(['s501']);
-
+  // Approach: count how many game slots gN in the saved data have at least one
+  // non-empty value (meaning the user actually filled something in that game).
+  // Compare against the number of games that produce inline inputs (all except s501).
+  // If fewer games have data than expected → session is incomplete.
   function isSessComplete(sessKey, sessData){
     const sess = SESS[sessKey];
     if(!sess) return true;
+
+    // Count games that produce inline inputs (all except s501)
+    const inlineGames = sess.games.filter(g => g.t !== 's501').length;
+
+    // Count gN keys in saved data that have at least one non-empty value
+    let filledGames = 0;
     let gi = 0;
     for(const g of sess.games){
-      const gid = 'g' + gi;
-      gi++;
-      if(SKIP_TYPES.has(g.t)) continue; // these games open overlays, not inline inputs
+      const gid = 'g' + gi++;
+      if(g.t === 's501') continue;
       const gdata = sessData[gid];
-      if(!gdata || typeof gdata !== 'object') return false; // game not saved at all
-      const vals = Object.values(gdata).map(v => String(v).trim()).filter(v => v !== '');
-      if(vals.length === 0) return false; // game saved but all empty
+      if(gdata && typeof gdata === 'object'){
+        const hasValue = Object.values(gdata).some(v => String(v).trim() !== '');
+        if(hasValue) filledGames++;
+      }
     }
-    return true;
+    return filledGames >= inlineGames;
   }
 
   // Build flat ordered list of all session keys
@@ -2911,7 +2917,7 @@ function rTriplo(gid,tg,sv){
     '20,19,18':'Tira 99 frecce al Triplo 20, 19 e 18. Tira 1 sola freccia per ogni settore in sequenza; 1 freccia al 20, 1 freccia al 19 e l\'ultima al 18. Ad ogni turno (3 frecce) segna il punteggio totale fatto: 1pt per ogni singola e 3pt per ogni tripla. Scrivi la somma totale, ad esempio 5pt se hai fatto "Singola + Singola + Tripla".'
   };
   let cells='';
-  for(let i=0;i<33;i++) cells+=`<div class="ic">${mkI(gid,i,sv[i],'0','',n)}</div>`;
+  for(let i=0;i<33;i++) cells+=`<div class="ic">${mkI(gid,i,sv[i],'','',n)}</div>`;
   const vals=Object.values(sv).map(v=>parseFloat(v)).filter(x=>!isNaN(x));
   const tot=vals.reduce((a,b)=>a+b,0);
   const avg=vals.length?+(tot/vals.length).toFixed(1):0;
@@ -2937,7 +2943,7 @@ function rRecord(gid,tg,st,sv){
     info="Lancia sul 20 (singola o tripla) finché esci dal settore (vai nel 1/5 o altrove). Conta le frecce consecutive riuscite e segnale. Poi ripeti cercando di battere il record precedente.";
   }
   let cells='';
-  for(let i=0;i<5;i++) cells+=`<div class="ic">${mkI(gid,i,sv[i],'0','width:58px')}</div>`;
+  for(let i=0;i<5;i++) cells+=`<div class="ic">${mkI(gid,i,sv[i],'','width:58px')}</div>`;
   const vals=[0,1,2,3,4].map(i=>parseFloat(sv[i])).filter(n=>!isNaN(n));
   const best=vals.length?Math.max(...vals):0;
   const avg=vals.length?+(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):0;
@@ -2953,7 +2959,7 @@ function rRecord(gid,tg,st,sv){
 function rDbl(gid,num,sv){
   const n=`DOPPIO ${num}`;
   let cells='';
-  for(let i=0;i<10;i++) cells+=`<div class="ic">${mkI(gid,i,sv[i],'0','',n)}</div>`;
+  for(let i=0;i<10;i++) cells+=`<div class="ic">${mkI(gid,i,sv[i],'','',n)}</div>`;
   const vals=Object.values(sv).map(v=>String(v).trim()).filter(v=>v!=='');
   const tot=vals.reduce((s,v)=>{const x=parseFloat(v);return s+(isNaN(x)?0:x);},0);
   const done=vals.filter(v=>{const x=parseFloat(v);return !isNaN(x)&&x>=1;}).length;
@@ -2969,7 +2975,7 @@ function rDbl(gid,num,sv){
 // ── Finish ──
 function rFin(gid,num,sv){
   let cells='';
-  for(let i=0;i<16;i++) cells+=`<div class="ic">${mkI(gid,i,sv[i],'—')}</div>`;
+  for(let i=0;i<16;i++) cells+=`<div class="ic">${mkI(gid,i,sv[i],'')}</div>`;
   const vals=Object.values(sv).map(v=>String(v).trim()).filter(v=>v!=='');
   // media frecce: only numeric values >= 1
   const numVals=vals.map(v=>parseFloat(v)).filter(n=>!isNaN(n)&&n>=1);
@@ -2985,7 +2991,7 @@ function rFin(gid,num,sv){
 // ── 201 in 9 ──
 function r201(gid,sv){
   let cells='';
-  for(let i=0;i<10;i++) cells+=`<div class="ic"><label>Leg ${i+1}</label>${mkI(gid,i,sv[i],'—','width:58px')}</div>`;
+  for(let i=0;i<10;i++) cells+=`<div class="ic"><label>Leg ${i+1}</label>${mkI(gid,i,sv[i],'','width:58px')}</div>`;
   const vals=Object.values(sv).map(v=>String(v).trim()).filter(v=>v!=='');
   const numVals=vals.map(v=>parseFloat(v)).filter(n=>!isNaN(n)&&n>=1);
   const avg=numVals.length?+(numVals.reduce((a,b)=>a+b,0)/numVals.length).toFixed(1):0;
@@ -3012,7 +3018,7 @@ function rFin41(gid, variant, sv){
   const info=`Allena le chiusure da 41 a 50 sempre finendo alla ${variant}. In ogni turno hai 3 frecce per riuscire a chiudere. Se ci riesci scrivi il numero di frecce usate (1, 2 o 3). Se non ci riesci in 3 frecce scrivi 0 e passa alla successiva. Le sequenze sono: ${hints[variant]||''}`;
   let cells='';
   const labels=['41','42','43','44','45','46','47','48','49','50'];
-  for(let i=0;i<10;i++) cells+=`<div class="ic"><label>${labels[i]}</label>${mkI(gid,i,sv[i],'—','width:58px',nm)}</div>`;
+  for(let i=0;i<10;i++) cells+=`<div class="ic"><label>${labels[i]}</label>${mkI(gid,i,sv[i],'','width:58px',nm)}</div>`;
   const vals=Object.values(sv).map(v=>parseFloat(v)).filter(n=>!isNaN(n)&&n>=1);
   const avg=vals.length?+(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):0;
   const body=`<div class="ig">${cells}</div>
@@ -3028,7 +3034,7 @@ function rShanghai(gid, sv){
   const info='Mira ai settori dal 10 al 20. L\'obiettivo è colpire Singola, Doppia e Tripla dello stesso settore nel corso di un turno di 3 frecce (Shanghai). Hai 3 tentativi per settore (9 frecce). Scrivi quanti tentativi hai usato: 1 (primo tentativo), 2 o 3. Se non ci riesci in 3 tentativi scrivi 0.';
   let cells='';
   const labels=['10','11','12','13','14','15','16','17','18','19','20'];
-  for(let i=0;i<11;i++) cells+=`<div class="ic"><label>${labels[i]}</label>${mkI(gid,i,sv[i],'—','width:58px',nm)}</div>`;
+  for(let i=0;i<11;i++) cells+=`<div class="ic"><label>${labels[i]}</label>${mkI(gid,i,sv[i],'','width:58px',nm)}</div>`;
   const vals=Object.values(sv).map(v=>String(v).trim()).filter(v=>v!=='');
   const numVals=vals.map(v=>parseFloat(v)).filter(n=>!isNaN(n)&&n>=1);
   const done=numVals.length;
@@ -3065,12 +3071,12 @@ function rPressure(gid, variant, sv){
   const cells=`
     <div class="ic" style="position:relative">
       <label>Partita 1</label>
-      ${mkI(gid,'0',v0,'—','width:72px',nm)}
+      ${mkI(gid,'0',v0,'','width:72px',nm)}
       ${isCrown(v0)?'<span style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:11px">👑</span>':''}
     </div>
     <div class="ic" style="position:relative">
       <label>Partita 2</label>
-      ${mkI(gid,'1',v1,'—','width:72px',nm)}
+      ${mkI(gid,'1',v1,'','width:72px',nm)}
       ${isCrown(v1)?'<span style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:11px">👑</span>':''}
     </div>`;
   const n0=parseFloat(v0)||0, n1=parseFloat(v1)||0;
@@ -3246,7 +3252,7 @@ function pgClose(){
 }
 function rCO(gid,nums,sv){
   let cells='';
-  for(let i=0;i<nums.length;i++) cells+=`<div class="ic"><label>${nums[i]}</label>${mkI(gid,i,sv[i],'—','width:58px')}</div>`;
+  for(let i=0;i<nums.length;i++) cells+=`<div class="ic"><label>${nums[i]}</label>${mkI(gid,i,sv[i],'','width:58px')}</div>`;
   const vals=Object.values(sv);
   const numVals=vals.filter(v=>v&&String(v).toUpperCase()!=='X').map(v=>parseFloat(v)).filter(n=>!isNaN(n));
   const avg=numVals.length?+(numVals.reduce((a,b)=>a+b,0)/numVals.length).toFixed(1):0;
@@ -3262,7 +3268,7 @@ function rCO(gid,nums,sv){
 function r501card(gid,sv){
   const nm='501 CON CHIUSURA OGNI 100 PUNTI';
   let cells='';
-  for(let i=0;i<3;i++) cells+=`<div class="ic"><label>Leg ${i+1}</label>${mkI(gid,i,sv[i]!==undefined?sv[i]:'','0–5','width:72px',nm)}</div>`;
+  for(let i=0;i<3;i++) cells+=`<div class="ic"><label>Leg ${i+1}</label>${mkI(gid,i,sv[i]!==undefined?sv[i]:'','','width:72px',nm)}</div>`;
   const tot=Math.min([0,1,2].reduce((s,i)=>{const n=parseFloat(sv[i]);return s+(isNaN(n)?0:n);},0),15);
   const body=`<div class="ig">${cells}</div>
     <div class="sr">
