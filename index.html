@@ -1525,16 +1525,27 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <!-- MODALITÀ TORNEO 501 -->
     <div class="pc" style="margin-top:12px">
       <h3>MODALITÀ TORNEO 501</h3>
-      <p style="font-size:13px;color:var(--mu2);margin-bottom:20px;line-height:1.65">Seleziona sets e legs e premi Inizia Torneo. Ogni set si conclude dopo il numero di legs selezionato. Se perdi un leg premi "LEG PERSO" per avanzare al successivo.</p>
-      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <p style="font-size:13px;color:var(--mu2);margin-bottom:20px;line-height:1.65">Seleziona la modalità di partita, sets e legs, poi premi Inizia Torneo. Se perdi un leg premi "LEG PERSO" per avanzare al successivo.</p>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px">
+        <div class="sel-group"><label>Tipo partita</label>
+          <select id="tourMatchType" onchange="tourMatchTypeChange()">
+            <option value="total" selected>Totale legs</option>
+            <option value="bestof">Alla meglio di…</option>
+          </select>
+        </div>
         <div class="sel-group"><label>Numero di sets</label>
           <select id="tourSetCount"><option value="1" selected>1 set</option><option value="2">2 sets</option><option value="3">3 sets</option><option value="4">4 sets</option><option value="5">5 sets</option><option value="6">6 sets</option><option value="7">7 sets</option><option value="8">8 sets</option><option value="9">9 sets</option><option value="10">10 sets</option><option value="11">11 sets</option><option value="12">12 sets</option><option value="13">13 sets</option><option value="14">14 sets</option><option value="15">15 sets</option><option value="16">16 sets</option><option value="17">17 sets</option><option value="18">18 sets</option><option value="19">19 sets</option><option value="20">20 sets</option><option value="21">21 sets</option></select>
         </div>
-        <div class="sel-group"><label>Numero di legs per set</label>
-          <select id="tourLegCount"><option value="1" selected>1 leg</option><option value="2">2 legs</option><option value="3">3 legs</option><option value="4">4 legs</option><option value="5">5 legs</option><option value="6">6 legs</option><option value="7">7 legs</option><option value="8">8 legs</option><option value="9">9 legs</option><option value="10">10 legs</option><option value="11">11 legs</option><option value="12">12 legs</option><option value="13">13 legs</option><option value="14">14 legs</option><option value="15">15 legs</option><option value="16">16 legs</option><option value="17">17 legs</option><option value="18">18 legs</option><option value="19">19 legs</option><option value="20">20 legs</option><option value="21">21 legs</option></select>
+        <!-- Total legs mode -->
+        <div class="sel-group" id="tourLegTotalGroup"><label>Legs per set</label>
+          <select id="tourLegCount"><option value="1">1 leg</option><option value="2">2 legs</option><option value="3" selected>3 legs</option><option value="4">4 legs</option><option value="5">5 legs</option><option value="6">6 legs</option><option value="7">7 legs</option><option value="8">8 legs</option><option value="9">9 legs</option><option value="10">10 legs</option><option value="11">11 legs</option><option value="12">12 legs</option><option value="13">13 legs</option><option value="14">14 legs</option><option value="15">15 legs</option><option value="16">16 legs</option><option value="17">17 legs</option><option value="18">18 legs</option><option value="19">19 legs</option><option value="20">20 legs</option><option value="21">21 legs</option></select>
         </div>
-        <button class="playbtn" style="padding:10px 28px;font-size:16px;margin-top:16px" onclick="startTournament501()">INIZIA TORNEO</button>
+        <!-- Best-of mode -->
+        <div class="sel-group" id="tourBestOfGroup" style="display:none"><label>Alla meglio di</label>
+          <select id="tourBestOfCount"><option value="3" selected>Best of 3 (vinci 2)</option><option value="5">Best of 5 (vinci 3)</option><option value="7">Best of 7 (vinci 4)</option><option value="9">Best of 9 (vinci 5)</option><option value="11">Best of 11 (vinci 6)</option><option value="13">Best of 13 (vinci 7)</option><option value="15">Best of 15 (vinci 8)</option><option value="17">Best of 17 (vinci 9)</option><option value="19">Best of 19 (vinci 10)</option><option value="21">Best of 21 (vinci 11)</option></select>
+        </div>
       </div>
+      <button class="playbtn" style="padding:10px 28px;font-size:16px" onclick="startTournament501()">INIZIA TORNEO</button>
     </div>
     <!-- SESSIONI PRECEDENTI -->
     <div class="pc" style="margin-top:12px">
@@ -4884,31 +4895,53 @@ function open501Training(gid){
 var GT = {
   active: false,
   totalSets: 1,
-  legsPerSet: 1,
-  currentSet: 0,   // 0-indexed
-  currentLeg: 0,   // 0-indexed within set
-  sets: [],        // array of set results [{legs:[...]}]
+  legsPerSet: 1,     // used in 'total' mode
+  matchType: 'total',// 'total' | 'bestof'
+  bestOf: 3,         // used in 'bestof' mode (must be odd)
+  winsNeeded: 2,     // ceil(bestOf/2)
+  winsCount: 0,      // legs won by the player this set
+  lossesCount: 0,    // legs lost by the player this set
+  currentSet: 0,
+  currentLeg: 0,
+  sets: [],
   currentLegData: null,
 };
 
+function tourMatchTypeChange(){
+  const t = document.getElementById('tourMatchType').value;
+  document.getElementById('tourLegTotalGroup').style.display  = t==='total'  ? '' : 'none';
+  document.getElementById('tourBestOfGroup').style.display    = t==='bestof' ? '' : 'none';
+}
+
 function startTournament501(){
   if(!CU){ alert('Devi essere loggato.'); return; }
-  const sets = parseInt(document.getElementById('tourSetCount').value) || 1;
-  const legs = parseInt(document.getElementById('tourLegCount').value) || 1;
-  GT.active = true;
-  GT.totalSets = sets;
-  GT.legsPerSet = legs;
-  GT.currentSet = 0;
-  GT.currentLeg = 0;
-  GT.sets = [];
-  // Start first leg in free mode but tournament-tracked
+  const sets    = parseInt(document.getElementById('tourSetCount').value) || 1;
+  const mtype   = document.getElementById('tourMatchType').value || 'total';
+  const legs    = mtype==='total'
+    ? parseInt(document.getElementById('tourLegCount').value) || 1
+    : parseInt(document.getElementById('tourBestOfCount').value) || 3;
+  const winsNeeded = mtype==='bestof' ? Math.ceil(legs/2) : 0;
+
+  GT.active       = true;
+  GT.totalSets    = sets;
+  GT.legsPerSet   = legs;
+  GT.matchType    = mtype;
+  GT.bestOf       = legs;
+  GT.winsNeeded   = winsNeeded;
+  GT.winsCount    = 0;
+  GT.lossesCount  = 0;
+  GT.currentSet   = 0;
+  GT.currentLeg   = 0;
+  GT.sets         = [];
+
   G.mode = 'tournament';
   G.trainingGid = null;
   G.totalLegs = legs;
   G.currentLeg = 0;
   G.legsResults = [];
   startLeg501();
-  // Update UI: LEG PERSO button, 4-col stats
+
+  // Update UI: LEG PERSO button, 4-col stats, hide Turni
   const btn = document.getElementById('g501closeBtn');
   if(btn){ btn.textContent = 'LEG PERSO'; btn.classList.add('leg-lost-btn'); }
   const setlegStat = document.getElementById('g501stat_setleg');
@@ -4921,7 +4954,13 @@ function startTournament501(){
 
 function g501UpdateSetLeg(){
   const el = document.getElementById('g501setleg');
-  if(el) el.textContent = (GT.currentSet+1) + '/' + (GT.currentLeg+1);
+  if(!el) return;
+  if(GT.matchType==='bestof'){
+    // Show: Set X | W-L (e.g. "Set 1 | 2-1")
+    el.textContent = 'S'+(GT.currentSet+1)+' '+GT.winsCount+'-'+GT.lossesCount;
+  } else {
+    el.textContent = (GT.currentSet+1) + '/' + (GT.currentLeg+1);
+  }
 }
 
 function g501CloseOrLegLost(){
@@ -4960,16 +4999,38 @@ function tourSaveCurrentLeg(won){
 }
 
 function tourAdvance(){
+  // Get result of the leg just finished (last pushed leg in current set)
+  const lastSetLegs = GT.sets[GT.currentSet]?.legs || [];
+  const lastLeg = lastSetLegs[lastSetLegs.length-1];
+  const lastWon = lastLeg ? lastLeg.won : false;
+
   GT.currentLeg++;
-  const isLastLeg = GT.currentLeg >= GT.legsPerSet;
-  if(isLastLeg){
-    // End of set
-    GT.currentSet++;
-    GT.currentLeg = 0;
-    if(GT.currentSet >= GT.totalSets){
-      // Tournament complete
-      tourFinalize();
-      return;
+
+  if(GT.matchType==='bestof'){
+    // Update win/loss counters for this set
+    if(lastWon) GT.winsCount++; else GT.lossesCount++;
+    const setDecided = GT.winsCount>=GT.winsNeeded || GT.lossesCount>=GT.winsNeeded;
+    if(setDecided){
+      // This set is over
+      GT.currentSet++;
+      GT.currentLeg   = 0;
+      GT.winsCount    = 0;
+      GT.lossesCount  = 0;
+      if(GT.currentSet >= GT.totalSets){
+        tourFinalize();
+        return;
+      }
+    }
+  } else {
+    // Total legs mode
+    const isLastLeg = GT.currentLeg >= GT.legsPerSet;
+    if(isLastLeg){
+      GT.currentSet++;
+      GT.currentLeg = 0;
+      if(GT.currentSet >= GT.totalSets){
+        tourFinalize();
+        return;
+      }
     }
   }
   // Start next leg
@@ -4997,6 +5058,7 @@ function tourFinalize(){
   data[tk] = {
     __meta: {type:'501tournament', title:'Torneo 501', savedAt: tourSavedAt,
               totalSets: GT.totalSets, legsPerSet: GT.legsPerSet,
+              matchType: GT.matchType, bestOf: GT.bestOf,
               tourName: tourAutoName},
     sets: GT.sets,
   };
@@ -5674,17 +5736,26 @@ function delete501Sess(key){
 }
 
 function render501Compare(){
-  const summaries=_selected501Sessions.map(s=>({date:s.date,...calc501SessSummary(s.legs)}));
-  const header=summaries.map((s,i)=>`<th style="padding:6px 10px;font-size:12px;color:var(--light)">📅 ${s.date}</th>`).join('');
+  // Always use ALL legs for comparison (ignore won/lost filter)
+  const summaries=_selected501Sessions.map(s=>{
+    const allLegs = s.legs; // full legs array regardless of current filter
+    const sum = s.isTournament
+      ? calcTourSessSummary(allLegs, true)
+      : calc501SessSummary(allLegs);
+    const label = s.tourName ? s.date+' — '+s.tourName : s.date;
+    return {label, ...sum};
+  });
+  const header=summaries.map(s=>`<th style="padding:6px 10px;font-size:12px;color:var(--light)">📅 ${s.label}</th>`).join('');
+  const isTour = _selected501Sessions.some(s=>s.isTournament);
   const rows=[
-    {label:'Turni avg', key:'avgRounds'},
+    {label:'Turni avg',  key:'avgRounds'},
     {label:'Frecce avg', key:'avgDarts'},
-    {label:'Media avg', key:'avgPts'},
-    {label:'Doppie avg', key:'avgDbl'},
-    {label:'% avg', key:'avgPct'},
+    {label:'Media avg',  key:'avgPts'},
+    {label: isTour?'Doppie tot':'Doppie avg', key: isTour?'totDbl':'avgDbl'},
+    {label:'% avg',      key:'avgPct'},
   ].map(r=>`<tr>
     <td style="padding:5px 10px;font-size:12px;color:var(--muted)">${r.label}</td>
-    ${summaries.map(s=>`<td style="padding:5px 10px;font-size:12px;text-align:center;color:var(--light)">${s[r.key]}</td>`).join('')}
+    ${summaries.map(s=>`<td style="padding:5px 10px;font-size:12px;text-align:center;color:var(--light)">${s[r.key]??'—'}</td>`).join('')}
   </tr>`).join('');
   return `<div style="font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--green);margin-bottom:8px">CONFRONTO</div>
   <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
