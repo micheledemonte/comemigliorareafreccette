@@ -2021,7 +2021,6 @@ const firebaseConfig = {
 let _fbDB = null;
 let _fbAuth = null;
 let _firebaseOK = false;
-let _lastSaveTime = 0;
 let _justResetPassword = false; // set true after email-link password reset
 try {
   firebase.initializeApp(firebaseConfig);
@@ -2146,15 +2145,15 @@ async function loadDBFromCloud(){
 
 // ── Save to Firebase (debounced 1.5s) ──
 let _saveTimer = null;
+let _lastSaveTime = 0; // timestamp of last DB write, for logout guard
 function saveDBToCloud(){
   if(!_firebaseOK || !_fbDB) return; // silent no-op in sandbox
-  _lastSaveTime = Date.now(); // record intent to save
+  _lastSaveTime = Date.now(); // track for logout guard
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(async ()=>{
     try{
       await _fbDB.ref('db').set(deepClean(_dbCache));
-      _lastSaveTime = Date.now(); // update on actual write completion
-      console.log('\u2713 Firebase DB saved');
+      console.log('✓ Firebase DB saved');
     } catch(e){ console.warn('Firebase save error:', e.message); }
   }, 1500);
 }
@@ -2475,17 +2474,12 @@ function autoLoadNextSession(){
   renderSession();
 }
 
-function showSavingPopup(secondsLeft){
-  const msg = 'I tuoi dati sono in fase di sincronizzazione con il cloud.\n\nPotrai effettuare il logout tra ' + secondsLeft + (secondsLeft===1?' secondo.':" secondi.");
-  document.getElementById('savingPopupMsg').textContent = msg;
-  document.getElementById('savingPopup').style.display = 'flex';
-}
-
 function confirmLogout(){
-  const elapsed = Date.now() - (_lastSaveTime||0);
-  const remaining = Math.ceil((10000 - elapsed) / 1000);
-  if(_lastSaveTime && elapsed < 10000){
-    showSavingPopup(remaining);
+  const elapsed = Date.now() - _lastSaveTime;
+  if(_lastSaveTime > 0 && elapsed < 10000){
+    // still within 10s of last save — show saving guard popup
+    const remaining = Math.ceil((10000 - elapsed) / 1000);
+    showSavingGuardPopup(remaining);
     return;
   }
   showConfirmPopup(
@@ -2494,6 +2488,14 @@ function confirmLogout(){
     ()=>doLogout(),
     {okLabel:'ESCI', okBg:'#dc2626', okColor:'#fff'}
   );
+}
+
+function showSavingGuardPopup(remaining){
+  const el = document.getElementById('savingGuardPopup');
+  const txt = document.getElementById('savingGuardText');
+  if(!el || !txt) return;
+  txt.textContent = 'I dati stanno venendo salvati nel cloud. Potrai uscire dall’app tra circa ' + remaining + ' second' + (remaining===1?'o':'i') + '. Chiudi questo messaggio e attendi.';
+  el.style.display = 'flex';
 }
 
 async function doLogout(){
@@ -6785,6 +6787,14 @@ if(document.readyState==='loading'){
   </div>
 </div>
 <!-- Blocked user popup -->
+<div id="savingGuardPopup" style="position:fixed;inset:0;z-index:2100;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;padding:20px">
+  <div class="modal-box" style="text-align:center;max-width:340px">
+    <div style="font-size:40px;margin-bottom:14px">☁️</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--light);margin-bottom:12px">SALVATAGGIO IN CORSO</div>
+    <div id="savingGuardText" style="font-size:14px;color:var(--mu2);line-height:1.6;margin-bottom:24px"></div>
+    <button onclick="document.getElementById('savingGuardPopup').style.display='none'" style="background:#166534;border:none;color:#4ade80;font-family:'Bebas Neue',sans-serif;font-size:22px;padding:12px 40px;border-radius:999px;cursor:pointer;letter-spacing:.05em;width:100%">OK</button>
+  </div>
+</div>
 <div id="blockedPopup" style="position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;padding:20px">
   <div class="modal-box" style="text-align:center">
     <div style="font-size:44px;margin-bottom:14px">🔒</div>
@@ -6794,15 +6804,6 @@ if(document.readyState==='loading'){
       <button onclick="document.getElementById('blockedPopup').style.display='none'" style="background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:12px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em;cursor:pointer">CHIUDI</button>
       <button id="blockedContactBtn" style="background:var(--green);border:none;color:#000;padding:12px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em;cursor:pointer">CONTATTA</button>
     </div>
-  </div>
-</div>
-<!-- Saving popup -->
-<div id="savingPopup" style="position:fixed;inset:0;z-index:2100;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;padding:20px">
-  <div class="modal-box" style="max-width:380px;text-align:center">
-    <div style="font-size:36px;margin-bottom:14px">☁️</div>
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--light);margin-bottom:10px">Dati in salvataggio</div>
-    <p id="savingPopupMsg" style="font-size:14px;color:var(--mu2);margin-bottom:28px;line-height:1.7"></p>
-    <button onclick="document.getElementById('savingPopup').style.display='none'" style="width:100%;background:#166534;border:none;color:#4ade80;padding:14px;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.05em;cursor:pointer;touch-action:manipulation">OK</button>
   </div>
 </div>
 <!-- Full-screen loading overlay -->
