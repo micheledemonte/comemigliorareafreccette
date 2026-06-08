@@ -1533,7 +1533,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
         <div class="sel-group"><label>Numero di legs per set</label>
           <select id="tourLegCount"><option value="1" selected>1 leg</option><option value="2">2 legs</option><option value="3">3 legs</option><option value="4">4 legs</option><option value="5">5 legs</option><option value="6">6 legs</option><option value="7">7 legs</option><option value="8">8 legs</option><option value="9">9 legs</option><option value="10">10 legs</option><option value="11">11 legs</option><option value="12">12 legs</option><option value="13">13 legs</option><option value="14">14 legs</option><option value="15">15 legs</option><option value="16">16 legs</option><option value="17">17 legs</option><option value="18">18 legs</option><option value="19">19 legs</option><option value="20">20 legs</option><option value="21">21 legs</option></select>
         </div>
-        <button class="playbtn" style="padding:10px 28px;font-size:16px;margin-top:16px;background:#1d4ed8" onclick="startTournament501()">INIZIA TORNEO</button>
+        <button class="playbtn" style="padding:10px 28px;font-size:16px;margin-top:16px" onclick="startTournament501()">INIZIA TORNEO</button>
       </div>
     </div>
     <!-- SESSIONI PRECEDENTI -->
@@ -1855,7 +1855,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       <div class="gsl">Set / Leg</div>
       <div class="gsv" id="g501setleg">1/1</div>
     </div>
-    <div class="g501-stat"><div class="gsl" id="g501mode_lbl">Turno</div><div class="gsv" id="g501round">1</div></div>
+    <div class="g501-stat" id="g501stat_turno"><div class="gsl" id="g501mode_lbl">Turno</div><div class="gsv" id="g501round">1</div></div>
     <div class="g501-stat"><div class="gsl" id="g501extra_lbl">Frecce tirate</div><div class="gsv" id="g501darts">0</div></div>
     <div class="g501-stat"><div class="gsl" id="g501third_lbl">Chiusure</div><div class="gsv" id="g501closures">0</div></div>
   </div>
@@ -2582,7 +2582,7 @@ const LD = {
   tabs: [
     {id:'training',    icon:'🎯', label:'Allenamento'},
     {id:'stats',       icon:'📊', label:'Statistiche'},
-    {id:'play501',     icon:'🎲', label:'501'},
+    {id:'play501',     icon:'🏆', label:'501'},
     {id:'checkout',    icon:'✅', label:'Checkout'},
     {id:'profile',     icon:'👤', label:'Profilo'},
   ],
@@ -4912,6 +4912,8 @@ function startTournament501(){
   if(btn){ btn.textContent = 'LEG PERSO'; btn.classList.add('leg-lost-btn'); }
   const setlegStat = document.getElementById('g501stat_setleg');
   if(setlegStat) setlegStat.style.display = '';
+  const turnoStat = document.getElementById('g501stat_turno');
+  if(turnoStat) turnoStat.style.display = 'none';
   g501UpdateSetLeg();
   document.getElementById('g501overlay').classList.add('open');
 }
@@ -4982,6 +4984,8 @@ function tourFinalize(){
   if(btn){ btn.textContent = 'ESCI ×'; btn.classList.remove('leg-lost-btn'); }
   const setlegStat = document.getElementById('g501stat_setleg');
   if(setlegStat) setlegStat.style.display = 'none';
+  const turnoStatF = document.getElementById('g501stat_turno');
+  if(turnoStatF) turnoStatF.style.display = '';
   if(!CU) return;
   // Save to Firebase
   const data = getUD(CU.id);
@@ -4997,6 +5001,26 @@ function tourFinalize(){
   tourKeys.slice(10).forEach(k=>delete data[k]);
   setUD(CU.id, data);
   loadPrev501Sessions();
+}
+
+// ══ TOUR SESSION NAME ══
+function saveTourName(key){
+  const input = document.getElementById('tourName_'+key);
+  if(!input||!CU) return;
+  const name = input.value.trim();
+  // Save to Firebase
+  const data = getUD(CU.id);
+  if(data[key]&&data[key].__meta){
+    data[key].__meta.tourName = name;
+    setUD(CU.id, data);
+  }
+  // Update in-memory selection
+  const sel = _selected501Sessions.find(s=>s.key===key);
+  if(sel) sel.tourName = name;
+  // Refresh dropdown label
+  loadPrev501Sessions();
+  // Re-render to update header
+  render501SessPanel();
 }
 
 // ══ MODE SELECTOR FOR SESSIONI PRECEDENTI ══
@@ -5033,6 +5057,8 @@ function close501(){
     if(btn){ btn.textContent='ESCI ×'; btn.classList.remove('leg-lost-btn'); }
     const setlegStat = document.getElementById('g501stat_setleg');
     if(setlegStat) setlegStat.style.display='none';
+    const turnoStatC = document.getElementById('g501stat_turno');
+    if(turnoStatC) turnoStatC.style.display='';
   }
   // save partial data if free mode has at least 1 completed leg
   if(G.mode==='free' && G.legsResults.length>0){
@@ -5064,7 +5090,7 @@ function g501NoScoreLeft(){
   G.legDartsThrown+=3; G.totalDarts+=3; G.round++;
   G.enteredStr='';
   // free mode: ALWAYS ask about doubles when score <= 50
-  if(G.mode==='free' && G.score<=50){
+  if((G.mode==='free'||G.mode==='tournament') && G.score<=50){
     showMissDoublesScreen(G.score);
   }
   g501UpdateDisplay();
@@ -5083,7 +5109,7 @@ function g501OKBtn(){
     G.legScores.push(0);
     G.legDartsThrown+=3; G.totalDarts+=3; G.round++;
     G.enteredStr='';
-    if(G.mode==='free'){
+    if(G.mode==='free'||G.mode==='tournament'){
       if(G.score<=50){ showMissDoublesScreen(G.score); }
       g501UpdateDisplay();
     } else {
@@ -5158,7 +5184,7 @@ function g501OKBtn(){
   G.enteredStr='';
   g501UpdateDisplay();
   // free mode: ask doubles when the new score is <=50 (player will aim at double next turn too)
-  if(G.mode==='free' && newScore<=50){
+  if((G.mode==='free'||G.mode==='tournament') && newScore<=50){
     showMissDoublesScreen(newScore);
   }
 }
@@ -5399,7 +5425,8 @@ function loadPrev501Sessions(){
       const d=new Date(v.__meta.savedAt).toLocaleDateString('it-IT');
       if(type==='501tournament'){
         const totalLegs=(v.sets||[]).reduce((a,s)=>a+(s.legs||[]).length,0);
-        return `<option value="${k}">${d} — ${v.__meta.totalSets||1} set × ${v.__meta.legsPerSet||1} leg (${totalLegs} totali)</option>`;
+        const tn = v.__meta.tourName ? ' — '+v.__meta.tourName : '';
+        return `<option value="${k}">${d}${tn} — ${v.__meta.totalSets||1}s×${v.__meta.legsPerSet||1}leg (${totalLegs} tot.)</option>`;
       }
       return `<option value="${k}">${d} — ${(v.legs||[]).length} legs</option>`;
     }).join('');
@@ -5421,6 +5448,7 @@ function showPrev501Sess(){
     // Tournament session: flatten legs from sets but keep set/leg info
     const allLegs=(sess.sets||[]).flatMap(set=>set.legs||[]);
     _selected501Sessions.push({key, date, legs:allLegs, isTournament:true,
+      tourName: sess.__meta.tourName||'',
       meta:{totalSets:sess.__meta.totalSets, legsPerSet:sess.__meta.legsPerSet}});
   } else {
     if(!sess?.legs) return;
@@ -5437,8 +5465,8 @@ function render501SessPanel(){
   function sessCard(s, idx){
     const legs=s.legs;
     const isTour = s.isTournament;
-    function legWon(l){ return isTour ? l.won===true : true; }
     function dblPct(l){ return (l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0; }
+    function tourAvg(l){ const d=l.darts||l.dartsThrown||0; return d>0?+((501/d)*3).toFixed(1):0; }
     // Apply compare filter for tournament sessions
     const filteredLegs = (isTour && _tourCompareFilter!=='all')
       ? legs.filter(l=>_tourCompareFilter==='won'?l.won:!l.won)
@@ -5448,34 +5476,49 @@ function render501SessPanel(){
       const rowClass = isTour ? (won ? 'tour-leg-row won' : 'tour-leg-row lost') : '';
       const wIcon = isTour ? (won ? '✅' : '❌') : '';
       const legLabel = isTour ? `Set ${l.setNum||1} · Leg ${l.legNum||i+1} ${wIcon}` : `Leg ${i+1}`;
+      const darts = l.dartsThrown||l.darts||0;
+      const avgVal = isTour ? tourAvg(l) : (l.avgPerRound||l.avg||0);
+      // Doppie: colpite/tirate (inverted)
+      const dblStr = `${l.doublesHit||0}/${l.doublesThrown||0}`;
       return `<div class="${rowClass}" style="${rowClass?'':'display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:5px;font-size:12px;padding:6px 0;border-bottom:1px solid var(--d4)'}">
         ${rowClass?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:5px;font-size:12px">`:''}
         <div style="color:${won?'var(--green)':'#f87171'};font-weight:600">${legLabel}</div>
         <div><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
-        <div><span style="color:var(--muted)">Frecce: </span>${l.dartsThrown||l.darts||0}</div>
-        <div><span style="color:var(--muted)">Media: </span>${l.avgPerRound||l.avg||0}</div>
-        <div><span style="color:var(--muted)">Doppie: </span>${l.doublesThrown||0}/${l.doublesHit||0}</div>
+        <div><span style="color:var(--muted)">Frecce: </span>${darts}</div>
+        <div><span style="color:var(--muted)">Media: </span>${avgVal}</div>
+        <div><span style="color:var(--muted)">Doppie: </span>${dblStr}</div>
         <div><span style="color:var(--muted)">%: </span>${dblPct(l)}%</div>
         ${rowClass?'</div>':''}
       </div>`;
     }).join('');
-    const summary=calc501SessSummary(legs);
+    // Summary computed on filteredLegs (respects filter)
+    const summary = calcTourSessSummary(filteredLegs, isTour);
+    // Name input for tournament sessions
+    const nameField = isTour ? `
+      <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">
+        <input id="tourName_${s.key}" type="text" placeholder="Aggiungi nome torneo…" value="${s.tourName||''}"
+          style="background:var(--d4);border:1px solid var(--d5);color:var(--light);border-radius:6px;padding:5px 10px;font-size:13px;flex:1;min-width:140px;max-width:260px"/>
+        <button onclick="saveTourName('${s.key}')" style="background:var(--green);border:none;color:#000;font-family:'DM Sans',sans-serif;font-weight:700;font-size:13px;padding:5px 14px;border-radius:6px;cursor:pointer">SALVA</button>
+      </div>` : '';
     return `<div style="background:var(--d3);border-radius:8px;padding:14px;margin-bottom:10px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--light)">📅 ${s.date} — ${legs.length} legs</div>
-        <div style="display:flex;gap:6px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--light)">📅 ${s.date}${s.tourName?' — '+s.tourName:''} — ${legs.length} legs</div>
+          ${nameField}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
           <button onclick="_selected501Sessions.splice(${idx},1);render501SessPanel()" style="background:transparent;border:1px solid var(--d5);color:var(--muted);border-radius:4px;padding:4px 10px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:12px;cursor:pointer">✕ NASCONDI</button>
           <button onclick="delete501Sess('${s.key}')" style="background:#3d0505;border:1px solid #ef4444;color:#f87171;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><img src="/cestino.svg" style="width:15px;height:15px;vertical-align:middle" alt=""> ELIMINA</button>
         </div>
       </div>
       ${legRows}
       <div style="margin-top:8px;padding:8px;background:var(--d4);border-radius:6px;font-size:12px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--green);margin-bottom:6px">RIEPILOGO SESSIONE</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--green);margin-bottom:6px">RIEPILOGO SESSIONE${isTour&&_tourCompareFilter!=='all'?' ('+(_tourCompareFilter==='won'?'Solo vinti':'Solo persi')+')':''}</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:5px">
           <div><span style="color:var(--muted)">Turni avg: </span>${summary.avgRounds}</div>
           <div><span style="color:var(--muted)">Frecce avg: </span>${summary.avgDarts}</div>
           <div><span style="color:var(--muted)">Media avg: </span>${summary.avgPts}</div>
-          <div><span style="color:var(--muted)">Doppie avg: </span>${summary.avgDbl}</div>
+          <div><span style="color:var(--muted)">Doppie tot: </span>${summary.totDbl}</div>
           <div><span style="color:var(--muted)">% avg: </span>${summary.avgPct}%</div>
         </div>
       </div>
@@ -5569,9 +5612,41 @@ function calc501SessSummary(legs){
     avgRounds: avg(legs,'rounds'),
     avgDarts: avg(legs,'dartsThrown'),
     avgPts: avg(legs,'avgPerRound'),
-    avgDbl: avg(legs,'doublesThrown')+'/'+avg(legs,'doublesHit'),
+    avgDbl: avg(legs,'doublesHit')+'/'+avg(legs,'doublesThrown'),
     avgPct: Math.round(avgPct)
   };
+}
+
+// Tournament-aware summary (uses filteredLegs, correct avg formula)
+function calcTourSessSummary(legs, isTour){
+  const n = legs.length || 1;
+  const sumOf = key => legs.reduce((s,l)=>s+(l[key]||0), 0);
+  // Average rounds
+  const avgRounds = +(sumOf('rounds') / n).toFixed(1);
+  // Average darts
+  const dartKey = isTour ? 'darts' : 'dartsThrown';
+  const totalDarts = legs.reduce((s,l)=>s+(l.darts||l.dartsThrown||0), 0);
+  const avgDarts = +(totalDarts / n).toFixed(1);
+  // Average media: (501/darts)*3 for tournament, avgPerRound for training
+  let avgPts;
+  if(isTour){
+    const validLegs = legs.filter(l=>(l.darts||l.dartsThrown||0)>0);
+    avgPts = validLegs.length
+      ? +((validLegs.reduce((s,l)=>s+((501/(l.darts||l.dartsThrown||1))*3), 0)) / validLegs.length).toFixed(1)
+      : 0;
+  } else {
+    avgPts = +(sumOf('avgPerRound') / n).toFixed(1);
+  }
+  // Doppie tot: colpite_tot / tirate_tot
+  const totHit = sumOf('doublesHit');
+  const totThrown = sumOf('doublesThrown');
+  const totDbl = totHit + '/' + totThrown;
+  // % avg: media delle percentuali per leg
+  const avgPct = Math.round(legs.reduce((s,l)=>{
+    const t=l.doublesThrown||0, h=l.doublesHit||0;
+    return s+(t>0?Math.round(h/t*100):0);
+  },0) / n);
+  return { avgRounds, avgDarts, avgPts, totDbl, avgPct };
 }
 
 // Reset on logout
