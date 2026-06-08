@@ -3720,7 +3720,7 @@ function initPendingCharts(){
         label:cfg.yLabel2||'%',
         data:values2,borderColor:cfg.color2,backgroundColor:cfg.color2+'22',
         pointBackgroundColor:cfg.color2,pointRadius:5,pointHoverRadius:7,tension:.3,
-        fill:false,borderDash:[4,3],yAxisID:'y2'
+        fill:false,borderDash:[4,3]
       });
     }
     const showLegend=datasets.length>1;
@@ -3737,10 +3737,7 @@ function initPendingCharts(){
         },
         scales:{
           x:{ticks:{color:'#666',font:{size:10},maxRotation:45},grid:{color:'#1e1e1e'}},
-          y:{ticks:{color:'#666',font:{size:11}},grid:{color:'#1e1e1e'},beginAtZero:true},
-          y2:{display:!!cfg.pts2,position:'right',ticks:{color:'#aaa',font:{size:11}},
-              grid:{drawOnChartArea:false},beginAtZero:true,
-              title:{display:!!cfg.yLabel2,text:cfg.yLabel2||'',color:'#aaa'}}
+          y:{ticks:{color:'#666',font:{size:11}},grid:{color:'#1e1e1e'},beginAtZero:true}
         }}
     });
   }
