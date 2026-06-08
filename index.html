@@ -2021,6 +2021,7 @@ const firebaseConfig = {
 let _fbDB = null;
 let _fbAuth = null;
 let _firebaseOK = false;
+let _lastSaveTime = 0;
 let _justResetPassword = false; // set true after email-link password reset
 try {
   firebase.initializeApp(firebaseConfig);
@@ -2147,11 +2148,13 @@ async function loadDBFromCloud(){
 let _saveTimer = null;
 function saveDBToCloud(){
   if(!_firebaseOK || !_fbDB) return; // silent no-op in sandbox
+  _lastSaveTime = Date.now(); // record intent to save
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(async ()=>{
     try{
       await _fbDB.ref('db').set(deepClean(_dbCache));
-      console.log('✓ Firebase DB saved');
+      _lastSaveTime = Date.now(); // update on actual write completion
+      console.log('\u2713 Firebase DB saved');
     } catch(e){ console.warn('Firebase save error:', e.message); }
   }, 1500);
 }
@@ -2472,7 +2475,19 @@ function autoLoadNextSession(){
   renderSession();
 }
 
+function showSavingPopup(secondsLeft){
+  const msg = 'I tuoi dati sono in fase di sincronizzazione con il cloud.\n\nPotrai effettuare il logout tra ' + secondsLeft + (secondsLeft===1?' secondo.':" secondi.");
+  document.getElementById('savingPopupMsg').textContent = msg;
+  document.getElementById('savingPopup').style.display = 'flex';
+}
+
 function confirmLogout(){
+  const elapsed = Date.now() - (_lastSaveTime||0);
+  const remaining = Math.ceil((10000 - elapsed) / 1000);
+  if(_lastSaveTime && elapsed < 10000){
+    showSavingPopup(remaining);
+    return;
+  }
   showConfirmPopup(
     "Uscire dall'app?",
     "Vuoi effettuare il logout e tornare alla schermata principale?",
@@ -6779,6 +6794,15 @@ if(document.readyState==='loading'){
       <button onclick="document.getElementById('blockedPopup').style.display='none'" style="background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:12px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em;cursor:pointer">CHIUDI</button>
       <button id="blockedContactBtn" style="background:var(--green);border:none;color:#000;padding:12px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em;cursor:pointer">CONTATTA</button>
     </div>
+  </div>
+</div>
+<!-- Saving popup -->
+<div id="savingPopup" style="position:fixed;inset:0;z-index:2100;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;padding:20px">
+  <div class="modal-box" style="max-width:380px;text-align:center">
+    <div style="font-size:36px;margin-bottom:14px">☁️</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--light);margin-bottom:10px">Dati in salvataggio</div>
+    <p id="savingPopupMsg" style="font-size:14px;color:var(--mu2);margin-bottom:28px;line-height:1.7"></p>
+    <button onclick="document.getElementById('savingPopup').style.display='none'" style="width:100%;background:#166534;border:none;color:#4ade80;padding:14px;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.05em;cursor:pointer;touch-action:manipulation">OK</button>
   </div>
 </div>
 <!-- Full-screen loading overlay -->
