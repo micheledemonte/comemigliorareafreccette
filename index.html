@@ -2701,7 +2701,8 @@ function ldUpdateHighlight(idx, animate=true){
   const hl   = document.getElementById('ldHighlight');
   const rect = LD.itemRects[idx];
   // On desktop trackOffset=0 always; on mobile it changes
-  const hlLeft = rect.left + LD.trackOffset + LD.PILL_PAD;
+  // Center highlight on item: subtract half of the extra 2px per side
+  const hlLeft = rect.left + LD.trackOffset + LD.PILL_PAD - 2;
   hl.style.transition = animate
     ? 'left .28s cubic-bezier(.25,.46,.45,.94),width .2s cubic-bezier(.25,.46,.45,.94)'
     : 'none';
@@ -5023,6 +5024,64 @@ function saveTourName(key){
   render501SessPanel();
 }
 
+// ══ MERGE TOURNAMENT SESSIONS ══
+function mergeTournamentSessions(){
+  if(!CU || _selected501Sessions.length < 2) return;
+  const tourSessions = _selected501Sessions.filter(s=>s.isTournament);
+  if(tourSessions.length < 2){ alert('Seleziona almeno 2 sessioni torneo da unire.'); return; }
+
+  // Ask for a name for the merged session
+  const name = prompt('Nome per la sessione unita (opzionale):','');
+
+  const data = getUD(CU.id);
+
+  // Merge all legs from all selected sessions in chronological order
+  // Sort sessions by savedAt date ascending
+  const sorted = [...tourSessions].sort((a,b)=>{
+    const da = data[a.key]?.__meta?.savedAt||'';
+    const db = data[b.key]?.__meta?.savedAt||'';
+    return da.localeCompare(db);
+  });
+
+  // Rebuild sets: each original session becomes its own sets block
+  const mergedSets = sorted.flatMap(s=>{
+    const orig = data[s.key];
+    return orig?.sets || [{legs: s.legs}];
+  });
+
+  // Total leg count
+  const totalLegs = mergedSets.reduce((a,set)=>a+(set.legs||[]).length,0);
+
+  // Use earliest savedAt
+  const savedAt = data[sorted[0].key]?.__meta?.savedAt || new Date().toISOString();
+
+  // Create merged session key
+  const mk = 'tour501_' + Date.now();
+  data[mk] = {
+    __meta: {
+      type: '501tournament',
+      title: 'Torneo 501 (unito)',
+      savedAt,
+      totalSets: mergedSets.length,
+      legsPerSet: mergedSets[0]?.legs?.length || 1,
+      tourName: name||'',
+    },
+    sets: mergedSets,
+  };
+
+  // Keep only 10 most recent tournament sessions
+  const tourKeys = Object.keys(data).filter(k=>k.startsWith('tour501_')).sort().reverse();
+  tourKeys.slice(10).forEach(k=>delete data[k]);
+
+  setUD(CU.id, data);
+
+  // Clear selection and reload
+  _selected501Sessions = [];
+  document.getElementById('prev501Content').innerHTML = '';
+  loadPrev501Sessions();
+  alert('Sessioni unite con successo! Trovale nel menu a tendina.');
+}
+
 // ══ MODE SELECTOR FOR SESSIONI PRECEDENTI ══
 var _prev501Mode = 'training'; // 'training' | 'tournament'
 var _tourCompareFilter = 'all'; // 'all' | 'won' | 'lost'
@@ -5426,7 +5485,7 @@ function loadPrev501Sessions(){
       if(type==='501tournament'){
         const totalLegs=(v.sets||[]).reduce((a,s)=>a+(s.legs||[]).length,0);
         const tn = v.__meta.tourName ? ' — '+v.__meta.tourName : '';
-        return `<option value="${k}">${d}${tn} — ${v.__meta.totalSets||1}s×${v.__meta.legsPerSet||1}leg (${totalLegs} tot.)</option>`;
+        return `<option value="${k}">${d}${tn}</option>`;
       }
       return `<option value="${k}">${d} — ${(v.legs||[]).length} legs</option>`;
     }).join('');
@@ -5466,7 +5525,15 @@ function render501SessPanel(){
     const legs=s.legs;
     const isTour = s.isTournament;
     function dblPct(l){ return (l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0; }
-    function tourAvg(l){ const d=l.darts||l.dartsThrown||0; return d>0?+((501/d)*3).toFixed(1):0; }
+    function tourAvg(l){
+      if(!l.won){
+        // Lost leg: use the live avg stored during play
+        return l.avgPerRound||l.avg||0;
+      }
+      // Won leg: standard darts average (501/darts)*3
+      const d=l.darts||l.dartsThrown||0;
+      return d>0?+((501/d)*3).toFixed(1):0;
+    }
     // Apply compare filter for tournament sessions
     const filteredLegs = (isTour && _tourCompareFilter!=='all')
       ? legs.filter(l=>_tourCompareFilter==='won'?l.won:!l.won)
@@ -5538,7 +5605,10 @@ function render501SessPanel(){
   // Header row: sessioni precedenti label + compare button top-right
   html+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
     <div style="font-size:13px;color:var(--muted)">${_selected501Sessions.length} sessione${_selected501Sessions.length>1?'i':''} selezionata${_selected501Sessions.length>1?'':'e'}</div>
-    ${_selected501Sessions.length>=2?`<button id="btn501Compare" onclick="toggle501Compare()" style="background:var(--green);color:#000;border:none;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;padding:7px 16px;border-radius:5px;cursor:pointer">CONFRONTA</button>`:''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${_selected501Sessions.length>=2?`<button id="btn501Compare" onclick="toggle501Compare()" style="background:var(--green);color:#000;border:none;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;padding:7px 16px;border-radius:5px;cursor:pointer">CONFRONTA</button>`:''}
+      ${(_selected501Sessions.length>=2 && _selected501Sessions.every(s=>s.isTournament))?`<button onclick="mergeTournamentSessions()" style="background:#1d4ed8;color:#fff;border:none;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;padding:7px 16px;border-radius:5px;cursor:pointer">🔗 UNISCI</button>`:''}
+    </div>
   </div>`;
 
   if(_selected501Sessions.length>=2){
