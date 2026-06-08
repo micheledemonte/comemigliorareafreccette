@@ -3928,7 +3928,7 @@ function renderStats(uid){
   );
   if(trainDays.length){
     const fid=cid_();
-    html+=\`<div class="cw" style="margin-bottom:16px"><h3>501 — MODALITÀ ALLENAMENTO — Media punti &amp; % doppia per giorno</h3><canvas id="\${fid}" height="100"></canvas></div>\`;
+    html+=`<div class="cw" style="margin-bottom:16px"><h3>501 — MODALITÀ ALLENAMENTO — Media punti &amp; % doppia per giorno</h3><canvas id="${fid}" height="100"></canvas></div>`;
     window._pendingCharts=window._pendingCharts||{};
     window._pendingCharts[fid]={
       pts:trainDays.map(d=>({label:d.label,value:d.avg})),
@@ -3960,7 +3960,7 @@ function renderStats(uid){
   );
   if(tourDays.length){
     const tid=cid_();
-    html+=\`<div class="cw" style="margin-bottom:16px"><h3>501 — MODALITÀ TORNEO — Media punti &amp; % doppia per giorno</h3><canvas id="\${tid}" height="100"></canvas></div>\`;
+    html+=`<div class="cw" style="margin-bottom:16px"><h3>501 — MODALITÀ TORNEO — Media punti &amp; % doppia per giorno</h3><canvas id="${tid}" height="100"></canvas></div>`;
     window._pendingCharts=window._pendingCharts||{};
     window._pendingCharts[tid]={
       pts:tourDays.map(d=>({label:d.label,value:d.avg})),
