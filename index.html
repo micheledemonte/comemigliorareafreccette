@@ -1938,6 +1938,25 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   </div>
 </div>
 
+<!-- ═══════════════════════ 201 CHECKOUT SCREEN ═══════════════════════ -->
+<div class="g501-dialog-screen" id="g201coScreen">
+  <div class="g501-dialog-card">
+    <div class="g501-dialog-body">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,6vw,40px);color:var(--green);margin-bottom:10px">🎯 LEG VINTO!</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(14px,3vw,18px);color:var(--light);margin-bottom:20px;letter-spacing:.04em">Con quante frecce hai chiuso?</div>
+      <div class="g501-radio-group">
+        <label class="g501-radio-opt"><input type="radio" name="co201D" value="1"> 1</label>
+        <label class="g501-radio-opt"><input type="radio" name="co201D" value="2"> 2</label>
+        <label class="g501-radio-opt"><input type="radio" name="co201D" value="3" checked> 3</label>
+      </div>
+    </div>
+    <div class="g501-2btn">
+      <button class="g501-annulla" onclick="g201CoCancel()">ANNULLA</button>
+      <button class="g501-ok" onclick="g201CoOK()">OK</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════════════ PRESSURE GAME OVERLAY ═══════════════════════ -->
 <div id="pgOverlay" style="position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden">
   <div class="g501-inner">
@@ -3633,7 +3652,8 @@ function destroyCharts(){Object.keys(_charts).forEach(k=>{try{_charts[k].destroy
 // Returns array of {label, value, date, week, session}
 function extractGameData(uid, gameFilter){
   const sessions=getAllSess(uid);
-  const points=[];
+  // Collect raw points
+  const raw=[];
   for(const s of sessions){
     const si=SESS[s.key]; if(!si) continue;
     let gi=0;
@@ -3643,12 +3663,24 @@ function extractGameData(uid, gameFilter){
       const match=gameFilter(g,gd,s);
       if(match!==null){
         const d=new Date(s.meta.savedAt);
-        const label=`A${s.meta.week} S${s.meta.session}\n${d.toLocaleDateString('it-IT')}`;
-        points.push({label,value:match,date:d,week:s.meta.week,session:s.meta.session});
+        const dateKey=d.toLocaleDateString('it-IT');
+        raw.push({dateKey,value:match,date:d});
       }
     }
   }
-  return points;
+  if(!raw.length) return [];
+  // Group by date: 1 point per day (average of all values that day)
+  const byDate={};
+  for(const p of raw){
+    if(!byDate[p.dateKey]) byDate[p.dateKey]={values:[],date:p.date};
+    byDate[p.dateKey].values.push(p.value);
+  }
+  return Object.entries(byDate)
+    .sort((a,b)=>a[1].date-b[1].date)
+    .map(([dateKey,{values}])=>({
+      label: dateKey,
+      value: +(values.reduce((a,b)=>a+b,0)/values.length).toFixed(1)
+    }));
 }
 
 // Build a chart card and return HTML + chart data for deferred rendering
@@ -3701,8 +3733,10 @@ function extractATC_S(g,gd){
 }
 function extractATC_D(g,gd){
   if(g.t!=='wu_d') return null;
-  const vals=Object.values(gd).map(v=>parseFloat(v)).filter(n=>!isNaN(n)&&n>0);
-  return vals.length?+(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):null;
+  // Include all 20 sectors (0 = no dart hit double), matching rWU display logic
+  const allVals=[];
+  for(let n=1;n<=20;n++){const v=parseFloat(gd[n]);if(!isNaN(v))allVals.push(v);}
+  return allVals.length===20?+(allVals.reduce((a,b)=>a+b,0)/20).toFixed(1):null;
 }
 function extractTriplo(g,gd){
   if(g.t!=='triplo') return null;
@@ -3745,6 +3779,12 @@ function extractFin41(g,gd){
   if(g.t!=='fin41') return null;
   const vals=Object.values(gd).map(v=>parseFloat(v)).filter(n=>!isNaN(n)&&n>=1);
   return vals.length?+(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):null;
+}
+function extractFin41Comp(g,gd){
+  if(g.t!=='fin41') return null;
+  // Count of completed variants (value >=1)
+  const comp=Object.values(gd).filter(v=>parseFloat(v)>=1).length;
+  return comp>0?comp:null;
 }
 function extractPressure(g,gd){
   if(g.t!=='pressure') return null;
@@ -3811,6 +3851,7 @@ function renderStats(uid){
   html+=buildChartCard(cid_(),'PRESSURE (tutte le varianti) — Totale completati per sessione',uid,(g,gd)=>extractPressure(g,gd),'#f43f5e','Completati');
   html+=buildChartCard(cid_(),'SHANGHAI — Settori completati per sessione',uid,(g,gd)=>extractShanghai(g,gd),'#0ea5e9','Settori');
   html+=buildChartCard(cid_(),'FINISH 41 (tutte le varianti) — Media frecce per chiusura',uid,(g,gd)=>extractFin41(g,gd),'#10b981','Media frecce');
+  html+=buildChartCard(cid_(),'FINISH 41 (tutte le varianti) — Completati per sessione',uid,(g,gd)=>extractFin41Comp(g,gd),'#34d399','Completati');
   html+=buildChartCard(cid_(),'201 IN 9 FRECCE — Legs vinti per sessione',uid,(g,gd)=>extract201(g,gd),'#06b6d4','Legs vinti');
   html+=buildChartCard(cid_(),'CHECKOUT — Media frecce per numero',uid,(g,gd)=>extractCO(g,gd),'#f97316','Media frecce');
   html+=buildChartCard(cid_(),'501 CON CHIUSURA — Totale chiusure per sessione',uid,(g,gd)=>extract501(g,gd),'#ec4899','Chiusure');
@@ -4871,7 +4912,7 @@ function g501UpdateDisplay(){
   // Checkout suggestion — only in free mode
   const coEl=document.getElementById('g501co');
   if(coEl){
-    if(G.mode==='free'&&G.score<=170&&CO[G.score]){
+    if((G.mode==='free'||G.mode==='tournament')&&G.score<=170&&CO[G.score]){
       coEl.innerHTML=formatCoHint(CO[G.score]);
       coEl.classList.add('has-hint');
     } else {
@@ -5780,7 +5821,7 @@ function render501Compare(){
     {label:'Turni avg',  key:'avgRounds'},
     {label:'Frecce avg', key:'avgDarts'},
     {label:'Media avg',  key:'avgPts'},
-    {label: isTour?'Doppie tot':'Doppie avg', key: isTour?'totDbl':'avgDbl'},
+    {label: 'Doppie tot', key: isTour?'totDbl':'totDbl'},
     {label:'% avg',      key:'avgPct'},
   ].map(r=>`<tr>
     <td style="padding:5px 10px;font-size:12px;color:var(--muted)">${r.label}</td>
@@ -5800,11 +5841,13 @@ function calc501SessSummary(legs){
     const t=l.doublesThrown||0, h=l.doublesHit||0;
     return s+(t>0?Math.round(h/t*100):0);
   },0)/n;
+  const totHitT = legs.reduce((s,l)=>s+(l.doublesHit||0),0);
+  const totThrownT = legs.reduce((s,l)=>s+(l.doublesThrown||0),0);
   return {
     avgRounds: avg(legs,'rounds'),
     avgDarts: avg(legs,'dartsThrown'),
     avgPts: avg(legs,'avgPerRound'),
-    avgDbl: avg(legs,'doublesHit')+'/'+avg(legs,'doublesThrown'),
+    totDbl: totHitT+'/'+totThrownT,
     avgPct: Math.round(avgPct)
   };
 }
@@ -5938,9 +5981,40 @@ function g201OKBtn(){
   if(G201.round>3){g201FinishLeg(false);}
 }
 function g201FinishLeg(won){
+  if(won){
+    // Ask how many darts used to check out before recording
+    G201._pendingWin=true;
+    show201CoScreen();
+    return;
+  }
+  _g201RecordLeg(false, 0);
+}
+
+function show201CoScreen(){
+  const el=document.getElementById('g201coScreen');
+  if(!el){ _g201RecordLeg(true,3); return; }
+  // Reset radio to 1
+  const r=el.querySelector('[name="co201D"][value="1"]');
+  if(r) r.checked=true;
+  el.classList.add('open');
+}
+
+function g201CoOK(){
+  document.getElementById('g201coScreen').classList.remove('open');
+  const dbl=parseInt(document.querySelector('[name="co201D"]:checked')?.value||'3');
+  _g201RecordLeg(true, dbl);
+}
+
+function g201CoCancel(){
+  document.getElementById('g201coScreen').classList.remove('open');
+  // Treat as 3 darts (worst case) if cancelled
+  _g201RecordLeg(true, 3);
+}
+
+function _g201RecordLeg(won, checkoutDarts){
   const darts=won?G201.legDarts:0;
   if(won) G201.winsCount++;
-  G201.legsResults.push({leg:G201.currentLeg+1,darts,won});
+  G201.legsResults.push({leg:G201.currentLeg+1,darts,won,checkoutDarts:won?checkoutDarts:0});
   G201.currentLeg++;
   if(G201.currentLeg<G201.totalLegs){start201Leg();}
   else{finalize201Game();}
