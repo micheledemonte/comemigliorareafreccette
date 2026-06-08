@@ -3270,9 +3270,11 @@ function rFin41(gid, variant, sv){
   for(let i=0;i<10;i++) cells+=`<div class="ic"><label>${labels[i]}</label>${mkI(gid,i,sv[i],'','width:58px',nm)}</div>`;
   const vals=Object.values(sv).map(v=>parseFloat(v)).filter(n=>!isNaN(n)&&n>=1);
   const avg=vals.length?+(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):0;
+  const comp=vals.length; // completed = count of entries with value >=1
   const body=`<div class="ig">${cells}</div>
     <div class="sr">
       <span class="sl">Media frecce</span><span class="sv" id="avg_${gid}">${avg||'—'}</span>
+      <span class="sl">Completati</span><span class="sv" id="comp_${gid}">${comp}</span>
     </div>`;
   return gcrd(gid,nm,'41→50 · max 3 frecce a chiusura',info,body);
 }
@@ -3705,20 +3707,40 @@ function initPendingCharts(){
     if(_charts[id]){try{_charts[id].destroy();}catch{}}
     const labels=cfg.pts.map(p=>p.label);
     const values=cfg.pts.map(p=>p.value);
+    // Support optional second dataset (e.g. % doppia)
+    const datasets=[{
+      label:cfg.yLabel||'Valore',
+      data:values,borderColor:cfg.color,backgroundColor:cfg.color+'22',
+      pointBackgroundColor:cfg.color,pointRadius:5,pointHoverRadius:7,tension:.3,fill:true,
+      yAxisID:'y'
+    }];
+    if(cfg.pts2&&cfg.color2){
+      const values2=cfg.pts2.map(p=>p.value);
+      datasets.push({
+        label:cfg.yLabel2||'%',
+        data:values2,borderColor:cfg.color2,backgroundColor:cfg.color2+'22',
+        pointBackgroundColor:cfg.color2,pointRadius:5,pointHoverRadius:7,tension:.3,
+        fill:false,borderDash:[4,3],yAxisID:'y2'
+      });
+    }
+    const showLegend=datasets.length>1;
     _charts[id]=new Chart(cv.getContext('2d'),{
       type:'line',
-      data:{labels,datasets:[{
-        data:values,borderColor:cfg.color,backgroundColor:cfg.color+'22',
-        pointBackgroundColor:cfg.color,pointRadius:5,pointHoverRadius:7,tension:.3,fill:true
-      }]},
+      data:{labels,datasets},
       options:{responsive:true,
-        plugins:{legend:{display:false},tooltip:{callbacks:{
-          title:t=>labels[t[0].dataIndex].replace('\n',' — '),
-          label:t=>`${cfg.yLabel||'Valore'}: ${t.raw}`
-        }}},
+        plugins:{
+          legend:{display:showLegend,labels:{color:'#aaa',font:{size:11}}},
+          tooltip:{callbacks:{
+            title:t=>labels[t[0].dataIndex].replace('\n',' — '),
+            label:t=>`${t.dataset.label}: ${t.raw}`
+          }}
+        },
         scales:{
           x:{ticks:{color:'#666',font:{size:10},maxRotation:45},grid:{color:'#1e1e1e'}},
-          y:{ticks:{color:'#666',font:{size:11}},grid:{color:'#1e1e1e'},beginAtZero:true}
+          y:{ticks:{color:'#666',font:{size:11}},grid:{color:'#1e1e1e'},beginAtZero:true},
+          y2:{display:!!cfg.pts2,position:'right',ticks:{color:'#aaa',font:{size:11}},
+              grid:{drawOnChartArea:false},beginAtZero:true,
+              title:{display:!!cfg.yLabel2,text:cfg.yLabel2||'',color:'#aaa'}}
         }}
     });
   }
@@ -3851,7 +3873,6 @@ function renderStats(uid){
   html+=buildChartCard(cid_(),'PRESSURE (tutte le varianti) — Totale completati per sessione',uid,(g,gd)=>extractPressure(g,gd),'#f43f5e','Completati');
   html+=buildChartCard(cid_(),'SHANGHAI — Settori completati per sessione',uid,(g,gd)=>extractShanghai(g,gd),'#0ea5e9','Settori');
   html+=buildChartCard(cid_(),'FINISH 41 (tutte le varianti) — Media frecce per chiusura',uid,(g,gd)=>extractFin41(g,gd),'#10b981','Media frecce');
-  html+=buildChartCard(cid_(),'FINISH 41 (tutte le varianti) — Completati per sessione',uid,(g,gd)=>extractFin41Comp(g,gd),'#34d399','Completati');
   html+=buildChartCard(cid_(),'201 IN 9 FRECCE — Legs vinti per sessione',uid,(g,gd)=>extract201(g,gd),'#06b6d4','Legs vinti');
   html+=buildChartCard(cid_(),'CHECKOUT — Media frecce per numero',uid,(g,gd)=>extractCO(g,gd),'#f97316','Media frecce');
   html+=buildChartCard(cid_(),'501 CON CHIUSURA — Totale chiusure per sessione',uid,(g,gd)=>extract501(g,gd),'#ec4899','Chiusure');
@@ -3870,51 +3891,83 @@ function renderStats(uid){
 
   const data=getUD(uid);
 
-  // 501 MODALITÀ ALLENAMENTO — avg punti per sessione (media dei leg.avgPerRound)
-  const trainingData=[];
-  const trainSessions=Object.entries(data).filter(([k,v])=>v?.__meta?.type==='501free')
-    .sort((a,b)=>new Date(a[1].__meta.savedAt)-new Date(b[1].__meta.savedAt));
-  for(const [,sess] of trainSessions){
-    const legs=sess.legs||[];
-    const avgs=legs.map(l=>l.avgPerRound||0).filter(n=>n>0);
-    if(avgs.length){
+  // Helper: group sessions by date, return [{label, avg, pct}]
+  function groupByDay(sessions, avgFn, pctFn){
+    const byDate={};
+    for(const [,sess] of sessions){
       const d=new Date(sess.__meta.savedAt);
-      const label=sess.__meta.tourName||(d.toLocaleDateString('it-IT'));
-      trainingData.push({label, value:+(avgs.reduce((a,b)=>a+b,0)/avgs.length).toFixed(1)});
+      const dk=d.toLocaleDateString('it-IT');
+      if(!byDate[dk]) byDate[dk]={avgs:[],pcts:[],d};
+      const a=avgFn(sess); if(a!==null) byDate[dk].avgs.push(a);
+      const p=pctFn(sess); if(p!==null) byDate[dk].pcts.push(p);
     }
-  }
-  if(trainingData.length){
-    const fid=cid_();
-    html+=`<div class="cw" style="margin-bottom:16px"><h3>501 — MODALITÀ ALLENAMENTO — Media punti per turno</h3><canvas id="${fid}" height="80"></canvas></div>`;
-    window._pendingCharts=window._pendingCharts||{};
-    window._pendingCharts[fid]={pts:trainingData,color:'#facc15',yLabel:'Media punti'};
+    return Object.entries(byDate)
+      .sort((a,b)=>a[1].d-b[1].d)
+      .map(([dk,{avgs,pcts}])=>({
+        label:dk,
+        avg:avgs.length?+(avgs.reduce((a,b)=>a+b,0)/avgs.length).toFixed(1):null,
+        pct:pcts.length?+(pcts.reduce((a,b)=>a+b,0)/pcts.length).toFixed(1):null
+      }))
+      .filter(p=>p.avg!==null);
   }
 
-  // 501 MODALITÀ TORNEO — avg punti per sessione
-  // Per ogni sessione: media di tourAvg(leg) su tutti i leg
-  const tourData=[];
+  // 501 MODALITÀ ALLENAMENTO — 1 punto per giorno, media punti + % doppia
+  const trainSessions=Object.entries(data).filter(([k,v])=>v?.__meta?.type==='501free')
+    .sort((a,b)=>new Date(a[1].__meta.savedAt)-new Date(b[1].__meta.savedAt));
+  const trainDays=groupByDay(trainSessions,
+    sess=>{
+      const legs=sess.legs||[];
+      const avgs=legs.map(l=>l.avgPerRound||0).filter(n=>n>0);
+      return avgs.length?+(avgs.reduce((a,b)=>a+b,0)/avgs.length).toFixed(1):null;
+    },
+    sess=>{
+      const legs=sess.legs||[];
+      const pcts=legs.map(l=>{const t=l.doublesThrown||0,h=l.doublesHit||0;return t>0?Math.round(h/t*100):null;}).filter(n=>n!==null);
+      return pcts.length?+(pcts.reduce((a,b)=>a+b,0)/pcts.length).toFixed(1):null;
+    }
+  );
+  if(trainDays.length){
+    const fid=cid_();
+    html+=\`<div class="cw" style="margin-bottom:16px"><h3>501 — MODALITÀ ALLENAMENTO — Media punti &amp; % doppia per giorno</h3><canvas id="\${fid}" height="100"></canvas></div>\`;
+    window._pendingCharts=window._pendingCharts||{};
+    window._pendingCharts[fid]={
+      pts:trainDays.map(d=>({label:d.label,value:d.avg})),
+      color:'#facc15',yLabel:'Media punti',
+      pts2:trainDays.filter(d=>d.pct!==null).map(d=>({label:d.label,value:d.pct})),
+      color2:'#fb923c',yLabel2:'% Doppia'
+    };
+  }
+
+  // 501 MODALITÀ TORNEO — 1 punto per giorno, media punti + % doppia
   const tourSessions=Object.entries(data).filter(([k,v])=>v?.__meta?.type==='501tournament')
     .sort((a,b)=>new Date(a[1].__meta.savedAt)-new Date(b[1].__meta.savedAt));
-  for(const [,sess] of tourSessions){
-    const allLegs=(sess.sets||[]).flatMap(s=>s.legs||[]);
-    if(!allLegs.length) continue;
-    const perLegAvg=allLegs.map(l=>{
-      if(l.won===false) return l.avgPerRound||l.avg||0;
-      const d=l.darts||l.dartsThrown||0;
-      return d>0?+((501/d)*3):0;
-    });
-    const avg=+(perLegAvg.reduce((a,v)=>a+v,0)/perLegAvg.length).toFixed(1);
-    if(avg>0){
-      const d=new Date(sess.__meta.savedAt);
-      const label=sess.__meta.tourName||(d.toLocaleDateString('it-IT'));
-      tourData.push({label, value:avg});
+  const tourDays=groupByDay(tourSessions,
+    sess=>{
+      const allLegs=(sess.sets||[]).flatMap(s=>s.legs||[]);
+      if(!allLegs.length) return null;
+      const perLegAvg=allLegs.map(l=>{
+        if(l.won===false) return l.avgPerRound||l.avg||0;
+        const d=l.darts||l.dartsThrown||0; return d>0?+((501/d)*3):0;
+      });
+      const avg=+(perLegAvg.reduce((a,v)=>a+v,0)/perLegAvg.length).toFixed(1);
+      return avg>0?avg:null;
+    },
+    sess=>{
+      const allLegs=(sess.sets||[]).flatMap(s=>s.legs||[]);
+      const pcts=allLegs.map(l=>{const t=l.doublesThrown||0,h=l.doublesHit||0;return t>0?Math.round(h/t*100):null;}).filter(n=>n!==null);
+      return pcts.length?+(pcts.reduce((a,b)=>a+b,0)/pcts.length).toFixed(1):null;
     }
-  }
-  if(tourData.length){
+  );
+  if(tourDays.length){
     const tid=cid_();
-    html+=`<div class="cw" style="margin-bottom:16px"><h3>501 — MODALITÀ TORNEO — Media punti per turno</h3><canvas id="${tid}" height="80"></canvas></div>`;
+    html+=\`<div class="cw" style="margin-bottom:16px"><h3>501 — MODALITÀ TORNEO — Media punti &amp; % doppia per giorno</h3><canvas id="\${tid}" height="100"></canvas></div>\`;
     window._pendingCharts=window._pendingCharts||{};
-    window._pendingCharts[tid]={pts:tourData,color:'#60a5fa',yLabel:'Media punti'};
+    window._pendingCharts[tid]={
+      pts:tourDays.map(d=>({label:d.label,value:d.avg})),
+      color:'#60a5fa',yLabel:'Media punti',
+      pts2:tourDays.filter(d=>d.pct!==null).map(d=>({label:d.label,value:d.pct})),
+      color2:'#a78bfa',yLabel2:'% Doppia'
+    };
   }
 
   if(!html){html='<div class="nd" style="padding:40px;text-align:center;color:var(--muted)">Nessun dato ancora. Inizia ad allenarti e salva le sessioni per vedere i grafici.</div>';}
@@ -5236,6 +5289,51 @@ function _doMergeTournamentSessions(tourSessions){
   loadPrev501Sessions();
 }
 
+// ══ MERGE TRAINING (501free) SESSIONS ══
+function mergeTrainingSessions(){
+  if(!CU || _selected501Sessions.length < 2) return;
+  const trainSess = _selected501Sessions.filter(s=>!s.isTournament);
+  if(trainSess.length < 2) return;
+  showConfirmPopup(
+    'Unisci sessioni',
+    'Vuoi unire ' + trainSess.length + ' sessioni di allenamento in una sola? Le sessioni originali verranno eliminate.',
+    ()=>_doMergeTrainingSessions(trainSess),
+    {okLabel:'UNISCI', okBg:'var(--green)', okColor:'#000'}
+  );
+}
+
+function _doMergeTrainingSessions(trainSess){
+  if(!CU) return;
+  const data = getUD(CU.id);
+  // Sort by savedAt ascending
+  const sorted = [...trainSess].sort((a,b)=>{
+    const da = data[a.key]?.__meta?.savedAt||'';
+    const db = data[b.key]?.__meta?.savedAt||'';
+    return da.localeCompare(db);
+  });
+  // Merge all legs
+  const mergedLegs = sorted.flatMap(s=>{
+    const orig = data[s.key];
+    return orig?.legs || s.legs;
+  });
+  const savedAt = data[sorted[0].key]?.__meta?.savedAt || new Date().toISOString();
+  // Create merged session
+  const mk = 'free501_' + Date.now();
+  data[mk] = {
+    __meta: {type:'501free', title:'Gioca a 501', savedAt, week:null, session:null},
+    legs: mergedLegs,
+  };
+  // Delete originals
+  sorted.forEach(s=>{ delete data[s.key]; });
+  // Keep only 10 most recent free501 sessions
+  const freeKeys = Object.keys(data).filter(k=>k.startsWith('free501_')).sort().reverse();
+  freeKeys.slice(10).forEach(k=>delete data[k]);
+  setUD(CU.id, data);
+  _selected501Sessions = [];
+  document.getElementById('prev501Content').innerHTML = '';
+  loadPrev501Sessions();
+}
+
 // ══ MODE SELECTOR FOR SESSIONI PRECEDENTI ══
 var _prev501Mode = 'training'; // 'training' | 'tournament'
 var _tourCompareFilter = 'all'; // 'all' | 'won' | 'lost'
@@ -5762,6 +5860,7 @@ function render501SessPanel(){
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       ${_selected501Sessions.length>=2?`<button id="btn501Compare" onclick="toggle501Compare()" style="background:var(--green);color:#000;border:none;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;padding:7px 16px;border-radius:5px;cursor:pointer">CONFRONTA</button>`:''}
       ${(_selected501Sessions.length>=2 && _selected501Sessions.every(s=>s.isTournament))?`<button onclick="mergeTournamentSessions()" style="background:var(--green);color:#000;border:none;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;padding:7px 16px;border-radius:5px;cursor:pointer">🔗 UNISCI</button>`:''}
+      ${(_selected501Sessions.length>=2 && _selected501Sessions.every(s=>!s.isTournament))?`<button onclick="mergeTrainingSessions()" style="background:var(--green);color:#000;border:none;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;padding:7px 16px;border-radius:5px;cursor:pointer">🔗 UNISCI</button>`:''}
     </div>
   </div>`;
 
@@ -5878,11 +5977,14 @@ function calcTourSessSummary(legs, isTour){
   const totHit = sumOf('doublesHit');
   const totThrown = sumOf('doublesThrown');
   const totDbl = totHit + '/' + totThrown;
-  // % avg: media delle percentuali per leg
-  const avgPct = Math.round(legs.reduce((s,l)=>{
-    const t=l.doublesThrown||0, h=l.doublesHit||0;
-    return s+(t>0?Math.round(h/t*100):0);
-  },0) / n);
+  // % avg: media delle percentuali solo dei leg con almeno 1 doppia tirata
+  const legsWithDbl = legs.filter(l=>(l.doublesThrown||0)>0);
+  const avgPct = legsWithDbl.length
+    ? Math.round(legsWithDbl.reduce((s,l)=>{
+        const t=l.doublesThrown||0, h=l.doublesHit||0;
+        return s+Math.round(h/t*100);
+      },0) / legsWithDbl.length)
+    : 0;
   return { avgRounds, avgDarts, avgPts, totDbl, avgPct };
 }
 
