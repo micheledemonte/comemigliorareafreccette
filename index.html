@@ -2145,16 +2145,22 @@ async function loadDBFromCloud(){
 
 // ── Save to Firebase (debounced 1.5s) ──
 let _saveTimer = null;
-let _lastSaveTime = 0; // timestamp of last DB write, for logout guard
+let _lastSaveTime = 0;   // timestamp of last completed DB write
+let _savePending = false; // true while debounce timer or Firebase write is in flight
 function saveDBToCloud(){
   if(!_firebaseOK || !_fbDB) return; // silent no-op in sandbox
-  _lastSaveTime = Date.now(); // track for logout guard
+  _savePending = true; // block logout immediately on any save request
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(async ()=>{
     try{
       await _fbDB.ref('db').set(deepClean(_dbCache));
       console.log('✓ Firebase DB saved');
-    } catch(e){ console.warn('Firebase save error:', e.message); }
+      _lastSaveTime = Date.now(); // mark write completed
+    } catch(e){
+      console.warn('Firebase save error:', e.message);
+      _lastSaveTime = Date.now(); // even on error, unblock after 10s
+    }
+    _savePending = false;
   }, 1500);
 }
 
@@ -2475,9 +2481,14 @@ function autoLoadNextSession(){
 }
 
 function confirmLogout(){
+  // Block if a write is in flight (debounce pending or Firebase writing)
+  if(_savePending){
+    showSavingGuardPopup(null); // unknown seconds — write still in progress
+    return;
+  }
+  // Block if within 10s of last completed write
   const elapsed = Date.now() - _lastSaveTime;
   if(_lastSaveTime > 0 && elapsed < 10000){
-    // still within 10s of last save — show saving guard popup
     const remaining = Math.ceil((10000 - elapsed) / 1000);
     showSavingGuardPopup(remaining);
     return;
@@ -2494,7 +2505,11 @@ function showSavingGuardPopup(remaining){
   const el = document.getElementById('savingGuardPopup');
   const txt = document.getElementById('savingGuardText');
   if(!el || !txt) return;
-  txt.textContent = 'I dati stanno venendo salvati nel cloud. Potrai uscire dall’app tra circa ' + remaining + ' second' + (remaining===1?'o':'i') + '. Chiudi questo messaggio e attendi.';
+  if(remaining === null){
+    txt.textContent = 'I dati stanno venendo salvati nel cloud. Attendi il completamento del salvataggio prima di uscire dall’app.';
+  } else {
+    txt.textContent = 'I dati sono stati appena salvati nel cloud. Per sicurezza potrai uscire dall’app tra circa ' + remaining + ' second' + (remaining===1?'o':'i') + '. Chiudi questo messaggio e attendi.';
+  }
   el.style.display = 'flex';
 }
 
