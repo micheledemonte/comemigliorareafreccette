@@ -4991,9 +4991,13 @@ function tourFinalize(){
   // Save to Firebase
   const data = getUD(CU.id);
   const tk = 'tour501_' + Date.now();
+  const tourSavedAt = new Date().toISOString();
+  const tourDateStr = new Date(tourSavedAt).toLocaleDateString('it-IT');
+  const tourAutoName = genTourAutoName(data, tourDateStr);
   data[tk] = {
-    __meta: {type:'501tournament', title:'Torneo 501', savedAt: new Date().toISOString(),
-              totalSets: GT.totalSets, legsPerSet: GT.legsPerSet},
+    __meta: {type:'501tournament', title:'Torneo 501', savedAt: tourSavedAt,
+              totalSets: GT.totalSets, legsPerSet: GT.legsPerSet,
+              tourName: tourAutoName},
     sets: GT.sets,
   };
   // Keep only 10 most recent tournament sessions
@@ -5024,38 +5028,54 @@ function saveTourName(key){
   render501SessPanel();
 }
 
+// ══ AUTO-NAME HELPER ══
+// Returns "Partita N" where N is progressive per date across all tour sessions
+function genTourAutoName(data, dateStr){
+  // Count existing sessions on the same date
+  const sameDate = Object.values(data).filter(v=>{
+    if(v?.__meta?.type !== '501tournament') return false;
+    const d = v.__meta.savedAt ? new Date(v.__meta.savedAt).toLocaleDateString('it-IT') : '';
+    return d === dateStr;
+  });
+  return 'Partita ' + (sameDate.length + 1);
+}
+
 // ══ MERGE TOURNAMENT SESSIONS ══
 function mergeTournamentSessions(){
   if(!CU || _selected501Sessions.length < 2) return;
   const tourSessions = _selected501Sessions.filter(s=>s.isTournament);
-  if(tourSessions.length < 2){ alert('Seleziona almeno 2 sessioni torneo da unire.'); return; }
+  if(tourSessions.length < 2) return;
+  const n = tourSessions.length;
+  showConfirmPopup(
+    'Unisci sessioni',
+    'Vuoi unire ' + n + ' sessioni in una sola? Le sessioni originali verranno eliminate.',
+    ()=>_doMergeTournamentSessions(tourSessions),
+    {okLabel:'UNISCI', okBg:'var(--green)', okColor:'#000'}
+  );
+}
 
-  // Ask for a name for the merged session
-  const name = prompt('Nome per la sessione unita (opzionale):','');
-
+function _doMergeTournamentSessions(tourSessions){
+  if(!CU) return;
   const data = getUD(CU.id);
 
-  // Merge all legs from all selected sessions in chronological order
-  // Sort sessions by savedAt date ascending
+  // Sort by savedAt ascending (oldest first)
   const sorted = [...tourSessions].sort((a,b)=>{
     const da = data[a.key]?.__meta?.savedAt||'';
     const db = data[b.key]?.__meta?.savedAt||'';
     return da.localeCompare(db);
   });
 
-  // Rebuild sets: each original session becomes its own sets block
+  // Merge sets from all sessions
   const mergedSets = sorted.flatMap(s=>{
     const orig = data[s.key];
     return orig?.sets || [{legs: s.legs}];
   });
 
-  // Total leg count
-  const totalLegs = mergedSets.reduce((a,set)=>a+(set.legs||[]).length,0);
-
-  // Use earliest savedAt
   const savedAt = data[sorted[0].key]?.__meta?.savedAt || new Date().toISOString();
+  const dateStr = new Date(savedAt).toLocaleDateString('it-IT');
+  const autoName = genTourAutoName(data, dateStr);
 
-  // Create merged session key
+  // Create merged session
   const mk = 'tour501_' + Date.now();
   data[mk] = {
     __meta: {
@@ -5064,10 +5084,13 @@ function mergeTournamentSessions(){
       savedAt,
       totalSets: mergedSets.length,
       legsPerSet: mergedSets[0]?.legs?.length || 1,
-      tourName: name||'',
+      tourName: autoName,
     },
     sets: mergedSets,
   };
+
+  // Delete original sessions from Firebase
+  sorted.forEach(s=>{ delete data[s.key]; });
 
   // Keep only 10 most recent tournament sessions
   const tourKeys = Object.keys(data).filter(k=>k.startsWith('tour501_')).sort().reverse();
@@ -5079,7 +5102,6 @@ function mergeTournamentSessions(){
   _selected501Sessions = [];
   document.getElementById('prev501Content').innerHTML = '';
   loadPrev501Sessions();
-  alert('Sessioni unite con successo! Trovale nel menu a tendina.');
 }
 
 // ══ MODE SELECTOR FOR SESSIONI PRECEDENTI ══
@@ -5607,7 +5629,7 @@ function render501SessPanel(){
     <div style="font-size:13px;color:var(--muted)">${_selected501Sessions.length} sessione${_selected501Sessions.length>1?'i':''} selezionata${_selected501Sessions.length>1?'':'e'}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       ${_selected501Sessions.length>=2?`<button id="btn501Compare" onclick="toggle501Compare()" style="background:var(--green);color:#000;border:none;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;padding:7px 16px;border-radius:5px;cursor:pointer">CONFRONTA</button>`:''}
-      ${(_selected501Sessions.length>=2 && _selected501Sessions.every(s=>s.isTournament))?`<button onclick="mergeTournamentSessions()" style="background:#1d4ed8;color:#fff;border:none;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;padding:7px 16px;border-radius:5px;cursor:pointer">🔗 UNISCI</button>`:''}
+      ${(_selected501Sessions.length>=2 && _selected501Sessions.every(s=>s.isTournament))?`<button onclick="mergeTournamentSessions()" style="background:var(--green);color:#000;border:none;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;padding:7px 16px;border-radius:5px;cursor:pointer">🔗 UNISCI</button>`:''}
     </div>
   </div>`;
 
@@ -5694,19 +5716,21 @@ function calcTourSessSummary(legs, isTour){
   // Average rounds
   const avgRounds = +(sumOf('rounds') / n).toFixed(1);
   // Average darts
-  const dartKey = isTour ? 'darts' : 'dartsThrown';
   const totalDarts = legs.reduce((s,l)=>s+(l.darts||l.dartsThrown||0), 0);
   const avgDarts = +(totalDarts / n).toFixed(1);
-  // Average media: (501/darts)*3 for tournament, avgPerRound for training
-  let avgPts;
-  if(isTour){
-    const validLegs = legs.filter(l=>(l.darts||l.dartsThrown||0)>0);
-    avgPts = validLegs.length
-      ? +((validLegs.reduce((s,l)=>s+((501/(l.darts||l.dartsThrown||1))*3), 0)) / validLegs.length).toFixed(1)
-      : 0;
-  } else {
-    avgPts = +(sumOf('avgPerRound') / n).toFixed(1);
-  }
+  // Media avg: (somma della Media di ogni leg) / numero leg
+  // For each leg: won→(501/darts)*3, lost→stored avg
+  const perLegAvg = legs.map(l=>{
+    if(isTour){
+      if(l.won===false){
+        return l.avgPerRound||l.avg||0;
+      }
+      const d=l.darts||l.dartsThrown||0;
+      return d>0?+((501/d)*3):0;
+    }
+    return l.avgPerRound||0;
+  });
+  const avgPts = +(perLegAvg.reduce((a,v)=>a+v,0)/n).toFixed(1);
   // Doppie tot: colpite_tot / tirate_tot
   const totHit = sumOf('doublesHit');
   const totThrown = sumOf('doublesThrown');
