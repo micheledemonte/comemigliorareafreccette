@@ -2145,22 +2145,22 @@ async function loadDBFromCloud(){
 
 // ── Save to Firebase (debounced 1.5s) ──
 let _saveTimer = null;
-let _lastSaveTime = 0;   // timestamp of last completed DB write
-let _savePending = false; // true while debounce timer or Firebase write is in flight
+let _lastSaveTime = 0;   // ms timestamp of last completed save
+let _saveInFlight = false; // true while a save is pending or running
 function saveDBToCloud(){
-  if(!_firebaseOK || !_fbDB) return; // silent no-op in sandbox
-  _savePending = true; // block logout immediately on any save request
+  if(!_firebaseOK || !_fbDB) return;
+  _saveInFlight = true;   // mark: save pending
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(async ()=>{
     try{
       await _fbDB.ref('db').set(deepClean(_dbCache));
+      _lastSaveTime = Date.now(); // mark completion time
       console.log('✓ Firebase DB saved');
-      _lastSaveTime = Date.now(); // mark write completed
     } catch(e){
       console.warn('Firebase save error:', e.message);
-      _lastSaveTime = Date.now(); // even on error, unblock after 10s
+    } finally {
+      _saveInFlight = false; // save done (success or error)
     }
-    _savePending = false;
   }, 1500);
 }
 
@@ -2481,12 +2481,12 @@ function autoLoadNextSession(){
 }
 
 function confirmLogout(){
-  // Block if a write is in flight (debounce pending or Firebase writing)
-  if(_savePending){
-    showSavingGuardPopup(null); // unknown seconds — write still in progress
+  // Block if save is in flight (debounce + Firebase write still running)
+  if(_saveInFlight){
+    showSavingGuardPopup(10);
     return;
   }
-  // Block if within 10s of last completed write
+  // Block if last save completed less than 10s ago
   const elapsed = Date.now() - _lastSaveTime;
   if(_lastSaveTime > 0 && elapsed < 10000){
     const remaining = Math.ceil((10000 - elapsed) / 1000);
@@ -2504,13 +2504,31 @@ function confirmLogout(){
 function showSavingGuardPopup(remaining){
   const el = document.getElementById('savingGuardPopup');
   const txt = document.getElementById('savingGuardText');
+  const cntEl = document.getElementById('savingGuardCount');
   if(!el || !txt) return;
-  if(remaining === null){
-    txt.textContent = 'I dati stanno venendo salvati nel cloud. Attendi il completamento del salvataggio prima di uscire dall’app.';
-  } else {
-    txt.textContent = 'I dati sono stati appena salvati nel cloud. Per sicurezza potrai uscire dall’app tra circa ' + remaining + ' second' + (remaining===1?'o':'i') + '. Chiudi questo messaggio e attendi.';
-  }
+  // Base message
+  txt.textContent = 'I dati stanno venendo salvati nel cloud. Attendi qualche secondo prima di effettuare il logout.';
   el.style.display = 'flex';
+  // Live countdown in the count element
+  if(cntEl){
+    let secs = remaining;
+    cntEl.textContent = secs;
+    clearInterval(el._countInterval);
+    el._countInterval = setInterval(()=>{
+      // Recompute from both flags
+      if(_saveInFlight){
+        cntEl.textContent = '…';
+        return;
+      }
+      const elapsed = Date.now() - _lastSaveTime;
+      secs = Math.max(0, Math.ceil((10000 - elapsed) / 1000));
+      cntEl.textContent = secs;
+      if(secs <= 0){
+        clearInterval(el._countInterval);
+        cntEl.textContent = '0';
+      }
+    }, 500);
+  }
 }
 
 async function doLogout(){
@@ -6806,8 +6824,9 @@ if(document.readyState==='loading'){
   <div class="modal-box" style="text-align:center;max-width:340px">
     <div style="font-size:40px;margin-bottom:14px">☁️</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--light);margin-bottom:12px">SALVATAGGIO IN CORSO</div>
-    <div id="savingGuardText" style="font-size:14px;color:var(--mu2);line-height:1.6;margin-bottom:24px"></div>
-    <button onclick="document.getElementById('savingGuardPopup').style.display='none'" style="background:#166534;border:none;color:#4ade80;font-family:'Bebas Neue',sans-serif;font-size:22px;padding:12px 40px;border-radius:999px;cursor:pointer;letter-spacing:.05em;width:100%">OK</button>
+    <div id="savingGuardText" style="font-size:14px;color:var(--mu2);line-height:1.6;margin-bottom:12px"></div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:42px;color:#4ade80;margin-bottom:20px;line-height:1"><span id="savingGuardCount">10</span>s</div>
+    <button onclick="(function(){var el=document.getElementById('savingGuardPopup');clearInterval(el._countInterval);el.style.display='none';})()" style="background:#166534;border:none;color:#4ade80;font-family:'Bebas Neue',sans-serif;font-size:22px;padding:12px 40px;border-radius:999px;cursor:pointer;letter-spacing:.05em;width:100%">OK</button>
   </div>
 </div>
 <div id="blockedPopup" style="position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;padding:20px">
