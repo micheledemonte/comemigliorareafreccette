@@ -3827,24 +3827,53 @@ function renderStats(uid){
     window._pendingCharts[cid2] = {pts:crownPts, color:'#f59e0b', yLabel:'Corone'};
   }
 
-  // 501 free sessions
-  const freeData=[];
   const data=getUD(uid);
-  const freeSessions=Object.entries(data).filter(([k,v])=>v?.__meta?.type==='501free')
+
+  // 501 MODALITÀ ALLENAMENTO — avg punti per sessione (media dei leg.avgPerRound)
+  const trainingData=[];
+  const trainSessions=Object.entries(data).filter(([k,v])=>v?.__meta?.type==='501free')
     .sort((a,b)=>new Date(a[1].__meta.savedAt)-new Date(b[1].__meta.savedAt));
-  for(const [,sess] of freeSessions){
+  for(const [,sess] of trainSessions){
     const legs=sess.legs||[];
     const avgs=legs.map(l=>l.avgPerRound||0).filter(n=>n>0);
     if(avgs.length){
       const d=new Date(sess.__meta.savedAt);
-      freeData.push({label:`${d.toLocaleDateString('it-IT')}`,value:+(avgs.reduce((a,b)=>a+b,0)/avgs.length).toFixed(1)});
+      const label=sess.__meta.tourName||(d.toLocaleDateString('it-IT'));
+      trainingData.push({label, value:+(avgs.reduce((a,b)=>a+b,0)/avgs.length).toFixed(1)});
     }
   }
-  if(freeData.length){
+  if(trainingData.length){
     const fid=cid_();
-    html+=`<div class="cw" style="margin-bottom:16px"><h3>GIOCA A 501 — Media punti per turno</h3><canvas id="${fid}" height="80"></canvas></div>`;
+    html+=`<div class="cw" style="margin-bottom:16px"><h3>501 — MODALITÀ ALLENAMENTO — Media punti per turno</h3><canvas id="${fid}" height="80"></canvas></div>`;
     window._pendingCharts=window._pendingCharts||{};
-    window._pendingCharts[fid]={pts:freeData.map(d=>({label:d.label,value:d.value})),color:'#facc15',yLabel:'Media punti'};
+    window._pendingCharts[fid]={pts:trainingData,color:'#facc15',yLabel:'Media punti'};
+  }
+
+  // 501 MODALITÀ TORNEO — avg punti per sessione
+  // Per ogni sessione: media di tourAvg(leg) su tutti i leg
+  const tourData=[];
+  const tourSessions=Object.entries(data).filter(([k,v])=>v?.__meta?.type==='501tournament')
+    .sort((a,b)=>new Date(a[1].__meta.savedAt)-new Date(b[1].__meta.savedAt));
+  for(const [,sess] of tourSessions){
+    const allLegs=(sess.sets||[]).flatMap(s=>s.legs||[]);
+    if(!allLegs.length) continue;
+    const perLegAvg=allLegs.map(l=>{
+      if(l.won===false) return l.avgPerRound||l.avg||0;
+      const d=l.darts||l.dartsThrown||0;
+      return d>0?+((501/d)*3):0;
+    });
+    const avg=+(perLegAvg.reduce((a,v)=>a+v,0)/perLegAvg.length).toFixed(1);
+    if(avg>0){
+      const d=new Date(sess.__meta.savedAt);
+      const label=sess.__meta.tourName||(d.toLocaleDateString('it-IT'));
+      tourData.push({label, value:avg});
+    }
+  }
+  if(tourData.length){
+    const tid=cid_();
+    html+=`<div class="cw" style="margin-bottom:16px"><h3>501 — MODALITÀ TORNEO — Media punti per turno</h3><canvas id="${tid}" height="80"></canvas></div>`;
+    window._pendingCharts=window._pendingCharts||{};
+    window._pendingCharts[tid]={pts:tourData,color:'#60a5fa',yLabel:'Media punti'};
   }
 
   if(!html){html='<div class="nd" style="padding:40px;text-align:center;color:var(--muted)">Nessun dato ancora. Inizia ad allenarti e salva le sessioni per vedere i grafici.</div>';}
