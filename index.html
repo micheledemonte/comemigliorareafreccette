@@ -14,6 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 <!-- Vercel Web Analytics -->
 <script defer src="/_vercel/insights/script.js"></script>
 <!-- Vercel Speed Insights -->
@@ -2249,6 +2250,7 @@ try {
   _fbAuth = firebase.auth();
   _fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
   _firebaseOK = true;
+  initFCM(); // Inizializza FCM Messaging
 } catch(e) {
   console.warn('Firebase SDK not available (Claude sandbox mode):', e.message);
 }
@@ -2629,7 +2631,10 @@ function enterApp(){
   autoLoadNextSession();
   loadPrev501Sessions();
   checkReset();
-  if(isAdmin) setTimeout(gsRestoreNotifications, 800); // schedula notifiche appuntamenti futuri
+  if(isAdmin){
+    setTimeout(gsRestoreNotifications, 800);   // fallback locale
+    setTimeout(registerPushNotifications, 1200); // registra Service Worker + FCM
+  }
 }
 
 function autoLoadNextSession(){
@@ -2757,7 +2762,7 @@ async function doLogout(){
   CU=null;
   _dbCache=null;
   reset501Sessions();
-  if(_fbAuth) try{ await _fbAuth.signOut(); }catch(e){}
+  if(_fbAuth) try{ await unregisterPushNotifications().finally(()=>_fbAuth.signOut()); }catch(e){}
   document.getElementById('loadingOverlay').style.display='none';
   document.getElementById('appLayer').classList.remove('visible');
   ldHide();
@@ -5127,67 +5132,167 @@ function calClearFilter(){
   renderCalendario();
 }
 // ══════════════════════════════════════════════════
-// NOTIFICHE BROWSER — appuntamenti lezioni
+// NOTIFICHE PUSH — Web Push via FCM + Service Worker
 // ══════════════════════════════════════════════════
-// Chiave Firebase: userData[adminUid]/__notifTimers = { 'uid_idx': dt }
-// Le notifiche vengono schedulate via setTimeout localmente alla sessione
-// e richiedono la pagina aperta (no push server-side).
+//
+// Flusso:
+// 1. Al login dell'admin, viene registrato il Service Worker
+// 2. Viene richiesto il permesso notifiche
+// 3. Il token FCM dell'admin viene salvato su Firebase (userData[uid]/__fcmToken)
+// 4. La Firebase Cloud Function (schedulata ogni 15min) legge i token
+//    e invia le notifiche push 24h / 12h / 1h / 30min prima di ogni lezione
+//
+// VAPID Key pubblica (dalla Firebase Console → Cloud Messaging → Web Push certificates)
+const VAPID_PUBLIC_KEY = 'BBhtrZwuxdv2xpTWyEa_OKsFMWcGibqTKAXhHjVDTwS6dl9SoVXpyCNTINSsgYDAPwNrwtmKm7dtSJU1yyC24HU';
 
-let _gsNotifTimers = {}; // key -> [timeoutId, ...]
+let _swRegistration = null;
+let _fcmMessaging   = null;
 
-function gsScheduleNotifications(uid, idx, dt, note, studentUser){
-  if(!dt) return;
-  const key = uid+'_'+idx;
-  // Cancella timer precedenti per questa lezione
-  (_gsNotifTimers[key]||[]).forEach(t=>clearTimeout(t));
-  _gsNotifTimers[key] = [];
+// Inizializza FCM Messaging (solo se disponibile)
+function initFCM(){
+  try {
+    if(firebase.messaging && firebase.messaging.isSupported()){
+      _fcmMessaging = firebase.messaging();
+    }
+  } catch(e){
+    console.warn('FCM non disponibile:', e.message);
+  }
+}
 
-  const lessonMs = new Date(dt).getTime();
-  const now      = Date.now();
-  const userName = studentUser ? studentUser.firstName+' '+studentUser.lastName : 'Studente';
-  const noteStr  = note ? ` · ${note}` : '';
-  const label    = `Lezione ${idx+1} — ${userName}${noteStr}`;
-
-  const offsets = [
-    {ms: 24*60*60*1000, txt:'tra 24 ore'},
-    {ms: 12*60*60*1000, txt:'tra 12 ore'},
-    {ms:    60*60*1000, txt:'tra 1 ora'},
-    {ms:    30*60*1000, txt:'tra 30 minuti'},
-  ];
-
-  // Richiedi permesso notifiche
-  if('Notification' in window && Notification.permission==='default'){
-    Notification.requestPermission();
+// Registra il Service Worker e ottieni il token FCM
+async function registerPushNotifications(){
+  if(!CU || CU.role !== 'admin') return;
+  if(!('serviceWorker' in navigator)) return;
+  if(!_fcmMessaging){
+    console.warn('FCM Messaging non inizializzato.');
+    return;
   }
 
-  offsets.forEach(({ms, txt})=>{
-    const fireAt = lessonMs - ms;
-    const delay  = fireAt - now;
-    if(delay < 0) return; // già passato
+  try {
+    // 1. Registra il Service Worker
+    _swRegistration = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+    console.log('[SW] Registrato:', _swRegistration.scope);
+
+    // 2. Richiedi permesso notifiche
+    const permission = await Notification.requestPermission();
+    if(permission !== 'granted'){
+      console.warn('[Push] Permesso notifiche negato.');
+      return;
+    }
+
+    // 3. Ottieni token FCM
+    const token = await _fcmMessaging.getToken({
+      vapidKey:            VAPID_PUBLIC_KEY,
+      serviceWorkerRegistration: _swRegistration,
+    });
+
+    if(!token){
+      console.warn('[Push] Token FCM non ottenuto.');
+      return;
+    }
+
+    console.log('[Push] Token FCM ottenuto:', token.slice(0,20)+'...');
+
+    // 4. Salva token su Firebase
+    const data = getUD(CU.id);
+    if(data.__fcmToken !== token){
+      data.__fcmToken = token;
+      setUD(CU.id, data);
+      console.log('[Push] Token FCM salvato su Firebase.');
+    }
+
+    // 5. Gestisci token refresh
+    _fcmMessaging.onTokenRefresh(async () => {
+      try {
+        const newToken = await _fcmMessaging.getToken({
+          vapidKey: VAPID_PUBLIC_KEY,
+          serviceWorkerRegistration: _swRegistration,
+        });
+        if(newToken){
+          const d = getUD(CU.id);
+          d.__fcmToken = newToken;
+          setUD(CU.id, d);
+        }
+      } catch(e){ console.warn('[Push] Token refresh error:', e); }
+    });
+
+    // 6. Gestisci messaggi in foreground (app aperta)
+    _fcmMessaging.onMessage((payload) => {
+      const notif = payload.notification || {};
+      const title = notif.title || '📅 Lezione';
+      const body  = notif.body  || '';
+      if(Notification.permission === 'granted'){
+        new Notification(title, {
+          body,
+          icon:  '/icon-192.png',
+          badge: '/icon-192.png',
+          tag:   'cmaf-fg-notif',
+          requireInteraction: true,
+        });
+      }
+    });
+
+  } catch(err){
+    console.error('[Push] Errore registrazione:', err);
+  }
+}
+
+// Rimuovi token FCM al logout (così l'admin non riceve notifiche dopo logout)
+async function unregisterPushNotifications(){
+  if(!_fcmMessaging || !CU) return;
+  try {
+    await _fcmMessaging.deleteToken();
+    const data = getUD(CU.id);
+    if(data.__fcmToken){
+      delete data.__fcmToken;
+      setUD(CU.id, data);
+    }
+    console.log('[Push] Token FCM rimosso al logout.');
+  } catch(e){
+    console.warn('[Push] Errore rimozione token:', e);
+  }
+}
+
+// Mantieni per compatibilità — ora le notifiche le gestisce la Cloud Function
+// ma teniamo il fallback locale per quando l'app è aperta
+let _gsNotifTimers = {};
+function gsScheduleNotifications(uid, idx, dt, note, studentUser){
+  // Con FCM attivo le notifiche push arrivano dal server.
+  // Questo fallback serve solo se FCM non è disponibile.
+  if(_fcmMessaging) return;
+  if(!dt) return;
+  const key = uid+'_'+idx;
+  (_gsNotifTimers[key]||[]).forEach(t=>clearTimeout(t));
+  _gsNotifTimers[key] = [];
+  const lessonMs = new Date(dt).getTime();
+  const now = Date.now();
+  const userName = studentUser ? studentUser.firstName+' '+studentUser.lastName : 'Studente';
+  const noteStr = note ? ' · '+note : '';
+  const label = 'Lezione '+(idx+1)+' — '+userName+noteStr;
+  [{ms:24*60*60*1000,txt:'tra 24 ore'},{ms:12*60*60*1000,txt:'tra 12 ore'},
+   {ms:60*60*1000,txt:'tra 1 ora'},{ms:30*60*1000,txt:'tra 30 minuti'}].forEach(({ms,txt})=>{
+    const delay = lessonMs - ms - now;
+    if(delay < 0) return;
     const tid = setTimeout(()=>{
       if(Notification.permission==='granted'){
-        new Notification('📅 '+label, {
-          body: `La lezione è ${txt}`,
-          icon: '/favicon.ico',
-          tag:  key+'_'+ms,
-        });
+        new Notification('📅 '+label, {body:'La lezione è '+txt, icon:'/icon-192.png', tag:key+'_'+ms});
       }
     }, delay);
     _gsNotifTimers[key].push(tid);
   });
 }
 
-// Re-schedula notifiche al login per tutti gli appuntamenti futuri degli admin
 function gsRestoreNotifications(){
+  // Con FCM il server gestisce tutto — niente da fare al login
+  if(_fcmMessaging) return;
   if(!CU || CU.role!=='admin') return;
   const users = getUsers().filter(u=>u.role!=='admin');
   users.forEach(u=>{
     const p = gsGetPercorso(u.id);
     if(!p) return;
     p.lezioni.forEach((l,i)=>{
-      if(l.dt && new Date(l.dt).getTime() > Date.now()){
+      if(l.dt && new Date(l.dt).getTime() > Date.now())
         gsScheduleNotifications(u.id, i, l.dt, l.note, u);
-      }
     });
   });
 }
