@@ -2610,6 +2610,7 @@ function enterApp(){
   loadPrev501Sessions();
   checkReset();
   if(isAdmin) setTimeout(gsRestoreNotifications, 800); // schedula notifiche appuntamenti futuri
+}
 
 function autoLoadNextSession(){
   const data=getUD(CU.id);
