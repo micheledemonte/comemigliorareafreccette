@@ -526,10 +526,6 @@ select:hover{border-color:var(--green)}
 .asc .asl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:1px}
 
 /* ═══ GESTIONALE ═══ */
-.gs-tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
-.gs-tab{background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:8px;padding:8px 18px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;cursor:pointer;transition:all .2s;letter-spacing:.02em}
-.gs-tab.active{background:var(--gdim);border-color:var(--green);color:var(--green)}
-.gs-tab:hover:not(.active){border-color:var(--d4);color:var(--light)}
 .gs-filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
 .gs-filter-btn{background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:999px;padding:5px 14px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:12px;cursor:pointer;transition:all .2s}
 .gs-filter-btn.active{background:var(--gdim);border-color:var(--green);color:var(--green)}
@@ -553,15 +549,22 @@ select:hover{border-color:var(--green)}
 .gs-percorso-form input:focus,.gs-percorso-form select:focus{outline:none;border-color:var(--green)}
 .gs-percorso-form label{font-size:11px;color:var(--mu2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px;display:block}
 .gs-field{display:flex;flex-direction:column}
-.gs-lezioni-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));gap:7px;margin-top:10px}
-.gs-lez-btn{width:100%;aspect-ratio:1;border-radius:8px;border:1.5px solid var(--d5);background:var(--d3);cursor:pointer;font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--mu2);transition:all .2s;display:flex;align-items:center;justify-content:center}
-.gs-lez-btn.svolta{border-color:#166534;background:#052e16;color:var(--green)}
-.gs-lez-btn.pagata{border-color:#1d4ed8;background:#1e3a5f;color:#93c5fd}
-.gs-lez-btn.svolta.pagata{border-color:var(--green);background:#052e16;color:var(--green);position:relative}
-.gs-lez-btn.svolta.pagata::after{content:'✓';position:absolute;bottom:2px;right:4px;font-size:9px;color:#93c5fd}
-.gs-lezioni-legend{display:flex;gap:14px;margin-top:8px;flex-wrap:wrap}
+.gs-lezioni-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:7px;margin-top:10px}
+.gs-lez-btn{width:100%;aspect-ratio:1;border-radius:8px;border:1.5px solid var(--d5);background:var(--d3);cursor:pointer;font-size:20px;transition:all .2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative;padding:2px}
+.gs-lez-btn .gs-lez-num{font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--mu2);line-height:1}
+.gs-lez-btn .gs-lez-dt{font-size:8px;color:var(--mu2);line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90%}
+/* lezione per lezione: 4 stati */
+.gs-lez-btn.st-svolta{border-color:#166534;background:#052e16}
+.gs-lez-btn.st-svolta-pagata{border-color:var(--green);background:#052e16}
+.gs-lez-btn.st-pagata{border-color:#1d4ed8;background:#1e3a5f}
+/* anticipato: 2 stati */
+.gs-lez-btn.st-ant-base{border-color:#1d4ed8;background:#1e3a5f}
+.gs-lez-btn.st-ant-svolta{border-color:var(--green);background:#052e16}
+/* data programmata */
+.gs-lez-btn.has-dt{box-shadow:0 0 0 1.5px var(--amber) inset}
+.gs-lezioni-legend{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap}
 .gs-leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mu2)}
-.gs-leg-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.gs-leg-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px}
 .gs-prog-bar{height:5px;background:var(--d4);border-radius:3px;overflow:hidden;margin-top:6px}
 .gs-prog-fill{height:100%;background:var(--green);border-radius:3px;transition:width .4s}
 .gs-summary-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
@@ -574,8 +577,41 @@ select:hover{border-color:var(--green)}
 .gs-del-percorso-btn:hover{background:#3d0505}
 .gs-section-title{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--mu2);letter-spacing:.08em;margin-bottom:10px;margin-top:4px}
 .gs-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px}
-.gs-pay-toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mu2);margin-top:4px;grid-column:1/-1}
-.gs-pay-toggle input[type=checkbox]{accent-color:var(--green);width:16px;height:16px;cursor:pointer}
+/* Popup appuntamento */
+#gsApptOverlay{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;padding:20px}
+#gsApptOverlay.open{display:flex}
+.gs-appt-card{background:var(--d2);border:1px solid var(--d4);border-radius:18px;padding:28px 24px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.gs-appt-card h3{font-family:'DM Sans',sans-serif;font-weight:700;font-size:18px;color:var(--green);margin-bottom:18px}
+.gs-appt-card label{font-size:11px;color:var(--mu2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;display:block}
+.gs-appt-card input,.gs-appt-card select{width:100%;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:10px 12px;border-radius:6px;font-size:14px;margin-bottom:14px;transition:border-color .2s}
+.gs-appt-card input:focus,.gs-appt-card select:focus{outline:none;border-color:var(--green)}
+.gs-appt-card input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.6}
+.gs-appt-btns{display:flex;gap:8px;margin-top:4px}
+.gs-appt-btns button{flex:1;padding:10px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;border:none;transition:all .2s}
+/* Calendario */
+#tab-calendario .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:10px}
+#tab-calendario .cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px}
+#tab-calendario .cal-dh{text-align:center;font-size:11px;color:var(--mu2);text-transform:uppercase;letter-spacing:.06em;padding:4px 0}
+#tab-calendario .cal-day{min-height:56px;background:var(--d3);border:1px solid var(--d4);border-radius:6px;padding:4px;cursor:pointer;transition:border-color .2s}
+#tab-calendario .cal-day:hover{border-color:var(--d5)}
+#tab-calendario .cal-day.today{border-color:var(--green)}
+#tab-calendario .cal-day.other-month{opacity:.35}
+#tab-calendario .cal-day .cal-dn{font-size:11px;color:var(--mu2);margin-bottom:2px}
+#tab-calendario .cal-day.today .cal-dn{color:var(--green);font-weight:700}
+#tab-calendario .cal-event{background:var(--gdim);border:1px solid #166534;border-radius:3px;font-size:9px;color:var(--green);padding:1px 4px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+#tab-calendario .cal-event.assigned{background:#1e3a5f;border-color:#1d4ed8;color:#93c5fd}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-nav button{background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:6px 14px;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;transition:all .2s}
+.cal-nav button:hover{border-color:var(--green);color:var(--green)}
+.cal-nav .cal-month-label{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--light);letter-spacing:.06em}
+.cal-event-list{margin-top:16px}
+.cal-event-item{background:var(--d2);border:1px solid var(--d4);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.cal-event-item .cei-time{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--green);min-width:50px}
+.cal-event-item .cei-info{flex:1}
+.cal-event-item .cei-name{font-weight:600;font-size:14px;color:var(--light)}
+.cal-event-item .cei-meta{font-size:12px;color:var(--mu2);margin-top:2px}
+.cal-event-item select{background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:5px 8px;border-radius:5px;font-size:12px;cursor:pointer}
+.cal-event-item select:focus{outline:none;border-color:var(--green)}
 
 .pw-wrap{position:relative}
 .pw-wrap input{padding-right:40px!important}
@@ -1840,6 +1876,13 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <!-- Riepilogo numerico -->
     <div class="gs-summary-row" id="gsSummaryRow"></div>
 
+    <!-- Ricerca utente -->
+    <div style="margin-bottom:12px;position:relative">
+      <input type="text" id="gsSearch" placeholder="🔍 Cerca studente per nome o cognome..." oninput="gsSearchUser()" autocomplete="off"
+        style="width:100%;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:9px 12px;border-radius:6px;font-size:14px">
+      <div id="gsSearchDrop" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--d2);border:1px solid var(--d4);border-radius:0 0 6px 6px;z-index:20;max-height:180px;overflow-y:auto"></div>
+    </div>
+
     <!-- Filtri -->
     <div class="gs-filters">
       <button class="gs-filter-btn active" onclick="gsFilter('all',this)">Tutti</button>
@@ -1850,6 +1893,29 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 
     <!-- Lista utenti -->
     <div id="gsUserList"></div>
+  </div>
+
+  <!-- CALENDARIO -->
+  <div class="tab-body" id="tab-calendario">
+    <h2 style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:22px;color:var(--green);margin-bottom:4px;letter-spacing:-.01em">CALENDARIO LEZIONI</h2>
+    <p style="font-size:13px;color:var(--mu2);margin-bottom:18px">Tutte le lezioni prenotate — assegna l'insegnante per ogni appuntamento.</p>
+    <div id="calContainer"></div>
+  </div>
+
+  <!-- POPUP APPUNTAMENTO (fuori dal tab per z-index corretto) -->
+  <div id="gsApptOverlay">
+    <div class="gs-appt-card">
+      <h3 id="gsApptTitle">📅 APPUNTAMENTO</h3>
+      <label>Data e orario</label>
+      <input type="datetime-local" id="gsApptDt">
+      <label>Note (opzionale)</label>
+      <input type="text" id="gsApptNote" placeholder="Es. Palestra via Roma">
+      <div class="gs-appt-btns">
+        <button onclick="gsApptCancel()" style="background:var(--d3);color:var(--mu2);border:1px solid var(--d5)">ANNULLA</button>
+        <button onclick="gsApptClear()" style="background:#3d0505;color:#f87171;border:1px solid #7f1d1d">RIMUOVI</button>
+        <button onclick="gsApptSave()" style="background:var(--green);color:#000">SALVA</button>
+      </div>
+    </div>
   </div>
 
   <!-- ADMIN -->
@@ -2543,7 +2609,7 @@ function enterApp(){
   autoLoadNextSession();
   loadPrev501Sessions();
   checkReset();
-}
+  if(isAdmin) setTimeout(gsRestoreNotifications, 800); // schedula notifiche appuntamenti futuri
 
 function autoLoadNextSession(){
   const data=getUD(CU.id);
@@ -2690,6 +2756,7 @@ const LD = {
   ],
   adminTab:        {id:'admin',       icon:'⚙️', label:'Admin'},
   gestTab:         {id:'gestionale',  icon:'📋', label:'Gestionale'}, // admin-only
+  calTab:          {id:'calendario',  icon:'📅', label:'Calendario'}, // admin-only
   analysisTab:     {id:'shotanalysis',icon:'📹', label:'Analisi'}, // admin-only
   logoutTab:    {id:'__logout',    icon:'⏻',  label:'Logout', isLogout:true},
   showAdmin:  false,
@@ -2720,6 +2787,7 @@ function ldAllTabs(){
   if(LD.showAdmin){
     all.push(LD.analysisTab); // ANALISI visible only to admins
     all.push(LD.gestTab);     // GESTIONALE visible only to admins
+    all.push(LD.calTab);      // CALENDARIO visible only to admins
     all.push(LD.adminTab);
   }
   all.push(LD.logoutTab);
@@ -3074,6 +3142,7 @@ function showTab(name,silent=false){
     if(name==='stats')       renderStats();
     if(name==='admin')       renderAdmin();
     if(name==='gestionale')  renderGestionale();
+    if(name==='calendario')  renderCalendario();
     if(name==='profile')     loadProfileForm();
     if(name==='checkout')    renderCOTables();
   }
@@ -4359,30 +4428,30 @@ function renderAdmin501Compare(uid){
 // ══════════════════════════════════════════════════
 // GESTIONALE LEZIONI
 // ══════════════════════════════════════════════════
-// Struttura Firebase:  userData[uid]/__percorso = {
+// Struttura Firebase: userData[uid]/__percorso = {
 //   totLezioni: N,
-//   tipoPagamento: 'anticipato' | 'lezione',  // anticipato=pagate tutte, lezione=una per volta
-//   lezioni: [ {svolta:bool, pagata:bool}, ... ]  // array di N elementi
+//   tipoPagamento: 'anticipato' | 'lezione',
+//   lezioni: [ { svolta:bool, pagata:bool, dt:string|null, note:string|null }, ... ]
 // }
+//
+// EMOJI stati — lezione per lezione:
+//   non svolta / non pagata  → numero (grigio)
+//   svolta (non pagata)      → ✅
+//   svolta + pagata          → 🏆
+//   pagata (non svolta)      → 💰
+//
+// EMOJI stati — tutto anticipato:
+//   pagata / non svolta (default) → numero (blu)
+//   pagata + svolta               → ✅
 
-let _gsFilter = 'all';    // filtro attivo: all | active | done | none
-let _gsExpanded = {};     // uid -> bool (card aperta)
+let _gsFilter   = 'all';
+let _gsExpanded = {};
+let _gsApptCtx  = null; // {uid, idx}
 
-function gsGetPercorso(uid){
-  return (getUD(uid).__percorso) || null;
-}
-
-function gsSetPercorso(uid, p){
-  const data = getUD(uid);
-  data.__percorso = p;
-  setUD(uid, data);
-}
-
-function gsDelPercorso(uid){
-  const data = getUD(uid);
-  delete data.__percorso;
-  setUD(uid, data);
-}
+// ── helpers ──────────────────────────────────────
+function gsGetPercorso(uid){ return (getUD(uid).__percorso) || null; }
+function gsSetPercorso(uid, p){ const d=getUD(uid); d.__percorso=p; setUD(uid,d); }
+function gsDelPercorso(uid){ const d=getUD(uid); delete d.__percorso; setUD(uid,d); }
 
 function gsStatus(p){
   if(!p) return 'none';
@@ -4391,6 +4460,65 @@ function gsStatus(p){
   return 'active';
 }
 
+// Aggiorna pillola badge + meta di una card senza re-render completo
+function gsRefreshCardHead(uid){
+  const p  = gsGetPercorso(uid);
+  const st = gsStatus(p);
+  const badgeMap = {
+    none:   {cls:'gsb-none',  txt:'Nessun percorso'},
+    active: {cls:'gsb-active',txt:'In corso'},
+    done:   {cls:'gsb-done',  txt:'Completato'},
+  };
+  const badge = badgeMap[st];
+  const card = document.getElementById('gsCard_'+uid);
+  if(!card) return;
+  const badgeEl = card.querySelector('.gs-status-badge');
+  if(badgeEl){
+    badgeEl.className = 'gs-status-badge '+badge.cls;
+    badgeEl.textContent = badge.txt;
+  }
+  const metaEl = card.querySelector('.gs-user-meta');
+  if(metaEl){
+    const u = getUsers().find(u=>u.id===uid);
+    if(u) metaEl.innerHTML = u.email + (p ? ` &middot; ${p.lezioni.filter(l=>l.svolta).length}/${p.totLezioni} lezioni svolte` : '');
+  }
+}
+
+// ── ricerca ──────────────────────────────────────
+function gsSearchUser(){
+  const q    = document.getElementById('gsSearch').value.trim().toLowerCase();
+  const drop = document.getElementById('gsSearchDrop');
+  if(!q){ drop.style.display='none'; return; }
+  const matches = getUsers().filter(u=>u.role!=='admin' && (u.firstName+' '+u.lastName).toLowerCase().includes(q));
+  if(!matches.length){ drop.style.display='none'; return; }
+  drop.style.display = 'block';
+  drop.innerHTML = matches.map(u=>`<div onclick="gsPinUser('${u.id}')" style="padding:10px 12px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--d4);transition:background .15s" onmouseover="this.style.background='var(--d3)'" onmouseout="this.style.background=''">${u.firstName} ${u.lastName} <span style="font-size:12px;color:var(--muted)">${u.email}</span></div>`).join('');
+}
+
+function gsPinUser(uid){
+  document.getElementById('gsSearch').value = '';
+  document.getElementById('gsSearchDrop').style.display = 'none';
+  // Espandi la card e porta in cima — prima re-render con quell'utente in cima
+  _gsExpanded[uid] = true;
+  const users = getUsers().filter(u=>u.role!=='admin');
+  let filtered = users.filter(u=>{
+    const st = gsStatus(gsGetPercorso(u.id));
+    if(_gsFilter==='active') return st==='active';
+    if(_gsFilter==='done')   return st==='done';
+    if(_gsFilter==='none')   return st==='none';
+    return true;
+  });
+  // porta in cima
+  const idx = filtered.findIndex(u=>u.id===uid);
+  if(idx>0){ const [pu]=filtered.splice(idx,1); filtered.unshift(pu); }
+  const listEl = document.getElementById('gsUserList');
+  if(listEl) listEl.innerHTML = filtered.map(u=>gsRenderUserCard(u)).join('');
+  // scroll to card
+  const card = document.getElementById('gsCard_'+uid);
+  if(card) card.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ── filtri ───────────────────────────────────────
 function gsFilter(f, btn){
   _gsFilter = f;
   document.querySelectorAll('.gs-filter-btn').forEach(b=>b.classList.remove('active'));
@@ -4398,68 +4526,56 @@ function gsFilter(f, btn){
   gsRender();
 }
 
+// ── render principale ────────────────────────────
 function renderGestionale(){
   if(!CU || CU.role!=='admin') return;
   gsRender();
 }
 
 function gsRender(){
-  const users = getUsers().filter(u => u.role !== 'admin'); // mostra solo utenti non-admin
+  const users     = getUsers().filter(u=>u.role!=='admin');
   const summaryEl = document.getElementById('gsSummaryRow');
   const listEl    = document.getElementById('gsUserList');
   if(!summaryEl || !listEl) return;
 
-  // Calcola riepilogo
   let cntNone=0, cntActive=0, cntDone=0;
   users.forEach(u=>{
-    const st = gsStatus(gsGetPercorso(u.id));
+    const st=gsStatus(gsGetPercorso(u.id));
     if(st==='none')   cntNone++;
     if(st==='active') cntActive++;
     if(st==='done')   cntDone++;
   });
   summaryEl.innerHTML = [
-    {v:users.length,  l:'Totale studenti', c:''},
-    {v:cntActive,     l:'In corso',        c:'var(--green)'},
-    {v:cntDone,       l:'Completati',      c:'#60a5fa'},
-    {v:cntNone,       l:'Nessun percorso', c:'var(--mu2)'},
-  ].map(c=>`<div class="gs-summary-chip">
-    <div class="gsv" style="${c.c?'color:'+c.c:''}">${c.v}</div>
-    <div class="gsl">${c.l}</div>
-  </div>`).join('');
+    {v:users.length, l:'Totale studenti', c:''},
+    {v:cntActive,    l:'In corso',        c:'var(--green)'},
+    {v:cntDone,      l:'Completati',      c:'#60a5fa'},
+    {v:cntNone,      l:'Nessun percorso', c:'var(--mu2)'},
+  ].map(c=>`<div class="gs-summary-chip"><div class="gsv" style="${c.c?'color:'+c.c:''}">${c.v}</div><div class="gsl">${c.l}</div></div>`).join('');
 
-  // Filtra utenti
   let filtered = users.filter(u=>{
-    const st = gsStatus(gsGetPercorso(u.id));
-    if(_gsFilter==='all')    return true;
+    const st=gsStatus(gsGetPercorso(u.id));
     if(_gsFilter==='active') return st==='active';
     if(_gsFilter==='done')   return st==='done';
     if(_gsFilter==='none')   return st==='none';
     return true;
   });
 
-  if(!filtered.length){
-    listEl.innerHTML = '<div class="gs-empty">Nessuno studente in questa categoria.</div>';
-    return;
-  }
-
-  listEl.innerHTML = filtered.map(u => gsRenderUserCard(u)).join('');
+  listEl.innerHTML = filtered.length
+    ? filtered.map(u=>gsRenderUserCard(u)).join('')
+    : '<div class="gs-empty">Nessuno studente in questa categoria.</div>';
 }
 
 function gsRenderUserCard(u){
-  const p    = gsGetPercorso(u.id);
-  const st   = gsStatus(p);
-  const ini  = (u.firstName[0]||'') + (u.lastName[0]||'');
-  const expanded = _gsExpanded[u.id] || false;
-
+  const p        = gsGetPercorso(u.id);
+  const st       = gsStatus(p);
+  const ini      = (u.firstName[0]||'')+(u.lastName[0]||'');
+  const expanded = _gsExpanded[u.id]||false;
   const badgeMap = {
     none:   {cls:'gsb-none',  txt:'Nessun percorso'},
     active: {cls:'gsb-active',txt:'In corso'},
     done:   {cls:'gsb-done',  txt:'Completato'},
   };
   const badge = badgeMap[st];
-
-  const bodyHtml = expanded ? gsRenderUserBody(u, p) : '';
-
   return `<div class="gs-user-card ${expanded?'expanded':''}" id="gsCard_${u.id}">
     <div class="gs-user-head" onclick="gsToggleCard('${u.id}')">
       <div class="gs-user-avatar">${ini.toUpperCase()}</div>
@@ -4471,7 +4587,7 @@ function gsRenderUserCard(u){
       <span style="color:var(--mu2);font-size:18px;margin-left:8px;transition:transform .2s;display:inline-block;${expanded?'transform:rotate(180deg)':''}">▾</span>
     </div>
     <div class="gs-user-body ${expanded?'open':''}" id="gsBody_${u.id}">
-      ${bodyHtml}
+      ${expanded ? gsRenderUserBody(u,p) : ''}
     </div>
   </div>`;
 }
@@ -4485,37 +4601,96 @@ function gsToggleCard(uid){
   card.classList.toggle('expanded', expanded);
   body.classList.toggle('open', expanded);
   const arrow = card.querySelector('.gs-user-head > span:last-child');
-  if(arrow) arrow.style.transform = expanded ? 'rotate(180deg)' : '';
+  if(arrow) arrow.style.transform = expanded?'rotate(180deg)':'';
   if(expanded){
-    const u = getUsers().find(u=>u.id===uid);
-    if(u) body.innerHTML = gsRenderUserBody(u, gsGetPercorso(uid));
+    const u=getUsers().find(u=>u.id===uid);
+    if(u) body.innerHTML=gsRenderUserBody(u, gsGetPercorso(uid));
   }
+}
+
+// ── contenuto card ────────────────────────────────
+function gsLezBtnHtml(uid, l, i, tipo){
+  const hasDt = !!(l.dt);
+  if(tipo==='anticipato'){
+    // 2 stati: pagata-non-svolta (default blu, numero) → pagata-svolta (verde, ✅)
+    if(l.svolta){
+      const dtStr = hasDt ? `<span class="gs-lez-dt">${gsFormatDtShort(l.dt)}</span>` : '';
+      return `<button class="gs-lez-btn st-ant-svolta${hasDt?' has-dt':''}" onclick="gsToggleLezione('${uid}',${i})" title="Lezione ${i+1} — svolta${hasDt?' · '+l.dt:''}${l.note?' · '+l.note:''}">
+        <span style="font-size:22px">✅</span>${dtStr}
+      </button>`;
+    } else {
+      const dtStr = hasDt ? `<span class="gs-lez-dt">${gsFormatDtShort(l.dt)}</span>` : '';
+      return `<button class="gs-lez-btn st-ant-base${hasDt?' has-dt':''}" onclick="gsToggleLezione('${uid}',${i})" title="Lezione ${i+1} — pagata${hasDt?' · '+l.dt:''}${l.note?' · '+l.note:''}">
+        <span class="gs-lez-num" style="color:#93c5fd">${i+1}</span>${dtStr}
+        <button onclick="event.stopPropagation();gsOpenAppt('${uid}',${i})" style="position:absolute;bottom:2px;right:2px;background:transparent;border:none;font-size:10px;cursor:pointer;padding:0;line-height:1;color:var(--amber);opacity:.7" title="Imposta appuntamento">📅</button>
+      </button>`;
+    }
+  } else {
+    // 4 stati lezione per lezione:
+    // default (grigio, numero) → svolta (verde, ✅) → svolta+pagata (verde, 🏆) → pagata-non-svolta (blu, 💰) → reset
+    let btnClass='', content='';
+    if(!l.svolta && !l.pagata){
+      btnClass=''; // grigio default
+      const dtStr = hasDt ? `<span class="gs-lez-dt">${gsFormatDtShort(l.dt)}</span>` : '';
+      content = `<span class="gs-lez-num">${i+1}</span>${dtStr}`;
+    } else if(l.svolta && !l.pagata){
+      btnClass='st-svolta';
+      const dtStr = hasDt ? `<span class="gs-lez-dt">${gsFormatDtShort(l.dt)}</span>` : '';
+      content = `<span style="font-size:22px">✅</span>${dtStr}`;
+    } else if(l.svolta && l.pagata){
+      btnClass='st-svolta-pagata';
+      const dtStr = hasDt ? `<span class="gs-lez-dt">${gsFormatDtShort(l.dt)}</span>` : '';
+      content = `<span style="font-size:22px">🏆</span>${dtStr}`;
+    } else {
+      // pagata non svolta
+      btnClass='st-pagata';
+      const dtStr = hasDt ? `<span class="gs-lez-dt">${gsFormatDtShort(l.dt)}</span>` : '';
+      content = `<span style="font-size:22px">💰</span>${dtStr}`;
+    }
+    const title = `Lezione ${i+1}${l.svolta?' — svolta':''}${l.pagata?' — pagata':''}${hasDt?' · '+l.dt:''}${l.note?' · '+l.note:''}`;
+    return `<button class="gs-lez-btn ${btnClass}${hasDt?' has-dt':''}" onclick="gsToggleLezione('${uid}',${i})" title="${title}" style="position:relative">
+      ${content}
+      <button onclick="event.stopPropagation();gsOpenAppt('${uid}',${i})" style="position:absolute;bottom:2px;right:2px;background:transparent;border:none;font-size:10px;cursor:pointer;padding:0;line-height:1;color:var(--amber);opacity:.7" title="Imposta appuntamento">📅</button>
+    </button>`;
+  }
+}
+
+function gsFormatDtShort(dt){
+  if(!dt) return '';
+  try{
+    const d=new Date(dt);
+    return d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'})+'  '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){ return dt.slice(0,10); }
 }
 
 function gsRenderUserBody(u, p){
   const uid = u.id;
-
   if(!p){
-    // Nessun percorso — form crea nuovo
-    return `<div>
-      <div class="gs-section-title">NUOVO PERCORSO</div>
-      ${gsRenderForm(uid, null)}
-    </div>`;
+    return `<div><div class="gs-section-title">NUOVO PERCORSO</div>${gsRenderForm(uid,null)}</div>`;
   }
+  const svolte = p.lezioni.filter(l=>l.svolta).length;
+  const pagate = p.lezioni.filter(l=>l.pagata).length;
+  const pct    = Math.round(svolte/p.totLezioni*100);
+  const tipoPagLabel = p.tipoPagamento==='anticipato'?'Pagate tutte in anticipo':'Pagamento lezione per lezione';
 
-  // Percorso esistente
-  const svolte  = p.lezioni.filter(l=>l.svolta).length;
-  const pagate  = p.lezioni.filter(l=>l.pagata).length;
-  const pct     = Math.round(svolte/p.totLezioni*100);
-  const tipoPagLabel = p.tipoPagamento==='anticipato' ? 'Pagate tutte in anticipo' : 'Pagamento lezione per lezione';
+  const lezioniHtml = p.lezioni.map((l,i)=>gsLezBtnHtml(uid,l,i,p.tipoPagamento)).join('');
 
-  const lezioniHtml = p.lezioni.map((l,i)=>{
-    const cls = [l.svolta?'svolta':'', l.pagata?'pagata':''].filter(Boolean).join(' ');
-    return `<button class="gs-lez-btn ${cls}" onclick="gsToggleLezione('${uid}',${i})" title="Lezione ${i+1}${l.svolta?' — svolta':''}${l.pagata?' — pagata':''}">${i+1}</button>`;
-  }).join('');
+  // legenda in base al tipo
+  const legendHtml = p.tipoPagamento==='anticipato'
+    ? `<div class="gs-lezioni-legend">
+        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#1e3a5f;border:1.5px solid #1d4ed8"></div>Pagata (non svolta)</div>
+        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#052e16;border:1.5px solid var(--green)">✅</div>Svolta</div>
+        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:var(--d3);border:1.5px solid var(--amber)"></div>Con appuntamento</div>
+      </div>`
+    : `<div class="gs-lezioni-legend">
+        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:var(--d3);border:1.5px solid var(--d5)"></div>Non svolta</div>
+        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#052e16;border:1.5px solid #166534">✅</div>Svolta</div>
+        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#052e16;border:1.5px solid var(--green)">🏆</div>Svolta + pagata</div>
+        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#1e3a5f;border:1.5px solid #1d4ed8">💰</div>Pagata</div>
+        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:var(--d3);border:1.5px solid var(--amber)"></div>Con appuntamento</div>
+      </div>`;
 
   return `<div>
-    <!-- Barra avanzamento -->
     <div style="margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--mu2);margin-bottom:4px">
         <span>Avanzamento: <strong style="color:var(--light)">${svolte}/${p.totLezioni}</strong></span>
@@ -4523,40 +4698,27 @@ function gsRenderUserBody(u, p){
       </div>
       <div class="gs-prog-bar"><div class="gs-prog-fill" style="width:${pct}%"></div></div>
     </div>
-
-    <!-- Info percorso -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-      <div style="background:var(--d3);border-radius:8px;padding:8px 14px;flex:1;min-width:100px">
+      <div style="background:var(--d3);border-radius:8px;padding:8px 14px;flex:1;min-width:90px">
         <div style="font-size:11px;color:var(--mu2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Lezioni</div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--light)">${p.totLezioni}</div>
       </div>
-      <div style="background:var(--d3);border-radius:8px;padding:8px 14px;flex:1;min-width:100px">
+      <div style="background:var(--d3);border-radius:8px;padding:8px 14px;flex:1;min-width:90px">
         <div style="font-size:11px;color:var(--mu2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Svolte</div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--green)">${svolte}</div>
       </div>
-      <div style="background:var(--d3);border-radius:8px;padding:8px 14px;flex:1;min-width:100px">
+      <div style="background:var(--d3);border-radius:8px;padding:8px 14px;flex:1;min-width:90px">
         <div style="font-size:11px;color:var(--mu2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Pagate</div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:#60a5fa">${pagate}</div>
       </div>
     </div>
-
-    <!-- Tipo pagamento -->
-    <div style="font-size:12px;color:var(--mu2);margin-bottom:12px">
-      💰 <span style="color:var(--light)">${tipoPagLabel}</span>
-    </div>
-
-    <!-- Griglia lezioni -->
-    <div class="gs-section-title">LEZIONI — tocca per segnare svolta / pagata</div>
-    <div style="font-size:12px;color:var(--mu2);margin-bottom:6px">Tocca 1 volta = svolta &nbsp;|&nbsp; Tocca 2 volte = svolta + pagata &nbsp;|&nbsp; Tocca 3 volte = resetta</div>
+    <div style="font-size:12px;color:var(--mu2);margin-bottom:12px">💰 <span style="color:var(--light)">${tipoPagLabel}</span></div>
+    <div class="gs-section-title">LEZIONI</div>
+    <div style="font-size:11px;color:var(--mu2);margin-bottom:6px">${p.tipoPagamento==='anticipato'
+      ? 'Tocca per segnare svolta. Il 📅 imposta data/ora appuntamento.'
+      : 'Tocca per cambiare stato. Il 📅 imposta data/ora appuntamento.'}</div>
     <div class="gs-lezioni-grid">${lezioniHtml}</div>
-    <div class="gs-lezioni-legend">
-      <div class="gs-leg-item"><div class="gs-leg-dot" style="background:var(--d3);border:1.5px solid var(--d5)"></div>Non svolta</div>
-      <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#052e16;border:1.5px solid #166534"></div>Svolta</div>
-      <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#1e3a5f;border:1.5px solid #1d4ed8"></div>Pagata</div>
-      <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#052e16;border:1.5px solid var(--green)"></div>Svolta + pagata</div>
-    </div>
-
-    <!-- Modifica percorso -->
+    ${legendHtml}
     <div style="margin-top:18px;border-top:1px solid var(--d4);padding-top:14px">
       <div class="gs-section-title">MODIFICA PERCORSO</div>
       ${gsRenderForm(uid, p)}
@@ -4581,25 +4743,34 @@ function gsRenderForm(uid, p){
       </select>
     </div>
   </div>
-  <button class="gs-save-btn" onclick="gsSavePercorso('${uid}')">${p ? 'SALVA MODIFICHE' : 'CREA PERCORSO'}</button>`;
+  <button class="gs-save-btn" onclick="gsSavePercorso('${uid}')">${p?'SALVA MODIFICHE':'CREA PERCORSO'}</button>`;
 }
 
+// ── toggle lezione ────────────────────────────────
 function gsToggleLezione(uid, idx){
   const p = gsGetPercorso(uid);
   if(!p) return;
   const l = p.lezioni[idx];
-  // Ciclo: non svolta → svolta → svolta+pagata → reset
-  if(!l.svolta && !l.pagata)         { l.svolta=true;  l.pagata=false; }
-  else if(l.svolta && !l.pagata)     { l.svolta=true;  l.pagata=true;  }
-  else                                { l.svolta=false; l.pagata=false; }
+  if(p.tipoPagamento==='anticipato'){
+    // 2 stati: pagata+non-svolta ↔ pagata+svolta
+    l.svolta = !l.svolta;
+    l.pagata = true;
+  } else {
+    // 4 stati ciclici: default → svolta → svolta+pagata → pagata → default
+    if(!l.svolta && !l.pagata)     { l.svolta=true;  l.pagata=false; }
+    else if(l.svolta && !l.pagata) { l.svolta=true;  l.pagata=true;  }
+    else if(l.svolta && l.pagata)  { l.svolta=false; l.pagata=true;  }
+    else                            { l.svolta=false; l.pagata=false; }
+  }
   gsSetPercorso(uid, p);
-  // Refresh solo il body della card
   const u = getUsers().find(u=>u.id===uid);
   const body = document.getElementById('gsBody_'+uid);
   if(body && u) body.innerHTML = gsRenderUserBody(u, p);
+  gsRefreshCardHead(uid);
   gsRenderSummary();
 }
 
+// ── salva/elimina percorso ────────────────────────
 function gsSavePercorso(uid){
   const totEl  = document.getElementById('gsTot_'+uid);
   const tipoEl = document.getElementById('gsTipo_'+uid);
@@ -4611,17 +4782,14 @@ function gsSavePercorso(uid){
   const existing = gsGetPercorso(uid);
   let lezioni;
   if(existing){
-    // Conserva le lezioni già registrate, aggiusta lunghezza
-    lezioni = [...existing.lezioni];
-    while(lezioni.length < tot)  lezioni.push({svolta:false, pagata:false});
-    if(lezioni.length > tot)     lezioni = lezioni.slice(0, tot);
+    lezioni = existing.lezioni.map(l=>({svolta:l.svolta||false, pagata:l.pagata||false, dt:l.dt||null, note:l.note||null}));
+    while(lezioni.length < tot) lezioni.push({svolta:false, pagata:tipo==='anticipato', dt:null, note:null});
+    if(lezioni.length > tot)   lezioni = lezioni.slice(0, tot);
+    // Se si passa ad anticipato: segna pagate le non ancora pagate
+    if(tipo==='anticipato') lezioni = lezioni.map(l=>({...l, pagata:true}));
+    // Se si passa a lezione-per-lezione: non toccare stati esistenti
   } else {
-    lezioni = Array.from({length:tot}, ()=>({svolta:false, pagata:false}));
-  }
-
-  // Se pagamento anticipato → segna tutte come pagate
-  if(tipo==='anticipato'){
-    lezioni = lezioni.map(l=>({...l, pagata:true}));
+    lezioni = Array.from({length:tot}, ()=>({svolta:false, pagata:tipo==='anticipato', dt:null, note:null}));
   }
 
   gsSetPercorso(uid, {totLezioni:tot, tipoPagamento:tipo, lezioni});
@@ -4629,9 +4797,7 @@ function gsSavePercorso(uid){
   const u = getUsers().find(u=>u.id===uid);
   const body = document.getElementById('gsBody_'+uid);
   if(body && u) body.innerHTML = gsRenderUserBody(u, gsGetPercorso(uid));
-  const card = document.getElementById('gsCard_'+uid);
-  if(card) card.querySelector('.gs-user-meta').textContent =
-    `${u.email} \u00b7 ${lezioni.filter(l=>l.svolta).length}/${tot} lezioni svolte`;
+  gsRefreshCardHead(uid);
   gsRenderSummary();
 }
 
@@ -4641,21 +4807,16 @@ function gsConfirmDelPercorso(uid){
   showConfirmPopup(
     'Elimina percorso',
     `Vuoi eliminare il percorso di lezioni di ${u.firstName} ${u.lastName}? Tutti i dati verranno persi.`,
-    ()=>{
-      gsDelPercorso(uid);
-      _gsExpanded[uid] = false;
-      gsRender();
-    },
+    ()=>{ gsDelPercorso(uid); _gsExpanded[uid]=false; gsRender(); },
     {okLabel:'ELIMINA', okBg:'#dc2626', okColor:'#fff'}
   );
 }
 
 function gsRenderSummary(){
-  // Aggiorna solo i chip di riepilogo senza ri-renderizzare tutta la lista
-  const users  = getUsers().filter(u=>u.role!=='admin');
+  const users = getUsers().filter(u=>u.role!=='admin');
   let cntNone=0, cntActive=0, cntDone=0;
   users.forEach(u=>{
-    const st = gsStatus(gsGetPercorso(u.id));
+    const st=gsStatus(gsGetPercorso(u.id));
     if(st==='none')   cntNone++;
     if(st==='active') cntActive++;
     if(st==='done')   cntDone++;
@@ -4663,14 +4824,285 @@ function gsRenderSummary(){
   const el = document.getElementById('gsSummaryRow');
   if(!el) return;
   el.innerHTML = [
-    {v:users.length,  l:'Totale studenti', c:''},
-    {v:cntActive,     l:'In corso',        c:'var(--green)'},
-    {v:cntDone,       l:'Completati',      c:'#60a5fa'},
-    {v:cntNone,       l:'Nessun percorso', c:'var(--mu2)'},
-  ].map(c=>`<div class="gs-summary-chip">
-    <div class="gsv" style="${c.c?'color:'+c.c:''}">${c.v}</div>
-    <div class="gsl">${c.l}</div>
-  </div>`).join('');
+    {v:users.length, l:'Totale studenti', c:''},
+    {v:cntActive,    l:'In corso',        c:'var(--green)'},
+    {v:cntDone,      l:'Completati',      c:'#60a5fa'},
+    {v:cntNone,      l:'Nessun percorso', c:'var(--mu2)'},
+  ].map(c=>`<div class="gs-summary-chip"><div class="gsv" style="${c.c?'color:'+c.c:''}">${c.v}</div><div class="gsl">${c.l}</div></div>`).join('');
+}
+
+// ── popup appuntamento ────────────────────────────
+function gsOpenAppt(uid, idx){
+  const p = gsGetPercorso(uid);
+  if(!p) return;
+  const l   = p.lezioni[idx];
+  const u   = getUsers().find(u=>u.id===uid);
+  _gsApptCtx = {uid, idx};
+  document.getElementById('gsApptTitle').textContent = `📅 Appuntamento — ${u?u.firstName+' '+u.lastName:''} · Lezione ${idx+1}`;
+  document.getElementById('gsApptDt').value   = l.dt   || '';
+  document.getElementById('gsApptNote').value = l.note || '';
+  document.getElementById('gsApptOverlay').classList.add('open');
+}
+
+function gsApptCancel(){
+  _gsApptCtx = null;
+  document.getElementById('gsApptOverlay').classList.remove('open');
+}
+
+function gsApptClear(){
+  if(!_gsApptCtx) return;
+  const {uid, idx} = _gsApptCtx;
+  const p = gsGetPercorso(uid);
+  if(!p) return;
+  p.lezioni[idx].dt   = null;
+  p.lezioni[idx].note = null;
+  gsSetPercorso(uid, p);
+  gsApptCancel();
+  const u = getUsers().find(u=>u.id===uid);
+  const body = document.getElementById('gsBody_'+uid);
+  if(body && u) body.innerHTML = gsRenderUserBody(u, p);
+}
+
+function gsApptSave(){
+  if(!_gsApptCtx) return;
+  const {uid, idx} = _gsApptCtx;
+  const p   = gsGetPercorso(uid);
+  if(!p) return;
+  const dt  = document.getElementById('gsApptDt').value;
+  const note= document.getElementById('gsApptNote').value.trim();
+  p.lezioni[idx].dt   = dt   || null;
+  p.lezioni[idx].note = note || null;
+  gsSetPercorso(uid, p);
+  // Schedule notification if dt set
+  if(dt) gsScheduleNotifications(uid, idx, dt, note, getUsers().find(u=>u.id===uid));
+  gsApptCancel();
+  const u = getUsers().find(u=>u.id===uid);
+  const body = document.getElementById('gsBody_'+uid);
+  if(body && u) body.innerHTML = gsRenderUserBody(u, p);
+  // Aggiorna calendario se aperto
+  if(document.getElementById('tab-calendario').classList.contains('active')) renderCalendario();
+}
+
+// ══════════════════════════════════════════════════
+// CALENDARIO LEZIONI
+// ══════════════════════════════════════════════════
+let _calYear  = new Date().getFullYear();
+let _calMonth = new Date().getMonth(); // 0-based
+let _calSelDay = null; // 'YYYY-MM-DD' | null
+
+function renderCalendario(){
+  if(!CU || CU.role!=='admin') return;
+  const el = document.getElementById('calContainer');
+  if(!el) return;
+  el.innerHTML = calBuildHtml();
+}
+
+function calBuildHtml(){
+  const monthNames = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const today = new Date();
+  const todayStr = calDateStr(today);
+
+  // Raccoglie tutti gli appuntamenti
+  const events = calGetAllEvents();
+
+  // Raggruppa per giorno
+  const byDay = {};
+  events.forEach(ev=>{
+    const day = ev.dt.slice(0,10);
+    if(!byDay[day]) byDay[day]=[];
+    byDay[day].push(ev);
+  });
+
+  // Costruisce griglia
+  const firstDay = new Date(_calYear, _calMonth, 1);
+  const lastDay  = new Date(_calYear, _calMonth+1, 0);
+  let startDow = firstDay.getDay(); // 0=Dom
+  startDow = startDow===0 ? 6 : startDow-1; // rende lun=0
+
+  const days = [];
+  // celle prima del mese
+  for(let i=0;i<startDow;i++){
+    const d = new Date(_calYear, _calMonth, 1-startDow+i);
+    days.push({date:calDateStr(d), inMonth:false});
+  }
+  for(let d=1;d<=lastDay.getDate();d++){
+    const dt=new Date(_calYear,_calMonth,d);
+    days.push({date:calDateStr(dt), inMonth:true});
+  }
+  // riempi fino a multiplo di 7
+  while(days.length%7!==0){
+    const d=new Date(_calYear,_calMonth+1,days.length-lastDay.getDate());
+    days.push({date:calDateStr(d), inMonth:false});
+  }
+
+  const gridHtml = days.map(d=>{
+    const evs = byDay[d.date]||[];
+    const isToday = d.date===todayStr;
+    const evHtml = evs.slice(0,3).map(ev=>`<div class="cal-event${ev.adminRef?' assigned':''}" onclick="event.stopPropagation();calSelectDay('${d.date}')" title="${ev.userName} — Lez.${ev.idx+1}${ev.note?' · '+ev.note:''}">${ev.timeStr} ${ev.userName.split(' ')[0]}</div>`).join('');
+    const moreHtml = evs.length>3 ? `<div style="font-size:8px;color:var(--mu2);padding-left:2px">+${evs.length-3} altri</div>` : '';
+    return `<div class="cal-day${isToday?' today':''}${!d.inMonth?' other-month':''}" onclick="calSelectDay('${d.date}')">
+      <div class="cal-dn">${parseInt(d.date.slice(8))}</div>
+      ${evHtml}${moreHtml}
+    </div>`;
+  }).join('');
+
+  // Lista giorno selezionato
+  const selDay = _calSelDay || todayStr;
+  const selEvs = byDay[selDay]||[];
+  const admins = getUsers().filter(u=>u.role==='admin');
+  const selD   = new Date(selDay+'T00:00:00');
+  const selLabel = selD.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  const selListHtml = selEvs.length
+    ? selEvs.map(ev=>{
+        const adminOpts = admins.map(a=>`<option value="${a.id}" ${ev.adminRef===a.id?'selected':''}>${a.firstName} ${a.lastName}</option>`).join('');
+        return `<div class="cal-event-item">
+          <div class="cei-time">${ev.timeStr}</div>
+          <div class="cei-info">
+            <div class="cei-name">${ev.userName} · Lezione ${ev.idx+1}</div>
+            <div class="cei-meta">${ev.note||'Nessuna nota'}</div>
+          </div>
+          <select onchange="calAssignAdmin('${ev.uid}',${ev.idx},this.value)" title="Assegna insegnante">
+            <option value="">— Insegnante —</option>
+            ${adminOpts}
+          </select>
+        </div>`;
+      }).join('')
+    : '<div class="gs-empty" style="padding:20px">Nessuna lezione in questo giorno.</div>';
+
+  return `
+    <div class="cal-nav">
+      <button onclick="calPrevMonth()">◀</button>
+      <span class="cal-month-label">${monthNames[_calMonth]} ${_calYear}</span>
+      <button onclick="calNextMonth()">▶</button>
+    </div>
+    <div id="calHead" class="cal-head">
+      ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d=>`<div class="cal-dh">${d}</div>`).join('')}
+    </div>
+    <div class="cal-grid" id="calGrid">${gridHtml}</div>
+    <div class="cal-event-list" id="calEventList">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--light);letter-spacing:.04em;margin-bottom:10px;text-transform:capitalize">${selLabel}</div>
+      ${selListHtml}
+    </div>`;
+}
+
+function calDateStr(d){ return d.toISOString().slice(0,10); }
+
+function calGetAllEvents(){
+  const users = getUsers().filter(u=>u.role!=='admin');
+  const evs = [];
+  users.forEach(u=>{
+    const p = gsGetPercorso(u.id);
+    if(!p) return;
+    p.lezioni.forEach((l,i)=>{
+      if(!l.dt) return;
+      try{
+        const d = new Date(l.dt);
+        evs.push({
+          uid:      u.id,
+          userName: u.firstName+' '+u.lastName,
+          idx:      i,
+          dt:       l.dt,
+          timeStr:  d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}),
+          note:     l.note||null,
+          adminRef: l.adminRef||null,
+        });
+      }catch(e){}
+    });
+  });
+  evs.sort((a,b)=>a.dt.localeCompare(b.dt));
+  return evs;
+}
+
+function calSelectDay(dateStr){
+  _calSelDay = dateStr;
+  const el = document.getElementById('calContainer');
+  if(el) el.innerHTML = calBuildHtml();
+}
+
+function calPrevMonth(){
+  _calMonth--;
+  if(_calMonth<0){ _calMonth=11; _calYear--; }
+  renderCalendario();
+}
+function calNextMonth(){
+  _calMonth++;
+  if(_calMonth>11){ _calMonth=0; _calYear++; }
+  renderCalendario();
+}
+
+function calAssignAdmin(uid, idx, adminId){
+  const p = gsGetPercorso(uid);
+  if(!p) return;
+  p.lezioni[idx].adminRef = adminId || null;
+  gsSetPercorso(uid, p);
+  // non re-render completo — solo visual feedback: già aggiornato dal select
+}
+
+// ══════════════════════════════════════════════════
+// NOTIFICHE BROWSER — appuntamenti lezioni
+// ══════════════════════════════════════════════════
+// Chiave Firebase: userData[adminUid]/__notifTimers = { 'uid_idx': dt }
+// Le notifiche vengono schedulate via setTimeout localmente alla sessione
+// e richiedono la pagina aperta (no push server-side).
+
+let _gsNotifTimers = {}; // key -> [timeoutId, ...]
+
+function gsScheduleNotifications(uid, idx, dt, note, studentUser){
+  if(!dt) return;
+  const key = uid+'_'+idx;
+  // Cancella timer precedenti per questa lezione
+  (_gsNotifTimers[key]||[]).forEach(t=>clearTimeout(t));
+  _gsNotifTimers[key] = [];
+
+  const lessonMs = new Date(dt).getTime();
+  const now      = Date.now();
+  const userName = studentUser ? studentUser.firstName+' '+studentUser.lastName : 'Studente';
+  const noteStr  = note ? ` · ${note}` : '';
+  const label    = `Lezione ${idx+1} — ${userName}${noteStr}`;
+
+  const offsets = [
+    {ms: 24*60*60*1000, txt:'tra 24 ore'},
+    {ms: 12*60*60*1000, txt:'tra 12 ore'},
+    {ms:    60*60*1000, txt:'tra 1 ora'},
+    {ms:    30*60*1000, txt:'tra 30 minuti'},
+  ];
+
+  // Richiedi permesso notifiche
+  if('Notification' in window && Notification.permission==='default'){
+    Notification.requestPermission();
+  }
+
+  offsets.forEach(({ms, txt})=>{
+    const fireAt = lessonMs - ms;
+    const delay  = fireAt - now;
+    if(delay < 0) return; // già passato
+    const tid = setTimeout(()=>{
+      if(Notification.permission==='granted'){
+        new Notification('📅 '+label, {
+          body: `La lezione è ${txt}`,
+          icon: '/favicon.ico',
+          tag:  key+'_'+ms,
+        });
+      }
+    }, delay);
+    _gsNotifTimers[key].push(tid);
+  });
+}
+
+// Re-schedula notifiche al login per tutti gli appuntamenti futuri degli admin
+function gsRestoreNotifications(){
+  if(!CU || CU.role!=='admin') return;
+  const users = getUsers().filter(u=>u.role!=='admin');
+  users.forEach(u=>{
+    const p = gsGetPercorso(u.id);
+    if(!p) return;
+    p.lezioni.forEach((l,i)=>{
+      if(l.dt && new Date(l.dt).getTime() > Date.now()){
+        gsScheduleNotifications(u.id, i, l.dt, l.note, u);
+      }
+    });
+  });
 }
 
 // Render stats into a specific container element for a given user
