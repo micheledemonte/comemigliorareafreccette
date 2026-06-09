@@ -584,16 +584,16 @@ select:hover{border-color:var(--green)}
 .gs-section-title{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--mu2);letter-spacing:.08em;margin-bottom:10px;margin-top:4px}
 .gs-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px}
 /* Popup appuntamento */
-#gsApptOverlay{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;padding:20px}
+#gsApptOverlay{position:fixed;inset:0;z-index:1800;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;padding:20px}
 #gsApptOverlay.open{display:flex}
-.gs-appt-card{background:var(--d2);border:1px solid var(--d4);border-radius:18px;padding:28px 24px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
-.gs-appt-card h3{font-family:'DM Sans',sans-serif;font-weight:700;font-size:18px;color:var(--green);margin-bottom:18px}
+.gs-appt-card{background:var(--d2);border:1.5px solid var(--green);border-radius:14px;padding:28px 24px;width:100%;max-width:380px;box-shadow:0 0 0 1px rgba(74,222,128,.12),0 24px 60px rgba(0,0,0,.7)}
+.gs-appt-card .modal-title{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--light);letter-spacing:.04em;margin-bottom:20px;text-align:center}
 .gs-appt-card label{font-size:11px;color:var(--mu2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;display:block}
-.gs-appt-card input,.gs-appt-card select{width:100%;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:10px 12px;border-radius:6px;font-size:14px;margin-bottom:14px;transition:border-color .2s}
+.gs-appt-card input,.gs-appt-card select{box-sizing:border-box;width:100%;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:10px 12px;border-radius:6px;font-size:14px;margin-bottom:14px;transition:border-color .2s}
 .gs-appt-card input:focus,.gs-appt-card select:focus{outline:none;border-color:var(--green)}
 .gs-appt-card input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.6}
 .gs-appt-btns{display:flex;gap:8px;margin-top:4px}
-.gs-appt-btns button{flex:1;padding:10px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;border:none;transition:all .2s}
+.gs-appt-btns button{flex:1;padding:10px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-weight:700;font-size:16px;letter-spacing:.04em;cursor:pointer;border:none;transition:all .2s}
 /* Calendario */
 #tab-calendario .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:10px}
 #tab-calendario .cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px}
@@ -604,8 +604,8 @@ select:hover{border-color:var(--green)}
 #tab-calendario .cal-day.other-month{opacity:.35}
 #tab-calendario .cal-day .cal-dn{font-size:11px;color:var(--mu2);margin-bottom:2px}
 #tab-calendario .cal-day.today .cal-dn{color:var(--green);font-weight:700}
-#tab-calendario .cal-event{background:var(--gdim);border:1px solid #166534;border-radius:3px;font-size:9px;color:var(--green);padding:1px 4px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
-#tab-calendario .cal-event.assigned{background:#1e3a5f;border-color:#1d4ed8;color:#93c5fd}
+#tab-calendario .cal-event{border-radius:3px;font-size:9px;padding:1px 4px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:600}
+/* i colori per utente vengono applicati inline via JS */
 .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .cal-nav button{background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:6px 14px;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;transition:all .2s}
 .cal-nav button:hover{border-color:var(--green);color:var(--green)}
@@ -1905,17 +1905,31 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   <div class="tab-body" id="tab-calendario">
     <h2 style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:22px;color:var(--green);margin-bottom:4px;letter-spacing:-.01em">CALENDARIO LEZIONI</h2>
     <p style="font-size:13px;color:var(--mu2);margin-bottom:18px">Tutte le lezioni prenotate — assegna l'insegnante per ogni appuntamento.</p>
+    <!-- Ricerca utente per filtrare le prenotazioni -->
+    <div style="margin-bottom:14px;position:relative">
+      <input type="text" id="calSearch" placeholder="🔍 Cerca studente per filtrare le prenotazioni..." oninput="calSearchUser()" autocomplete="off"
+        style="width:100%;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:9px 12px;border-radius:6px;font-size:14px;box-sizing:border-box">
+      <div id="calSearchDrop" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--d2);border:1px solid var(--d4);border-radius:0 0 6px 6px;z-index:20;max-height:180px;overflow-y:auto"></div>
+    </div>
+    <div id="calFilterBadge" style="display:none;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+      <span id="calFilterName" style="background:var(--gdim);border:1px solid var(--green);color:var(--green);border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700"></span>
+      <button onclick="calClearFilter()" style="background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:999px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600">✕ Tutti</button>
+    </div>
     <div id="calContainer"></div>
   </div>
 
-  <!-- POPUP APPUNTAMENTO (fuori dal tab per z-index corretto) -->
+  <!-- POPUP APPUNTAMENTO -->
   <div id="gsApptOverlay">
     <div class="gs-appt-card">
-      <h3 id="gsApptTitle">📅 APPUNTAMENTO</h3>
+      <div class="modal-title" id="gsApptTitle">📅 APPUNTAMENTO</div>
       <label>Data e orario</label>
       <input type="datetime-local" id="gsApptDt">
       <label>Note (opzionale)</label>
-      <input type="text" id="gsApptNote" placeholder="Es. Palestra via Roma">
+      <input type="text" id="gsApptNote">
+      <label>Insegnante</label>
+      <select id="gsApptAdmin">
+        <option value="">— Nessuno assegnato —</option>
+      </select>
       <div class="gs-appt-btns">
         <button onclick="gsApptCancel()" style="background:var(--d3);color:var(--mu2);border:1px solid var(--d5)">ANNULLA</button>
         <button onclick="gsApptClear()" style="background:#3d0505;color:#f87171;border:1px solid #7f1d1d">RIMUOVI</button>
@@ -4631,7 +4645,7 @@ function gsLezBtnHtml(uid, l, i, tipo){
   if(tipo === 'anticipato'){
     if(l.svolta){
       btnCls = 'st-ant-svolta';
-      innerHtml = '<span style="font-size:20px">&#x2705;</span>' + dtStr;
+      innerHtml = '<span style="font-size:20px">&#x1F3C6;</span>' + dtStr;
     } else {
       btnCls = 'st-ant-base';
       innerHtml = '<span class="gs-lez-num" style="color:#93c5fd">' + (i+1) + '</span>' + dtStr;
@@ -4840,12 +4854,18 @@ function gsRenderSummary(){
 function gsOpenAppt(uid, idx){
   const p = gsGetPercorso(uid);
   if(!p) return;
-  const l   = p.lezioni[idx];
-  const u   = getUsers().find(u=>u.id===uid);
-  _gsApptCtx = {uid, idx};
-  document.getElementById('gsApptTitle').textContent = `📅 Appuntamento — ${u?u.firstName+' '+u.lastName:''} · Lezione ${idx+1}`;
+  const l      = p.lezioni[idx];
+  const u      = getUsers().find(u=>u.id===uid);
+  _gsApptCtx   = {uid, idx};
+  const titleEl = document.getElementById('gsApptTitle');
+  if(titleEl) titleEl.textContent = '📅 Appuntamento — '+(u?u.firstName+' '+u.lastName:'')+' · Lezione '+(idx+1);
   document.getElementById('gsApptDt').value   = l.dt   || '';
   document.getElementById('gsApptNote').value = l.note || '';
+  // Popola select admin
+  const sel    = document.getElementById('gsApptAdmin');
+  const admins = getUsers().filter(u=>u.role==='admin');
+  sel.innerHTML = '<option value="">— Nessuno assegnato —</option>'
+    + admins.map(a=>'<option value="'+a.id+'"'+(l.adminRef===a.id?' selected':'')+'>'+a.firstName+' '+a.lastName+'</option>').join('');
   document.getElementById('gsApptOverlay').classList.add('open');
 }
 
@@ -4873,27 +4893,57 @@ function gsApptSave(){
   const {uid, idx} = _gsApptCtx;
   const p   = gsGetPercorso(uid);
   if(!p) return;
-  const dt  = document.getElementById('gsApptDt').value;
-  const note= document.getElementById('gsApptNote').value.trim();
-  p.lezioni[idx].dt   = dt   || null;
-  p.lezioni[idx].note = note || null;
+  const dt      = document.getElementById('gsApptDt').value;
+  const note    = document.getElementById('gsApptNote').value.trim();
+  const adminId = document.getElementById('gsApptAdmin').value;
+  p.lezioni[idx].dt       = dt       || null;
+  p.lezioni[idx].note     = note     || null;
+  p.lezioni[idx].adminRef = adminId  || null;
   gsSetPercorso(uid, p);
-  // Schedule notification if dt set
   if(dt) gsScheduleNotifications(uid, idx, dt, note, getUsers().find(u=>u.id===uid));
   gsApptCancel();
-  const u = getUsers().find(u=>u.id===uid);
+  const u    = getUsers().find(u=>u.id===uid);
   const body = document.getElementById('gsBody_'+uid);
   if(body && u) body.innerHTML = gsRenderUserBody(u, p);
-  // Aggiorna calendario se aperto
   if(document.getElementById('tab-calendario').classList.contains('active')) renderCalendario();
 }
 
 // ══════════════════════════════════════════════════
 // CALENDARIO LEZIONI
 // ══════════════════════════════════════════════════
-let _calYear  = new Date().getFullYear();
-let _calMonth = new Date().getMonth(); // 0-based
-let _calSelDay = null; // 'YYYY-MM-DD' | null
+let _calYear    = new Date().getFullYear();
+let _calMonth   = new Date().getMonth();
+let _calSelDay  = null;
+let _calFilterUid = null; // uid filtro ricerca | null = tutti
+
+// Palette colori per utenti attivi — rotante, persistente per uid durante il percorso
+const CAL_PALETTE = [
+  {bg:'#052e16', border:'#16a34a', color:'#4ade80'},  // verde
+  {bg:'#1e3a5f', border:'#2563eb', color:'#93c5fd'},  // blu
+  {bg:'#4c1d95', border:'#7c3aed', color:'#c4b5fd'},  // viola
+  {bg:'#7c2d12', border:'#ea580c', color:'#fdba74'},  // arancio
+  {bg:'#831843', border:'#db2777', color:'#f9a8d4'},  // rosa
+  {bg:'#134e4a', border:'#0d9488', color:'#5eead4'},  // teal
+  {bg:'#422006', border:'#d97706', color:'#fcd34d'},  // giallo
+  {bg:'#1e1b4b', border:'#4f46e5', color:'#a5b4fc'},  // indaco
+  {bg:'#0c4a6e', border:'#0284c7', color:'#7dd3fc'},  // celeste
+  {bg:'#14532d', border:'#15803d', color:'#86efac'},  // verde chiaro
+  {bg:'#3b0764', border:'#9333ea', color:'#d8b4fe'},  // viola chiaro
+  {bg:'#450a0a', border:'#dc2626', color:'#fca5a5'},  // rosso
+];
+
+// Assegna colore persistente a ogni utente con percorso attivo
+// Usa il timestamp di creazione del percorso come seed stabile
+// La mappa è calcolata fresco ad ogni render (non serve salvare su Firebase)
+function calGetUserColorMap(){
+  const users = getUsers().filter(u=>u.role!=='admin');
+  const active = users.filter(u=>gsStatus(gsGetPercorso(u.id))==='active');
+  // Ordina per uid in modo stabile
+  active.sort((a,b)=>a.id.localeCompare(b.id));
+  const map = {};
+  active.forEach((u,i)=>{ map[u.id] = CAL_PALETTE[i % CAL_PALETTE.length]; });
+  return map;
+}
 
 function renderCalendario(){
   if(!CU || CU.role!=='admin') return;
@@ -4904,13 +4954,14 @@ function renderCalendario(){
 
 function calBuildHtml(){
   const monthNames = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-  const today = new Date();
-  const todayStr = calDateStr(today);
+  const today      = new Date();
+  const todayStr   = calDateStr(today);
+  const colorMap   = calGetUserColorMap();
 
-  // Raccoglie tutti gli appuntamenti
-  const events = calGetAllEvents();
+  // Raccoglie eventi (filtrati se ricerca attiva)
+  const allEvents = calGetAllEvents();
+  const events    = _calFilterUid ? allEvents.filter(ev=>ev.uid===_calFilterUid) : allEvents;
 
-  // Raggruppa per giorno
   const byDay = {};
   events.forEach(ev=>{
     const day = ev.dt.slice(0,10);
@@ -4918,84 +4969,86 @@ function calBuildHtml(){
     byDay[day].push(ev);
   });
 
-  // Costruisce griglia
+  // Griglia mese
   const firstDay = new Date(_calYear, _calMonth, 1);
   const lastDay  = new Date(_calYear, _calMonth+1, 0);
-  let startDow = firstDay.getDay(); // 0=Dom
-  startDow = startDow===0 ? 6 : startDow-1; // rende lun=0
+  let startDow   = firstDay.getDay();
+  startDow = startDow===0 ? 6 : startDow-1;
 
   const days = [];
-  // celle prima del mese
   for(let i=0;i<startDow;i++){
-    const d = new Date(_calYear, _calMonth, 1-startDow+i);
-    days.push({date:calDateStr(d), inMonth:false});
+    const d=new Date(_calYear,_calMonth,1-startDow+i);
+    days.push({date:calDateStr(d),inMonth:false});
   }
   for(let d=1;d<=lastDay.getDate();d++){
-    const dt=new Date(_calYear,_calMonth,d);
-    days.push({date:calDateStr(dt), inMonth:true});
+    days.push({date:calDateStr(new Date(_calYear,_calMonth,d)),inMonth:true});
   }
-  // riempi fino a multiplo di 7
   while(days.length%7!==0){
     const d=new Date(_calYear,_calMonth+1,days.length-lastDay.getDate());
-    days.push({date:calDateStr(d), inMonth:false});
+    days.push({date:calDateStr(d),inMonth:false});
   }
 
   const gridHtml = days.map(d=>{
-    const evs = byDay[d.date]||[];
+    const evs     = byDay[d.date]||[];
     const isToday = d.date===todayStr;
-    const evHtml = evs.slice(0,3).map(ev=>`<div class="cal-event${ev.adminRef?' assigned':''}" onclick="event.stopPropagation();calSelectDay('${d.date}')" title="${ev.userName} — Lez.${ev.idx+1}${ev.note?' · '+ev.note:''}">${ev.timeStr} ${ev.userName.split(' ')[0]}</div>`).join('');
-    const moreHtml = evs.length>3 ? `<div style="font-size:8px;color:var(--mu2);padding-left:2px">+${evs.length-3} altri</div>` : '';
-    return `<div class="cal-day${isToday?' today':''}${!d.inMonth?' other-month':''}" onclick="calSelectDay('${d.date}')">
-      <div class="cal-dn">${parseInt(d.date.slice(8))}</div>
-      ${evHtml}${moreHtml}
-    </div>`;
+    const evHtml  = evs.slice(0,3).map(ev=>{
+      const col = colorMap[ev.uid] || {bg:'var(--gdim)',border:'#166534',color:'var(--green)'};
+      return '<div class="cal-event" style="background:'+col.bg+';border-color:'+col.border+';color:'+col.color+'" '
+        + 'onclick="event.stopPropagation();calSelectDay('+d.date+')" '
+        + 'title="'+ev.userName+' — Lez.'+(ev.idx+1)+(ev.note?' · '+ev.note:'')+'">'
+        + ev.timeStr+' '+ev.userName.split(' ')[0]
+        + '</div>';
+    }).join('');
+    const moreHtml = evs.length>3 ? '<div style="font-size:8px;color:var(--mu2);padding-left:2px">+'+(evs.length-3)+' altri</div>' : '';
+    return '<div class="cal-day'+(isToday?' today':'')+(!d.inMonth?' other-month':'')+'" onclick="calSelectDay('+d.date+')">'
+      + '<div class="cal-dn">'+parseInt(d.date.slice(8))+'</div>'
+      + evHtml + moreHtml
+      + '</div>';
   }).join('');
 
   // Lista giorno selezionato
-  const selDay = _calSelDay || todayStr;
-  const selEvs = byDay[selDay]||[];
-  const admins = getUsers().filter(u=>u.role==='admin');
-  const selD   = new Date(selDay+'T00:00:00');
+  const selDay   = _calSelDay || todayStr;
+  const selEvs   = byDay[selDay]||[];
+  const admins   = getUsers().filter(u=>u.role==='admin');
+  const selD     = new Date(selDay+'T00:00:00');
   const selLabel = selD.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
   const selListHtml = selEvs.length
     ? selEvs.map(ev=>{
-        const adminOpts = admins.map(a=>`<option value="${a.id}" ${ev.adminRef===a.id?'selected':''}>${a.firstName} ${a.lastName}</option>`).join('');
-        return `<div class="cal-event-item">
-          <div class="cei-time">${ev.timeStr}</div>
-          <div class="cei-info">
-            <div class="cei-name">${ev.userName} · Lezione ${ev.idx+1}</div>
-            <div class="cei-meta">${ev.note||'Nessuna nota'}</div>
-          </div>
-          <select onchange="calAssignAdmin('${ev.uid}',${ev.idx},this.value)" title="Assegna insegnante">
-            <option value="">— Insegnante —</option>
-            ${adminOpts}
-          </select>
-        </div>`;
+        const col       = colorMap[ev.uid] || {bg:'var(--gdim)',border:'#166534',color:'var(--green)'};
+        const adminOpts = admins.map(a=>'<option value="'+a.id+'" '+(ev.adminRef===a.id?'selected':'')+'>'+a.firstName+' '+a.lastName+'</option>').join('');
+        return '<div class="cal-event-item" style="border-left:3px solid '+col.border+'">'
+          + '<div class="cei-time" style="color:'+col.color+'">'+ev.timeStr+'</div>'
+          + '<div class="cei-info">'
+          +   '<div class="cei-name">'+ev.userName+' · Lezione '+(ev.idx+1)+'</div>'
+          +   '<div class="cei-meta">'+(ev.note||'Nessuna nota')+'</div>'
+          + '</div>'
+          + '<select onchange="calAssignAdmin('+ev.uid+','+ev.idx+',this.value)" title="Assegna insegnante">'
+          +   '<option value="">— Insegnante —</option>'
+          +   adminOpts
+          + '</select>'
+          + '</div>';
       }).join('')
     : '<div class="gs-empty" style="padding:20px">Nessuna lezione in questo giorno.</div>';
 
-  return `
-    <div class="cal-nav">
-      <button onclick="calPrevMonth()">◀</button>
-      <span class="cal-month-label">${monthNames[_calMonth]} ${_calYear}</span>
-      <button onclick="calNextMonth()">▶</button>
-    </div>
-    <div id="calHead" class="cal-head">
-      ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d=>`<div class="cal-dh">${d}</div>`).join('')}
-    </div>
-    <div class="cal-grid" id="calGrid">${gridHtml}</div>
-    <div class="cal-event-list" id="calEventList">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--light);letter-spacing:.04em;margin-bottom:10px;text-transform:capitalize">${selLabel}</div>
-      ${selListHtml}
-    </div>`;
+  return '<div class="cal-nav">'
+    + '<button onclick="calPrevMonth()">◀</button>'
+    + '<span class="cal-month-label">'+monthNames[_calMonth]+' '+_calYear+'</span>'
+    + '<button onclick="calNextMonth()">▶</button>'
+    + '</div>'
+    + '<div class="cal-head">'+['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d=>'<div class="cal-dh">'+d+'</div>').join('')+'</div>'
+    + '<div class="cal-grid">'+gridHtml+'</div>'
+    + '<div class="cal-event-list">'
+    +   '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--light);letter-spacing:.04em;margin-bottom:10px;text-transform:capitalize">'+selLabel+'</div>'
+    +   selListHtml
+    + '</div>';
 }
 
 function calDateStr(d){ return d.toISOString().slice(0,10); }
 
 function calGetAllEvents(){
   const users = getUsers().filter(u=>u.role!=='admin');
-  const evs = [];
+  const evs   = [];
   users.forEach(u=>{
     const p = gsGetPercorso(u.id);
     if(!p) return;
@@ -5003,15 +5056,9 @@ function calGetAllEvents(){
       if(!l.dt) return;
       try{
         const d = new Date(l.dt);
-        evs.push({
-          uid:      u.id,
-          userName: u.firstName+' '+u.lastName,
-          idx:      i,
-          dt:       l.dt,
-          timeStr:  d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}),
-          note:     l.note||null,
-          adminRef: l.adminRef||null,
-        });
+        evs.push({uid:u.id, userName:u.firstName+' '+u.lastName, idx:i, dt:l.dt,
+          timeStr:d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}),
+          note:l.note||null, adminRef:l.adminRef||null});
       }catch(e){}
     });
   });
@@ -5039,11 +5086,46 @@ function calNextMonth(){
 function calAssignAdmin(uid, idx, adminId){
   const p = gsGetPercorso(uid);
   if(!p) return;
-  p.lezioni[idx].adminRef = adminId || null;
+  p.lezioni[idx].adminRef = adminId||null;
   gsSetPercorso(uid, p);
-  // non re-render completo — solo visual feedback: già aggiornato dal select
 }
 
+// ── Ricerca utente nel calendario ────────────────────────────────────────────
+function calSearchUser(){
+  const q    = document.getElementById('calSearch').value.trim().toLowerCase();
+  const drop = document.getElementById('calSearchDrop');
+  if(!q){ drop.style.display='none'; return; }
+  const matches = getUsers().filter(u=>u.role!=='admin' && (u.firstName+' '+u.lastName).toLowerCase().includes(q));
+  if(!matches.length){ drop.style.display='none'; return; }
+  drop.style.display = 'block';
+  drop.innerHTML = matches.map(function(u){
+    return '<div onclick="calPinUser(' + JSON.stringify(u.id) + ')" style="padding:10px 12px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--d4)">'
+      + u.firstName + ' ' + u.lastName + ' <span style="font-size:12px;color:var(--muted)">' + u.email + '</span></div>';
+  }).join('');
+}
+
+function calPinUser(uid){
+  document.getElementById('calSearch').value = '';
+  document.getElementById('calSearchDrop').style.display = 'none';
+  _calFilterUid = uid;
+  // Mostra badge filtro
+  const u = getUsers().find(u=>u.id===uid);
+  const badge = document.getElementById('calFilterBadge');
+  const nameEl = document.getElementById('calFilterName');
+  if(badge && nameEl && u){
+    nameEl.textContent = u.firstName+' '+u.lastName;
+    badge.style.display = 'flex';
+  }
+  renderCalendario();
+}
+
+function calClearFilter(){
+  _calFilterUid = null;
+  document.getElementById('calSearch').value = '';
+  const badge = document.getElementById('calFilterBadge');
+  if(badge) badge.style.display = 'none';
+  renderCalendario();
+}
 // ══════════════════════════════════════════════════
 // NOTIFICHE BROWSER — appuntamenti lezioni
 // ══════════════════════════════════════════════════
