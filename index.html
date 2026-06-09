@@ -549,10 +549,12 @@ select:hover{border-color:var(--green)}
 .gs-percorso-form input:focus,.gs-percorso-form select:focus{outline:none;border-color:var(--green)}
 .gs-percorso-form label{font-size:11px;color:var(--mu2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px;display:block}
 .gs-field{display:flex;flex-direction:column}
-.gs-lezioni-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:7px;margin-top:10px}
-.gs-lez-btn{width:100%;aspect-ratio:1;border-radius:8px;border:1.5px solid var(--d5);background:var(--d3);cursor:pointer;font-size:20px;transition:all .2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative;padding:2px}
+.gs-lezioni-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:7px;margin-top:10px}
+/* Wrapper: contiene il button principale + il tasto calendario separato */
+.gs-lez-wrap{position:relative;aspect-ratio:1}
+.gs-lez-btn{width:100%;height:100%;border-radius:8px;border:1.5px solid var(--d5);background:var(--d3);cursor:pointer;font-size:20px;transition:all .2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:2px;position:relative}
 .gs-lez-btn .gs-lez-num{font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--mu2);line-height:1}
-.gs-lez-btn .gs-lez-dt{font-size:8px;color:var(--mu2);line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90%}
+.gs-lez-btn .gs-lez-dt{font-size:7px;color:var(--mu2);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90%;text-align:center}
 /* lezione per lezione: 4 stati */
 .gs-lez-btn.st-svolta{border-color:#166534;background:#052e16}
 .gs-lez-btn.st-svolta-pagata{border-color:var(--green);background:#052e16}
@@ -560,8 +562,12 @@ select:hover{border-color:var(--green)}
 /* anticipato: 2 stati */
 .gs-lez-btn.st-ant-base{border-color:#1d4ed8;background:#1e3a5f}
 .gs-lez-btn.st-ant-svolta{border-color:var(--green);background:#052e16}
-/* data programmata */
-.gs-lez-btn.has-dt{box-shadow:0 0 0 1.5px var(--amber) inset}
+/* Tasto calendario — sempre visibile, separato dal button principale */
+.gs-lez-cal{position:absolute;bottom:2px;right:2px;z-index:2;width:18px;height:18px;border-radius:4px;background:rgba(0,0,0,.45);border:1px solid var(--d5);color:var(--mu2);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;padding:0;line-height:1}
+.gs-lez-cal:hover{background:rgba(245,158,11,.18);border-color:var(--amber);color:var(--amber)}
+.gs-lez-cal.set{background:rgba(245,158,11,.15);border-color:var(--amber);color:var(--amber)}
+/* bordo ambra sull'intero wrap quando appuntamento fissato */
+.gs-lez-wrap.has-dt .gs-lez-btn{box-shadow:0 0 0 1.5px var(--amber) inset}
 .gs-lezioni-legend{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap}
 .gs-leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mu2)}
 .gs-leg-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px}
@@ -4611,51 +4617,49 @@ function gsToggleCard(uid){
 
 // ── contenuto card ────────────────────────────────
 function gsLezBtnHtml(uid, l, i, tipo){
+  // Struttura: <div class="gs-lez-wrap"> contiene due fratelli (NON annidati):
+  //   <button class="gs-lez-btn">  per cambiare stato lezione
+  //   <button class="gs-lez-cal">  per aprire popup appuntamento
   const hasDt = !!(l.dt);
-  if(tipo==='anticipato'){
-    // 2 stati: pagata-non-svolta (default blu, numero) → pagata-svolta (verde, ✅)
+  const calCls = 'gs-lez-cal' + (hasDt ? ' set' : '');
+  const calTitle = hasDt ? 'Modifica appuntamento: ' + gsFormatDtShort(l.dt) : 'Imposta data/ora appuntamento';
+  const calBtn = '<button class="' + calCls + '" onclick="gsOpenAppt(\'' + uid + '\',' + i + ')" title="' + calTitle + '">&#x1F4C5;</button>';
+
+  let btnCls = '', innerHtml = '';
+  const dtStr = hasDt ? '<span class="gs-lez-dt">' + gsFormatDtShort(l.dt) + '</span>' : '';
+
+  if(tipo === 'anticipato'){
     if(l.svolta){
-      const dtStr = hasDt ? `<span class="gs-lez-dt">${gsFormatDtShort(l.dt)}</span>` : '';
-      return `<button class="gs-lez-btn st-ant-svolta${hasDt?' has-dt':''}" onclick="gsToggleLezione('${uid}',${i})" title="Lezione ${i+1} — svolta${hasDt?' · '+l.dt:''}${l.note?' · '+l.note:''}">
-        <span style="font-size:22px">✅</span>${dtStr}
-      </button>`;
+      btnCls = 'st-ant-svolta';
+      innerHtml = '<span style="font-size:20px">&#x2705;</span>' + dtStr;
     } else {
-      const dtStr = hasDt ? `<span class="gs-lez-dt">${gsFormatDtShort(l.dt)}</span>` : '';
-      return `<button class="gs-lez-btn st-ant-base${hasDt?' has-dt':''}" onclick="gsToggleLezione('${uid}',${i})" title="Lezione ${i+1} — pagata${hasDt?' · '+l.dt:''}${l.note?' · '+l.note:''}">
-        <span class="gs-lez-num" style="color:#93c5fd">${i+1}</span>${dtStr}
-        <button onclick="event.stopPropagation();gsOpenAppt('${uid}',${i})" style="position:absolute;bottom:2px;right:2px;background:transparent;border:none;font-size:10px;cursor:pointer;padding:0;line-height:1;color:var(--amber);opacity:.7" title="Imposta appuntamento">📅</button>
-      </button>`;
+      btnCls = 'st-ant-base';
+      innerHtml = '<span class="gs-lez-num" style="color:#93c5fd">' + (i+1) + '</span>' + dtStr;
     }
   } else {
-    // 4 stati lezione per lezione:
-    // default (grigio, numero) → svolta (verde, ✅) → svolta+pagata (verde, 🏆) → pagata-non-svolta (blu, 💰) → reset
-    let btnClass='', content='';
     if(!l.svolta && !l.pagata){
-      btnClass=''; // grigio default
-      const dtStr = hasDt ? `<span class="gs-lez-dt">${gsFormatDtShort(l.dt)}</span>` : '';
-      content = `<span class="gs-lez-num">${i+1}</span>${dtStr}`;
+      btnCls = '';
+      innerHtml = '<span class="gs-lez-num">' + (i+1) + '</span>' + dtStr;
     } else if(l.svolta && !l.pagata){
-      btnClass='st-svolta';
-      const dtStr = hasDt ? `<span class="gs-lez-dt">${gsFormatDtShort(l.dt)}</span>` : '';
-      content = `<span style="font-size:22px">✅</span>${dtStr}`;
+      btnCls = 'st-svolta';
+      innerHtml = '<span style="font-size:20px">&#x2705;</span>' + dtStr;
     } else if(l.svolta && l.pagata){
-      btnClass='st-svolta-pagata';
-      const dtStr = hasDt ? `<span class="gs-lez-dt">${gsFormatDtShort(l.dt)}</span>` : '';
-      content = `<span style="font-size:22px">🏆</span>${dtStr}`;
+      btnCls = 'st-svolta-pagata';
+      innerHtml = '<span style="font-size:20px">&#x1F3C6;</span>' + dtStr;
     } else {
-      // pagata non svolta
-      btnClass='st-pagata';
-      const dtStr = hasDt ? `<span class="gs-lez-dt">${gsFormatDtShort(l.dt)}</span>` : '';
-      content = `<span style="font-size:22px">💰</span>${dtStr}`;
+      btnCls = 'st-pagata';
+      innerHtml = '<span style="font-size:20px">&#x1F4B0;</span>' + dtStr;
     }
-    const title = `Lezione ${i+1}${l.svolta?' — svolta':''}${l.pagata?' — pagata':''}${hasDt?' · '+l.dt:''}${l.note?' · '+l.note:''}`;
-    return `<button class="gs-lez-btn ${btnClass}${hasDt?' has-dt':''}" onclick="gsToggleLezione('${uid}',${i})" title="${title}" style="position:relative">
-      ${content}
-      <button onclick="event.stopPropagation();gsOpenAppt('${uid}',${i})" style="position:absolute;bottom:2px;right:2px;background:transparent;border:none;font-size:10px;cursor:pointer;padding:0;line-height:1;color:var(--amber);opacity:.7" title="Imposta appuntamento">📅</button>
-    </button>`;
   }
-}
 
+  const stateDesc = (l.svolta ? ' — svolta' : '') + (l.pagata ? ' — pagata' : '') + (hasDt ? ' | ' + gsFormatDtShort(l.dt) : '') + (l.note ? ' | ' + l.note : '');
+  const mainTitle = 'Lezione ' + (i+1) + stateDesc;
+
+  return '<div class="gs-lez-wrap' + (hasDt ? ' has-dt' : '') + '">'
+    + '<button class="gs-lez-btn ' + btnCls + '" onclick="gsToggleLezione(\'' + uid + '\',' + i + ')" title="' + mainTitle + '">' + innerHtml + '</button>'
+    + calBtn
+    + '</div>';
+}
 function gsFormatDtShort(dt){
   if(!dt) return '';
   try{
@@ -4679,16 +4683,16 @@ function gsRenderUserBody(u, p){
   // legenda in base al tipo
   const legendHtml = p.tipoPagamento==='anticipato'
     ? `<div class="gs-lezioni-legend">
-        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#1e3a5f;border:1.5px solid #1d4ed8"></div>Pagata (non svolta)</div>
-        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#052e16;border:1.5px solid var(--green)">✅</div>Svolta</div>
-        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:var(--d3);border:1.5px solid var(--amber)"></div>Con appuntamento</div>
+        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#1e3a5f;border:1.5px solid #1d4ed8"></div>Pagata, non svolta — tocca per segnare svolta</div>
+        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#052e16;border:1.5px solid var(--green)">✅</div>Pagata + svolta</div>
+        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:var(--d3);border:1.5px solid var(--amber)"></div>Bordo arancione = appuntamento fissato</div>
       </div>`
     : `<div class="gs-lezioni-legend">
-        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:var(--d3);border:1.5px solid var(--d5)"></div>Non svolta</div>
-        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#052e16;border:1.5px solid #166534">✅</div>Svolta</div>
+        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:var(--d3);border:1.5px solid var(--d5)"></div>Non svolta / non pagata</div>
+        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#052e16;border:1.5px solid #166534">✅</div>Svolta (non pagata)</div>
         <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#052e16;border:1.5px solid var(--green)">🏆</div>Svolta + pagata</div>
-        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#1e3a5f;border:1.5px solid #1d4ed8">💰</div>Pagata</div>
-        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:var(--d3);border:1.5px solid var(--amber)"></div>Con appuntamento</div>
+        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#1e3a5f;border:1.5px solid #1d4ed8">💰</div>Pagata (non svolta)</div>
+        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:var(--d3);border:1.5px solid var(--amber)"></div>Bordo arancione = appuntamento fissato</div>
       </div>`;
 
   return `<div>
@@ -4716,8 +4720,8 @@ function gsRenderUserBody(u, p){
     <div style="font-size:12px;color:var(--mu2);margin-bottom:12px">💰 <span style="color:var(--light)">${tipoPagLabel}</span></div>
     <div class="gs-section-title">LEZIONI</div>
     <div style="font-size:11px;color:var(--mu2);margin-bottom:6px">${p.tipoPagamento==='anticipato'
-      ? 'Tocca per segnare svolta. Il 📅 imposta data/ora appuntamento.'
-      : 'Tocca per cambiare stato. Il 📅 imposta data/ora appuntamento.'}</div>
+      ? 'Tocca il cerchio per segnare svolta. Il tasto 📅 (angolo in basso a destra di ogni cerchio) imposta data e ora appuntamento.'
+      : 'Tocca il cerchio per cambiare stato. Il tasto 📅 (angolo in basso a destra di ogni cerchio) imposta data e ora appuntamento.'}</div>
     <div class="gs-lezioni-grid">${lezioniHtml}</div>
     ${legendHtml}
     <div style="margin-top:18px;border-top:1px solid var(--d4);padding-top:14px">
