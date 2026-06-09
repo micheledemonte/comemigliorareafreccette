@@ -14,7 +14,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 <!-- Vercel Web Analytics -->
 <script defer src="/_vercel/insights/script.js"></script>
 <!-- Vercel Speed Insights -->
@@ -1878,7 +1877,9 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   <!-- GESTIONALE -->
   <div class="tab-body" id="tab-gestionale">
     <h2 style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:22px;color:var(--green);margin-bottom:4px;letter-spacing:-.01em">GESTIONALE LEZIONI</h2>
-    <p style="font-size:13px;color:var(--mu2);margin-bottom:18px">Gestisci i percorsi di lezioni per ogni studente.</p>
+    <p style="font-size:13px;color:var(--mu2);margin-bottom:8px">Gestisci i percorsi di lezioni per ogni studente.</p>
+    <!-- Banner stato notifiche push -->
+    <div id="pushStatusBanner" style="display:none;margin-bottom:16px;padding:10px 14px;border-radius:8px;font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>
 
     <!-- Riepilogo numerico -->
     <div class="gs-summary-row" id="gsSummaryRow"></div>
@@ -2250,7 +2251,6 @@ try {
   _fbAuth = firebase.auth();
   _fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
   _firebaseOK = true;
-  initFCM(); // Inizializza FCM Messaging
 } catch(e) {
   console.warn('Firebase SDK not available (Claude sandbox mode):', e.message);
 }
@@ -2631,10 +2631,7 @@ function enterApp(){
   autoLoadNextSession();
   loadPrev501Sessions();
   checkReset();
-  if(isAdmin){
-    setTimeout(gsRestoreNotifications, 800);   // fallback locale
-    setTimeout(registerPushNotifications, 1200); // registra Service Worker + FCM
-  }
+  if(isAdmin) setTimeout(gsRestoreNotifications, 800); // schedula notifiche appuntamenti futuri
 }
 
 function autoLoadNextSession(){
@@ -2762,7 +2759,7 @@ async function doLogout(){
   CU=null;
   _dbCache=null;
   reset501Sessions();
-  if(_fbAuth) try{ await unregisterPushNotifications().finally(()=>_fbAuth.signOut()); }catch(e){}
+  if(_fbAuth) try{ await _fbAuth.signOut(); }catch(e){}
   document.getElementById('loadingOverlay').style.display='none';
   document.getElementById('appLayer').classList.remove('visible');
   ldHide();
@@ -4556,6 +4553,7 @@ function gsFilter(f, btn){
 function renderGestionale(){
   if(!CU || CU.role!=='admin') return;
   gsRender();
+  setTimeout(pushUpdateBanner, 200);
 }
 
 function gsRender(){
@@ -5132,169 +5130,108 @@ function calClearFilter(){
   renderCalendario();
 }
 // ══════════════════════════════════════════════════
-// NOTIFICHE PUSH — Web Push via FCM + Service Worker
+// WEB PUSH NOTIFICATIONS — Service Worker
 // ══════════════════════════════════════════════════
-//
-// Flusso:
-// 1. Al login dell'admin, viene registrato il Service Worker
-// 2. Viene richiesto il permesso notifiche
-// 3. Il token FCM dell'admin viene salvato su Firebase (userData[uid]/__fcmToken)
-// 4. La Firebase Cloud Function (schedulata ogni 15min) legge i token
-//    e invia le notifiche push 24h / 12h / 1h / 30min prima di ogni lezione
-//
-// VAPID Key pubblica (dalla Firebase Console → Cloud Messaging → Web Push certificates)
-const VAPID_PUBLIC_KEY = 'BBhtrZwuxdv2xpTWyEa_OKsFMWcGibqTKAXhHjVDTwS6dl9SoVXpyCNTINSsgYDAPwNrwtmKm7dtSJU1yyC24HU';
+// Le notifiche arrivano anche con app chiusa tramite
+// Vercel Cron + web-push + Service Worker.
+// La chiave pubblica VAPID viene letta dall'API.
 
-let _swRegistration = null;
-let _fcmMessaging   = null;
+const VAPID_PUBLIC_KEY = 'BPsxji1xuc_equzGyuP7K7pJRepjS2bXbhaRx7pLHBGpMGUbt13jMl_G6LOnlCefoiirIbFU-NYqlOPVeEsiwIc'; // sostituita da Vercel env
 
-// Inizializza FCM Messaging (solo se disponibile)
-function initFCM(){
-  try {
-    if(firebase.messaging && firebase.messaging.isSupported()){
-      _fcmMessaging = firebase.messaging();
-    }
-  } catch(e){
-    console.warn('FCM non disponibile:', e.message);
-  }
+// Converte la chiave VAPID base64url in Uint8Array per subscribe()
+function urlBase64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw     = atob(base64);
+  return new Uint8Array([...raw].map(c => c.charCodeAt(0)));
 }
 
-// Registra il Service Worker e ottieni il token FCM
-async function registerPushNotifications(){
+// Registra il Service Worker e sottoscrivi alle push
+async function pushRegister(){
   if(!CU || CU.role !== 'admin') return;
-  if(!('serviceWorker' in navigator)) return;
-  if(!_fcmMessaging){
-    console.warn('FCM Messaging non inizializzato.');
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)){
+    console.warn('Push non supportato su questo browser.');
     return;
   }
 
   try {
-    // 1. Registra il Service Worker
-    _swRegistration = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
-    console.log('[SW] Registrato:', _swRegistration.scope);
+    // 1. Registra sw.js
+    const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    console.log('[Push] Service Worker registrato:', reg.scope);
 
-    // 2. Richiedi permesso notifiche
+    // 2. Chiedi permesso
     const permission = await Notification.requestPermission();
     if(permission !== 'granted'){
       console.warn('[Push] Permesso notifiche negato.');
       return;
     }
 
-    // 3. Ottieni token FCM
-    const token = await _fcmMessaging.getToken({
-      vapidKey:            VAPID_PUBLIC_KEY,
-      serviceWorkerRegistration: _swRegistration,
-    });
-
-    if(!token){
-      console.warn('[Push] Token FCM non ottenuto.');
-      return;
+    // 3. Controlla se già sottoscritto
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub){
+      // 4. Crea nuova subscription
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly:      true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+      console.log('[Push] Nuova subscription creata.');
+    } else {
+      console.log('[Push] Subscription esistente trovata.');
     }
 
-    console.log('[Push] Token FCM ottenuto:', token.slice(0,20)+'...');
-
-    // 4. Salva token su Firebase
-    const data = getUD(CU.id);
-    if(data.__fcmToken !== token){
-      data.__fcmToken = token;
-      setUD(CU.id, data);
-      console.log('[Push] Token FCM salvato su Firebase.');
-    }
-
-    // 5. Gestisci token refresh
-    _fcmMessaging.onTokenRefresh(async () => {
-      try {
-        const newToken = await _fcmMessaging.getToken({
-          vapidKey: VAPID_PUBLIC_KEY,
-          serviceWorkerRegistration: _swRegistration,
-        });
-        if(newToken){
-          const d = getUD(CU.id);
-          d.__fcmToken = newToken;
-          setUD(CU.id, d);
-        }
-      } catch(e){ console.warn('[Push] Token refresh error:', e); }
+    // 5. Salva subscription su Firebase via Vercel API
+    await fetch('/api/save-subscription', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        subscription: sub.toJSON(),
+        adminUid:     CU.id,
+        adminName:    (CU.firstName || '') + ' ' + (CU.lastName || ''),
+      }),
     });
 
-    // 6. Gestisci messaggi in foreground (app aperta)
-    _fcmMessaging.onMessage((payload) => {
-      const notif = payload.notification || {};
-      const title = notif.title || '📅 Lezione';
-      const body  = notif.body  || '';
-      if(Notification.permission === 'granted'){
-        new Notification(title, {
-          body,
-          icon:  '/icon-192.png',
-          badge: '/icon-192.png',
-          tag:   'cmaf-fg-notif',
-          requireInteraction: true,
-        });
-      }
-    });
-
+    console.log('[Push] Subscription salvata su Firebase ✓');
   } catch(err){
     console.error('[Push] Errore registrazione:', err);
   }
 }
 
-// Rimuovi token FCM al logout (così l'admin non riceve notifiche dopo logout)
-async function unregisterPushNotifications(){
-  if(!_fcmMessaging || !CU) return;
+// Chiamata al login admin — registra SW e subscription
+function gsRestoreNotifications(){
+  if(!CU || CU.role !== 'admin') return;
+  pushRegister();
+}
+
+// Aggiorna il banner di stato notifiche nel gestionale
+async function pushUpdateBanner(){
+  const banner = document.getElementById('pushStatusBanner');
+  if(!banner) return;
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)){
+    banner.style.cssText = 'display:flex;background:#3d0505;border:1px solid #7f1d1d;color:#f87171;padding:10px 14px;border-radius:8px;font-size:13px;align-items:center;gap:8px;flex-wrap:wrap';
+    banner.innerHTML = '🔕 <strong>Notifiche push non supportate</strong> su questo browser. Usa Chrome o Edge su desktop.';
+    return;
+  }
   try {
-    await _fcmMessaging.deleteToken();
-    const data = getUD(CU.id);
-    if(data.__fcmToken){
-      delete data.__fcmToken;
-      setUD(CU.id, data);
+    const reg = await navigator.serviceWorker.getRegistration('/sw.js');
+    const sub = reg ? await reg.pushManager.getSubscription() : null;
+    const perm = Notification.permission;
+    if(sub && perm === 'granted'){
+      banner.style.cssText = 'display:flex;background:#052e16;border:1px solid #166534;color:#4ade80;padding:10px 14px;border-radius:8px;font-size:13px;align-items:center;gap:8px;flex-wrap:wrap';
+      banner.innerHTML = '🔔 <strong>Notifiche push attive</strong> — riceverai promemoria lezioni anche con l\'app chiusa.';
+    } else {
+      banner.style.cssText = 'display:flex;background:#1e1b4b;border:1px solid #4f46e5;color:#a5b4fc;padding:10px 14px;border-radius:8px;font-size:13px;align-items:center;gap:8px;flex-wrap:wrap';
+      banner.innerHTML = '🔕 <strong>Notifiche push non attive</strong> — <button onclick="pushRegister().then(pushUpdateBanner)" style="background:var(--green);color:#000;border:none;padding:4px 12px;border-radius:4px;font-family:DM Sans,sans-serif;font-weight:700;font-size:12px;cursor:pointer;margin-left:4px">ATTIVA ORA</button>';
     }
-    console.log('[Push] Token FCM rimosso al logout.');
-  } catch(e){
-    console.warn('[Push] Errore rimozione token:', e);
+  } catch(e) {
+    console.warn('[Push] Banner check error:', e);
   }
 }
 
-// Mantieni per compatibilità — ora le notifiche le gestisce la Cloud Function
-// ma teniamo il fallback locale per quando l'app è aperta
-let _gsNotifTimers = {};
+// Compatibilità: gsScheduleNotifications rimane no-op
+// (le notifiche ora vengono inviate dal Vercel Cron, non dal browser)
 function gsScheduleNotifications(uid, idx, dt, note, studentUser){
-  // Con FCM attivo le notifiche push arrivano dal server.
-  // Questo fallback serve solo se FCM non è disponibile.
-  if(_fcmMessaging) return;
-  if(!dt) return;
-  const key = uid+'_'+idx;
-  (_gsNotifTimers[key]||[]).forEach(t=>clearTimeout(t));
-  _gsNotifTimers[key] = [];
-  const lessonMs = new Date(dt).getTime();
-  const now = Date.now();
-  const userName = studentUser ? studentUser.firstName+' '+studentUser.lastName : 'Studente';
-  const noteStr = note ? ' · '+note : '';
-  const label = 'Lezione '+(idx+1)+' — '+userName+noteStr;
-  [{ms:24*60*60*1000,txt:'tra 24 ore'},{ms:12*60*60*1000,txt:'tra 12 ore'},
-   {ms:60*60*1000,txt:'tra 1 ora'},{ms:30*60*1000,txt:'tra 30 minuti'}].forEach(({ms,txt})=>{
-    const delay = lessonMs - ms - now;
-    if(delay < 0) return;
-    const tid = setTimeout(()=>{
-      if(Notification.permission==='granted'){
-        new Notification('📅 '+label, {body:'La lezione è '+txt, icon:'/icon-192.png', tag:key+'_'+ms});
-      }
-    }, delay);
-    _gsNotifTimers[key].push(tid);
-  });
-}
-
-function gsRestoreNotifications(){
-  // Con FCM il server gestisce tutto — niente da fare al login
-  if(_fcmMessaging) return;
-  if(!CU || CU.role!=='admin') return;
-  const users = getUsers().filter(u=>u.role!=='admin');
-  users.forEach(u=>{
-    const p = gsGetPercorso(u.id);
-    if(!p) return;
-    p.lezioni.forEach((l,i)=>{
-      if(l.dt && new Date(l.dt).getTime() > Date.now())
-        gsScheduleNotifications(u.id, i, l.dt, l.note, u);
-    });
-  });
+  // Non serve più: il cron job su Vercel gestisce l'invio server-side
+  // Manteniamo la funzione per non rompere le chiamate esistenti
 }
 
 // Render stats into a specific container element for a given user
