@@ -598,20 +598,31 @@ select:hover{border-color:var(--green)}
 .req-list{display:flex;flex-direction:column;gap:8px}
 .req-card{background:var(--d2);border:1px solid var(--d4);border-radius:10px;padding:14px 16px;cursor:pointer;transition:border-color .2s;position:relative}
 .req-card:hover{border-color:var(--d5)}
+/* Stato: non letto = bordo verde + grassetto */
 .req-card.unread{border-left:3px solid var(--green)}
-.req-card .req-sender{font-size:15px;color:var(--light);margin-bottom:3px}
 .req-card.unread .req-sender{font-weight:700}
-.req-card .req-preview{font-size:13px;color:var(--mu2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .req-card.unread .req-preview{font-weight:600;color:var(--light)}
+/* Stato: letto ma non risposto = bordo rosso */
+.req-card.needs-reply{border-left:3px solid #ef4444}
+.req-card.needs-reply .req-sender{font-weight:700;color:var(--light)}
+.req-card.needs-reply .req-preview{font-weight:600;color:var(--light)}
+.req-card .req-sender{font-size:15px;color:var(--light);margin-bottom:3px}
+.req-card .req-preview{font-size:13px;color:var(--mu2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Sezione già letti con scroll */
+.req-read-list{max-height:calc(3*88px);overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:2px}
+.req-read-list::-webkit-scrollbar{width:4px}
+.req-read-list::-webkit-scrollbar-track{background:var(--d3);border-radius:2px}
+.req-read-list::-webkit-scrollbar-thumb{background:var(--d5);border-radius:2px}
 .req-card .req-ts{font-size:11px;color:var(--muted);position:absolute;top:14px;right:14px}
 .req-card .req-badges{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
 .req-badge{font-size:10px;padding:2px 8px;border-radius:999px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
-.req-badge-replied{background:#052e16;color:var(--green);border:1px solid #166534}
+.req-badge-replied{background:var(--d4);color:var(--mu2);border:1px solid var(--d5)}
 .req-badge-read{background:var(--d4);color:var(--mu2)}
+.req-badge-needs-reply{background:#450a0a;color:#f87171;border:1px solid #7f1d1d}
 /* Fullscreen dettaglio messaggio */
 #reqDetailOverlay{position:fixed;inset:0;z-index:1900;background:#000;display:none;flex-direction:column;overflow-y:auto}
 #reqDetailOverlay.open{display:flex}
-.req-detail-wrap{max-width:600px;width:100%;margin:0 auto;padding:28px 20px 40px}
+.req-detail-wrap{max-width:600px;width:100%;margin:0 auto;padding:60px 24px 60px}
 .req-detail-close{background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:8px 18px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:24px;display:inline-flex;align-items:center;gap:6px;transition:all .2s}
 .req-detail-close:hover{border-color:var(--green);color:var(--green)}
 .req-detail-user{background:var(--d2);border:1px solid var(--d4);border-radius:10px;padding:16px;margin-bottom:16px}
@@ -622,7 +633,7 @@ select:hover{border-color:var(--green)}
 .req-detail-ts{font-size:12px;color:var(--muted);margin-bottom:20px}
 .req-reply-btn{background:var(--gdim);border:1.5px solid var(--green);color:var(--green);padding:10px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;width:100%;margin-bottom:10px}
 .req-reply-btn:hover{background:#052e16}
-.req-reply-btn.replied{background:var(--d3);border-color:var(--d5);color:var(--mu2);cursor:default}
+.req-reply-btn.replied{background:var(--d4);border-color:var(--d5);color:var(--mu2);cursor:default;pointer-events:none}
 /* Dot notifica dock — sulla ld-icon del gestionale */
 .ld-dot{position:absolute;top:-3px;right:-5px;width:9px;height:9px;background:#ef4444;border-radius:50%;border:1.5px solid var(--dark);display:none}
 .ld-dot.visible{display:block}
@@ -1945,13 +1956,12 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <!-- RICHIESTE DI PERCORSO -->
     <div id="reqSection" style="margin-bottom:28px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--light);letter-spacing:.06em;margin:0">📩 RICHIESTE DI PERCORSO</h3>
+        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:26px;font-weight:400;color:var(--light);letter-spacing:.06em;margin:0">📩 RICHIESTE DI PERCORSO</h3>
         <span id="reqUnreadBadge" style="display:none;background:#ef4444;color:#fff;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700"></span>
       </div>
       <div class="req-filters">
-        <button class="req-filter-btn active" onclick="reqFilter('all',this)">Tutti</button>
-        <button class="req-filter-btn" onclick="reqFilter('unread',this)">Da leggere</button>
-        <button class="req-filter-btn" onclick="reqFilter('read',this)">Già letti</button>
+        <button class="req-filter-btn active" id="reqFilterUnread" onclick="reqFilter('unread',this)">Da leggere</button>
+        <button class="req-filter-btn" id="reqFilterRead" onclick="reqFilter('read',this)">Già letti</button>
       </div>
       <div id="reqList"></div>
     </div>
@@ -5169,7 +5179,7 @@ function userSaveIcsSaved(){
 //   }
 // }
 
-let _reqFilter    = 'all';
+let _reqFilter    = 'unread'; // default: Da leggere
 let _reqListener  = null;   // Firebase .on listener
 let _reqCache     = {};     // reqId → oggetto request (aggiornato live)
 let _reqDetailId  = null;   // id messaggio aperto in dettaglio
@@ -5240,52 +5250,77 @@ function reqStopListener(){
 }
 
 // ── Render lista richieste ────────────────────────────────────────────────────
+// Classificazione stati per questo admin:
+//   unread      = readBy[me] assente/false
+//   needs-reply = readBy[me]=true AND repliedBy[me] assente/false
+//   replied     = repliedBy[me]=true
+function reqMsgState(r){
+  if(!r.readBy || !r.readBy[CU.id])      return 'unread';
+  if(!r.repliedBy || !r.repliedBy[CU.id]) return 'needs-reply';
+  return 'replied';
+}
+
 function reqRenderList(){
   const el = document.getElementById('reqList');
   if(!el || !CU) return;
 
-  let reqs = Object.entries(_reqCache).map(([id,r])=>({id,...r}));
-  // Ordina per data decrescente
+  let reqs = Object.entries(_reqCache).map(([id,r])=>({...r, id}));
   reqs.sort((a,b)=>b.ts-a.ts);
 
-  // Applica filtro
-  if(_reqFilter==='unread') reqs = reqs.filter(r=>!r.readBy?.[CU.id]);
-  if(_reqFilter==='read')   reqs = reqs.filter(r=>r.readBy?.[CU.id]);
+  const unreadReqs = reqs.filter(r=>reqMsgState(r)!=='replied');
+  const readReqs   = reqs.filter(r=>reqMsgState(r)==='replied');
 
-  if(!reqs.length){
-    el.innerHTML = '<div class="gs-empty">Nessun messaggio in questa categoria.</div>';
-    return;
+  if(_reqFilter==='unread'){
+    reqRenderSection(el, unreadReqs, false);
+  } else {
+    reqRenderSection(el, readReqs, true);
   }
 
-  el.innerHTML = reqs.map(r=>{
-    const isUnread  = !r.readBy?.[CU.id];
-    const isReplied = !!(r.repliedBy?.[CU.id]);
-    const d         = new Date(r.ts);
-    const tsStr     = d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit'})
-                    + ' ' + d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
-    const preview   = r.msg.split('\n').join(' ').slice(0,60)+(r.msg.length>60?'…':'');
-
-    return '<div class="req-card'+(isUnread?' unread':'')+'" data-reqid="'+r.id+'" onclick="reqClickCard(this)">'
-      +'<div class="req-ts">'+tsStr+'</div>'
-      +'<div class="req-sender">'+r.firstName+' '+r.lastName+'</div>'
-      +'<div class="req-preview">'+preview+'</div>'
-      +'<div class="req-badges">'
-      +(isReplied ? '<span class="req-badge req-badge-replied">✓ Risposto</span>' : '')
-      +(!isUnread && !isReplied ? '<span class="req-badge req-badge-read">Letto</span>' : '')
-      +'</div>'
-      +'</div>';
-  }).join('');
-
-  // Aggiorna badge non letti
-  const unreadCount = Object.values(_reqCache).filter(r=>!r.readBy?.[CU.id]).length;
+  // Badge e dot
+  const needsAtt = unreadReqs.length;
   const badge = document.getElementById('reqUnreadBadge');
   if(badge){
-    if(unreadCount > 0){
+    if(needsAtt > 0){
       badge.style.display = 'inline-block';
-      badge.textContent   = unreadCount+' da leggere';
+      badge.textContent   = needsAtt+' da gestire';
     } else {
       badge.style.display = 'none';
     }
+  }
+  reqUpdateDot();
+}
+
+function reqRenderSection(el, reqs, isReadSection){
+  if(!reqs.length){
+    el.innerHTML = '<div class="gs-empty">Nessun messaggio in questa sezione.</div>';
+    return;
+  }
+  const cards = reqs.map(function(r){
+    const state    = reqMsgState(r);
+    const isUnread = state==='unread';
+    const needsRep = state==='needs-reply';
+    const isReplied= state==='replied';
+    const d        = new Date(r.ts);
+    const tsStr    = d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit'})
+                   + ' ' + d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+    const preview  = r.msg.split('\n').join(' ').slice(0,60)+(r.msg.length>60?'\u2026':'');
+    let cls = 'req-card';
+    if(isUnread)  cls += ' unread';
+    if(needsRep)  cls += ' needs-reply';
+    let badges = '';
+    if(isReplied) badges += '<span class="req-badge req-badge-replied">\u2713 Risposto</span>';
+    if(needsRep)  badges += '<span class="req-badge req-badge-read">Letto</span><span class="req-badge req-badge-needs-reply">\u26a0 Da rispondere</span>';
+    return '<div class="'+cls+'" data-reqid="'+r.id+'" onclick="reqClickCard(this)">'
+      +'<div class="req-ts">'+tsStr+'</div>'
+      +'<div class="req-sender">'+r.firstName+' '+r.lastName+'</div>'
+      +'<div class="req-preview">'+preview+'</div>'
+      +(badges ? '<div class="req-badges">'+badges+'</div>' : '')
+      +'</div>';
+  }).join('');
+  if(isReadSection){
+    el.innerHTML = '<div class="req-read-list">'+cards+'</div>';
+  } else {
+    el.innerHTML = cards;
   }
 }
 
@@ -5331,7 +5366,7 @@ function reqOpenDetail(reqId){
     +'</div>'
     +'<div class="req-detail-ts">'+tsStr+'</div>'
     +'<div class="req-detail-msg">'+escHtml(r.msg)+'</div>'
-    +'<button class="req-reply-btn'+(isReplied?' replied':'')+'" id="reqReplyBtn" onclick="reqToggleReplied('+reqId+')">'
+    +'<button class="req-reply-btn'+(isReplied?' replied':'')+'" id="reqReplyBtn" data-reqid="'+reqId+'" onclick="reqToggleReplied(this)">'
     +(isReplied ? '✓ HAI GIÀ RISPOSTO' : '📝 SEGNA COME RISPOSTO')+'</button>';
 
   document.getElementById('reqDetailOverlay').classList.add('open');
@@ -5350,22 +5385,27 @@ function reqCloseDetail(){
 }
 
 // ── Segna come risposto ───────────────────────────────────────────────────────
-function reqToggleReplied(reqId){
+function reqToggleReplied(elOrId){
+  // Accetta sia un elemento DOM (da onclick(this)) che una stringa id
+  const reqId = (typeof elOrId==='string') ? elOrId : elOrId.dataset.reqid;
   const r = _reqCache[reqId];
   if(!r || !CU) return;
   if(!r.repliedBy) r.repliedBy = {};
-  const wasReplied = !!(r.repliedBy[CU.id]);
-  r.repliedBy[CU.id] = !wasReplied;
+
+  // Comportamento: solo imposta come risposto (non toggle — la risposta è permanente)
+  r.repliedBy[CU.id] = true;
 
   if(_firebaseOK && _fbDB){
-    _fbDB.ref('db/requests/'+reqId+'/repliedBy/'+CU.id).set(!wasReplied);
+    _fbDB.ref('db/requests/'+reqId+'/repliedBy/'+CU.id).set(true);
   }
 
   const btn = document.getElementById('reqReplyBtn');
   if(btn){
-    btn.classList.toggle('replied', !wasReplied);
-    btn.textContent = !wasReplied ? '✓ HAI GIÀ RISPOSTO' : '📝 SEGNA COME RISPOSTO';
+    btn.classList.add('replied');
+    btn.innerHTML = '\u2713 RISPOSTO';
   }
+  // Aggiorna lista in background
+  reqRenderList();
 }
 
 // ── Dot notifica nel dock ─────────────────────────────────────────────────────
