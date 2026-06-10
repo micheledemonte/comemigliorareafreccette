@@ -595,12 +595,12 @@ select:hover{border-color:var(--green)}
 .gs-appt-btns{display:flex;gap:8px;margin-top:4px}
 .gs-appt-btns button{flex:1;padding:10px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-weight:700;font-size:16px;letter-spacing:.04em;cursor:pointer;border:none;transition:all .2s}
 /* Calendario */
-#tab-calendario .cal-scroll-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-#tab-calendario .cal-scroll-inner{min-width:350px}
-#tab-calendario .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:0}
-#tab-calendario .cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px;margin-top:10px}
-#tab-calendario .cal-dh{text-align:center;font-size:11px;color:var(--mu2);text-transform:uppercase;letter-spacing:.06em;padding:4px 0}
-#tab-calendario .cal-day{min-height:56px;background:var(--d3);border:1px solid var(--d4);border-radius:6px;padding:4px;cursor:pointer;transition:border-color .2s}
+#tab-calendario .cal-scroll-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -2px}
+#tab-calendario .cal-scroll-inner{min-width:calc(7*48px + 6*3px)}
+#tab-calendario .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(48px,1fr));gap:3px;margin-top:0}
+#tab-calendario .cal-head{display:grid;grid-template-columns:repeat(7,minmax(48px,1fr));gap:3px;margin-bottom:4px;margin-top:10px}
+#tab-calendario .cal-dh{text-align:center;font-size:11px;color:var(--mu2);text-transform:uppercase;letter-spacing:.04em;padding:4px 2px;min-width:0;white-space:nowrap}
+#tab-calendario .cal-day{min-height:52px;min-width:0;background:var(--d3);border:1px solid var(--d4);border-radius:6px;padding:4px;cursor:pointer;transition:border-color .2s}
 #tab-calendario .cal-day:hover{border-color:var(--d5)}
 #tab-calendario .cal-day.today{border-color:#ef4444}
 #tab-calendario .cal-day.selected{border-color:var(--green)}
@@ -4815,14 +4815,14 @@ function gsSavePercorso(uid){
   const existing = gsGetPercorso(uid);
   let lezioni;
   if(existing){
-    lezioni = existing.lezioni.map(l=>({svolta:l.svolta||false, pagata:l.pagata||false, dt:l.dt||null, note:l.note||null}));
-    while(lezioni.length < tot) lezioni.push({svolta:false, pagata:tipo==='anticipato', dt:null, note:null});
+    lezioni = existing.lezioni.map(l=>({svolta:l.svolta||false, pagata:l.pagata||false, dt:l.dt||null, note:l.note||null, adminRef:l.adminRef||null}));
+    while(lezioni.length < tot) lezioni.push({svolta:false, pagata:tipo==='anticipato', dt:null, note:null, adminRef:null});
     if(lezioni.length > tot)   lezioni = lezioni.slice(0, tot);
     // Se si passa ad anticipato: segna pagate le non ancora pagate
     if(tipo==='anticipato') lezioni = lezioni.map(l=>({...l, pagata:true}));
     // Se si passa a lezione-per-lezione: non toccare stati esistenti
   } else {
-    lezioni = Array.from({length:tot}, ()=>({svolta:false, pagata:tipo==='anticipato', dt:null, note:null}));
+    lezioni = Array.from({length:tot}, ()=>({svolta:false, pagata:tipo==='anticipato', dt:null, note:null, adminRef:null}));
   }
 
   gsSetPercorso(uid, {totLezioni:tot, tipoPagamento:tipo, lezioni});
@@ -4949,6 +4949,7 @@ let _calYear    = new Date().getFullYear();
 let _calMonth   = new Date().getMonth();
 let _calSelDay  = null;
 let _calFilterUid = null; // uid filtro ricerca | null = tutti
+let _calIcsSaved  = new Set(); // 'uid_idx' degli appuntamenti già salvati nel calendario
 
 // Palette colori per utenti attivi — rotante, persistente per uid durante il percorso
 const CAL_PALETTE = [
@@ -5072,7 +5073,7 @@ function calBuildHtml(){
             +'<div class="cei-name">'+ev.userName+' · Lezione '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+dateLabel2+(ev.note?' · '+ev.note:'')+'</div>'
             +'</div>'
-            +'<div class="cei-actions"><button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsT.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">&#x1F4C5; AGGIUNGI AL CALENDARIO</button></div>'
+            +'<div class="cei-actions">'+calIcsBtn(ev,icsT)+'</div>'
             +'</div>';
         }).join('')
       : '<div class="gs-empty" style="padding:16px">Nessun appuntamento assegnato a te.</div>';
@@ -5100,7 +5101,7 @@ function calBuildHtml(){
             +'<div class="cei-name">Lezione '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+dateLabel+(ev.note?' · '+ev.note:'')+'</div>'
             +'</div>'
-            +'<div class="cei-actions"><button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsTitle1.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">&#x1F4C5; AGGIUNGI AL CALENDARIO</button>'
+            +'<div class="cei-actions">'+calIcsBtn(ev,icsTitle1)
             +'<select class="cal-admin-sel" data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onchange="calAssignAdmin(this)" title="Assegna insegnante">'
             +'<option value="">— Insegnante —</option>'+adminOpts+'</select></div>'
             +'</div>';
@@ -5131,7 +5132,7 @@ function calBuildHtml(){
             +'<div class="cei-name">'+ev.userName+' · Lezione '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+(ev.note||'Nessuna nota')+'</div>'
             +'</div>'
-            +'<div class="cei-actions"><button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsTitle2.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">&#x1F4C5; AGGIUNGI AL CALENDARIO</button>'
+            +'<div class="cei-actions">'+calIcsBtn(ev,icsTitle2)
             +'<select class="cal-admin-sel" data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onchange="calAssignAdmin(this)" title="Assegna insegnante">'
             +'<option value="">— Insegnante —</option>'+adminOpts+'</select></div>'
             +'</div>';
@@ -5269,6 +5270,16 @@ function calClearFilter(){
   if(calEl) calEl.innerHTML = calBuildHtml();
 }
 
+// ── Helper: genera bottone ICS con stato salvato ─────────────────────────────
+function calIcsBtn(ev, titleStr){
+  const key     = ev.uid+'_'+ev.idx;
+  const isSaved = _calIcsSaved.has(key);
+  const cls     = 'cal-ics-btn' + (isSaved ? ' ics-saved' : '');
+  const label   = isSaved ? '&#x2713; SALVATO' : '&#x1F4C5; AGGIUNGI AL CALENDARIO';
+  const safeTitle = titleStr.replace(/"/g,'&quot;');
+  return '<button class="'+cls+'" data-dt="'+ev.dt+'" data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" data-title="'+safeTitle+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">'+label+'</button>';
+}
+
 // ── Filtro "I miei appuntamenti" ─────────────────────────────────────────────
 let _calMyFilter = false;
 
@@ -5291,6 +5302,9 @@ function calExportICS(btn){
   const dt    = btn.dataset.dt;
   const title = btn.dataset.title || 'Lezione freccette';
   if(!dt){ alert('Nessuna data impostata per questo appuntamento.'); return; }
+  // Registra questo appuntamento come salvato (persiste tra re-render del calendario)
+  const icsKey = (btn.dataset.uid||'')+'_'+(btn.dataset.idx||'');
+  if(icsKey !== '_') _calIcsSaved.add(icsKey);
 
   const d   = new Date(dt);
   const pad = n => String(n).padStart(2,'0');
@@ -5341,10 +5355,11 @@ function calExportICS(btn){
   document.body.appendChild(a);
   a.click();
   setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 3000);
-  // Marca il bottone come già cliccato (grigio permanente per questa sessione)
+  // Marca il bottone come già cliccato (grigio permanente, ma sempre cliccabile)
   btn.classList.add('ics-saved');
   btn.textContent = '✓ SALVATO';
-  btn.disabled = true;
+  // NON disabilitare — l'utente può sempre ri-salvare l'appuntamento
+  // La classe ics-saved mantiene lo stile grigio in modo permanente
 }
 // ══════════════════════════════════════════════════
 // NOTIFICHE BROWSER — appuntamenti lezioni
