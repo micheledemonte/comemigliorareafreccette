@@ -620,6 +620,10 @@ select:hover{border-color:var(--green)}
 .cal-event-item .cei-meta{font-size:12px;color:var(--mu2);margin-top:2px}
 .cal-event-item select{background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:5px 8px;border-radius:5px;font-size:12px;cursor:pointer}
 .cal-event-item select:focus{outline:none;border-color:var(--green)}
+.cal-ics-btn{width:32px;height:32px;border-radius:6px;background:var(--d3);border:1px solid var(--d5);color:var(--mu2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;transition:all .2s}
+.cal-ics-btn:hover{background:var(--gdim);border-color:var(--green);color:var(--green)}
+.cal-myfilter-btn{background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:6px;padding:7px 14px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
+.cal-myfilter-btn.active{background:var(--gdim);border-color:var(--green);color:var(--green)}
 
 .pw-wrap{position:relative}
 .pw-wrap input{padding-right:40px!important}
@@ -1906,7 +1910,13 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   <!-- CALENDARIO -->
   <div class="tab-body" id="tab-calendario">
     <h2 style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:22px;color:var(--green);margin-bottom:4px;letter-spacing:-.01em">CALENDARIO LEZIONI</h2>
-    <p style="font-size:13px;color:var(--mu2);margin-bottom:18px">Tutte le lezioni prenotate — assegna l'insegnante per ogni appuntamento.</p>
+    <p style="font-size:13px;color:var(--mu2);margin-bottom:12px">Tutte le lezioni prenotate — assegna l'insegnante per ogni appuntamento.</p>
+    <!-- Bottone filtro "I miei appuntamenti" -->
+    <div style="margin-bottom:12px">
+      <button class="cal-myfilter-btn" id="calMyFilterBtn" onclick="calToggleMyFilter()">
+        <span>👤</span> I MIEI APPUNTAMENTI
+      </button>
+    </div>
     <!-- Ricerca utente per filtrare le prenotazioni -->
     <div style="margin-bottom:14px;position:relative">
       <input type="text" id="calSearch" placeholder="🔍 Cerca studente per filtrare le prenotazioni..." oninput="calSearchUser()" autocomplete="off"
@@ -4696,7 +4706,7 @@ function gsRenderUserBody(u, p){
   const legendHtml = p.tipoPagamento==='anticipato'
     ? `<div class="gs-lezioni-legend">
         <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#1e3a5f;border:1.5px solid #1d4ed8"></div>Pagata, non svolta — tocca per segnare svolta</div>
-        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#052e16;border:1.5px solid var(--green)">✅</div>Pagata + svolta</div>
+        <div class="gs-leg-item"><div class="gs-leg-dot" style="background:#052e16;border:1.5px solid var(--green)">🏆</div>Pagata + svolta</div>
         <div class="gs-leg-item"><div class="gs-leg-dot" style="background:var(--d3);border:1.5px solid var(--amber)"></div>Bordo arancione = appuntamento fissato</div>
       </div>`
     : `<div class="gs-lezioni-legend">
@@ -4956,7 +4966,14 @@ function calBuildHtml(){
   const todayStr   = calDateStr(today);
   const colorMap   = calGetUserColorMap();
   const allEvents  = calGetAllEvents();
-  const events     = _calFilterUid ? allEvents.filter(ev=>ev.uid===_calFilterUid) : allEvents;
+  let events;
+  if(_calFilterUid){
+    events = allEvents.filter(ev=>ev.uid===_calFilterUid);
+  } else if(_calMyFilter && CU){
+    events = allEvents.filter(ev=>ev.adminRef===CU.id);
+  } else {
+    events = allEvents;
+  }
 
   // Raggruppa per giorno
   const byDay = {};
@@ -5012,7 +5029,32 @@ function calBuildHtml(){
 
   // Se filtro utente attivo → mostra tutte le sue prenotazioni (non per giorno)
   let listHtml;
-  if(_calFilterUid){
+  if(_calMyFilter && CU){
+    // Vista "I miei appuntamenti"
+    const myEvs  = allEvents.filter(ev=>ev.adminRef===CU.id).sort((a,b)=>a.dt.localeCompare(b.dt));
+    const colorMap2 = calGetUserColorMap();
+    const rowsHtml = myEvs.length
+      ? myEvs.map(ev=>{
+          const _dp2 = ev.dt.slice(0,10).split('-');
+          const d2  = new Date(parseInt(_dp2[0]), parseInt(_dp2[1])-1, parseInt(_dp2[2]), ...ev.dt.length>10 ? ev.dt.slice(11,16).split(':').map(Number) : [0,0]);
+          const dateLabel2 = d2.toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short',year:'numeric'})+' '+ev.timeStr;
+          const col2 = colorMap2[ev.uid]||{border:'var(--green)',color:'var(--green)'};
+          const icsT = ev.userName+' - Lezione '+(ev.idx+1)+(ev.note?' - '+ev.note:'');
+          return '<div class="cal-event-item" style="border-left:3px solid '+col2.border+'">'
+            +'<div class="cei-time" style="color:'+col2.color+'">'+ev.timeStr+'</div>'
+            +'<div class="cei-info">'
+            +'<div class="cei-name">'+ev.userName+' · Lezione '+(ev.idx+1)+'</div>'
+            +'<div class="cei-meta">'+dateLabel2+(ev.note?' · '+ev.note:'')+'</div>'
+            +'</div>'
+            +'<button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsT.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario">&#x1F4C5;</button>'
+            +'</div>';
+        }).join('')
+      : '<div class="gs-empty" style="padding:16px">Nessun appuntamento assegnato a te.</div>';
+    listHtml = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">'
+      +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--green);letter-spacing:.04em">👤 I MIEI APPUNTAMENTI</div>'
+      +'<button onclick="calClearFilter()" style="background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">✕ RIMUOVI SELEZIONE</button>'
+      +'</div>'+rowsHtml;
+  } else if(_calFilterUid){
     const u     = getUsers().find(u=>u.id===_calFilterUid);
     const uName = u ? u.firstName+' '+u.lastName : 'Utente';
     const admins= getUsers().filter(u=>u.role==='admin');
@@ -5021,16 +5063,19 @@ function calBuildHtml(){
 
     const rowsHtml = uEvs.length
       ? uEvs.map(ev=>{
-          const d   = new Date(ev.dt);
-          const dateLabel = d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+          const _dp = ev.dt.slice(0,10).split('-');
+          const d   = new Date(parseInt(_dp[0]), parseInt(_dp[1])-1, parseInt(_dp[2]), ...ev.dt.length>10 ? ev.dt.slice(11,16).split(':').map(Number) : [0,0]);
+          const dateLabel = d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short',year:'numeric'}) + ' ' + (ev.dt.length>10 ? ev.dt.slice(11,16) : '');
           const adminOpts = admins.map(a=>'<option value="'+a.id+'"'+(ev.adminRef===a.id?' selected':'')+'>'+a.firstName+' '+a.lastName+'</option>').join('');
+          const icsTitle1 = ev.userName+' - Lezione '+(ev.idx+1)+(ev.note?' - '+ev.note:'');
           return '<div class="cal-event-item" style="border-left:3px solid '+col.border+'">'
             +'<div class="cei-time" style="color:'+col.color+'">'+ev.timeStr+'</div>'
             +'<div class="cei-info">'
             +'<div class="cei-name">Lezione '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+dateLabel+(ev.note?' · '+ev.note:'')+'</div>'
             +'</div>'
-            +'<select onchange="calAssignAdmin(\"'+ev.uid+'\",'+ev.idx+',this.value)" title="Assegna insegnante">'
+            +'<button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsTitle1.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">&#x1F4C5;</button>'
+            +'<select class="cal-admin-sel" data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onchange="calAssignAdmin(this)" title="Assegna insegnante">'
             +'<option value="">— Insegnante —</option>'+adminOpts+'</select>'
             +'</div>';
         }).join('')
@@ -5045,20 +5090,23 @@ function calBuildHtml(){
     const selDay   = _calSelDay || todayStr;
     const selEvs   = byDay[selDay]||[];
     const admins   = getUsers().filter(u=>u.role==='admin');
-    const selD     = new Date(selDay+'T00:00:00');
+    const _selParts = selDay.split('-');
+    const selD     = new Date(parseInt(_selParts[0]), parseInt(_selParts[1])-1, parseInt(_selParts[2]));
     const selLabel = selD.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
     const rows = selEvs.length
       ? selEvs.map(ev=>{
           const col       = colorMap[ev.uid]||{border:'var(--green)',color:'var(--green)'};
           const adminOpts = admins.map(a=>'<option value="'+a.id+'"'+(ev.adminRef===a.id?' selected':'')+'>'+a.firstName+' '+a.lastName+'</option>').join('');
+          const icsTitle2 = ev.userName+' - Lezione '+(ev.idx+1)+(ev.note?' - '+ev.note:'');
           return '<div class="cal-event-item" style="border-left:3px solid '+col.border+'">'
             +'<div class="cei-time" style="color:'+col.color+'">'+ev.timeStr+'</div>'
             +'<div class="cei-info">'
             +'<div class="cei-name">'+ev.userName+' · Lezione '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+(ev.note||'Nessuna nota')+'</div>'
             +'</div>'
-            +'<select onchange="calAssignAdmin(\"'+ev.uid+'\",'+ev.idx+',this.value)" title="Assegna insegnante">'
+            +'<button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsTitle2.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">&#x1F4C5;</button>'
+            +'<select class="cal-admin-sel" data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onchange="calAssignAdmin(this)" title="Assegna insegnante">'
             +'<option value="">— Insegnante —</option>'+adminOpts+'</select>'
             +'</div>';
         }).join('')
@@ -5124,12 +5172,23 @@ function calNextMonth(){
   renderCalendario();
 }
 
-function calAssignAdmin(uid, idx, adminId){
+function calAssignAdmin(elOrUid, idxOrUndef, adminIdOrUndef){
+  // Supporta sia calAssignAdmin(element) che calAssignAdmin(uid, idx, adminId)
+  let uid, idx, adminId;
+  if(typeof elOrUid === 'object' && elOrUid.dataset){
+    uid     = elOrUid.dataset.uid;
+    idx     = parseInt(elOrUid.dataset.idx);
+    adminId = elOrUid.value;
+  } else {
+    uid     = elOrUid;
+    idx     = idxOrUndef;
+    adminId = adminIdOrUndef;
+  }
   const p = gsGetPercorso(uid);
   if(!p) return;
   p.lezioni[idx].adminRef = adminId||null;
   gsSetPercorso(uid, p);
-  // Aggiorna anche la card gestionale se aperta (body dell'utente)
+  // Aggiorna anche la card gestionale se aperta
   const body = document.getElementById('gsBody_'+uid);
   if(body && body.classList.contains('open')){
     const u = getUsers().find(u=>u.id===uid);
@@ -5167,12 +5226,84 @@ function calPinUser(uid){
 }
 
 function calClearFilter(){
-  _calFilterUid = null;
-  _calSelDay    = null;
+  _calFilterUid  = null;
+  _calMyFilter   = false;
+  _calSelDay     = null;
   const srch = document.getElementById('calSearch');
   if(srch) srch.value = '';
+  const btn = document.getElementById('calMyFilterBtn');
+  if(btn) btn.classList.remove('active');
   const calEl = document.getElementById('calContainer');
   if(calEl) calEl.innerHTML = calBuildHtml();
+}
+
+// ── Filtro "I miei appuntamenti" ─────────────────────────────────────────────
+let _calMyFilter = false;
+
+function calToggleMyFilter(){
+  _calMyFilter   = !_calMyFilter;
+  _calFilterUid  = null;
+  _calSelDay     = null;
+  const srch = document.getElementById('calSearch');
+  if(srch) srch.value = '';
+  const drop = document.getElementById('calSearchDrop');
+  if(drop) drop.style.display = 'none';
+  const btn = document.getElementById('calMyFilterBtn');
+  if(btn) btn.classList.toggle('active', _calMyFilter);
+  const calEl = document.getElementById('calContainer');
+  if(calEl) calEl.innerHTML = calBuildHtml();
+}
+
+// ── Esporta ICS per calendario dispositivo ───────────────────────────────────
+function calExportICS(btn){
+  const dt    = btn.dataset.dt;
+  const title = btn.dataset.title || 'Lezione freccette';
+  if(!dt){ alert('Nessuna data impostata per questo appuntamento.'); return; }
+
+  // Formatta data ICS: 20260610T140000
+  const d   = new Date(dt);
+  const pad = n => String(n).padStart(2,'0');
+  const dtStr  = d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())
+    +'T'+pad(d.getHours())+pad(d.getMinutes())+'00';
+  // Fine lezione = 1 ora dopo
+  const dEnd = new Date(d.getTime() + 60*60*1000);
+  const dtEnd = dEnd.getFullYear()+pad(dEnd.getMonth()+1)+pad(dEnd.getDate())
+    +'T'+pad(dEnd.getHours())+pad(dEnd.getMinutes())+'00';
+  // UID univoco evento
+  const uid = 'cmaf-'+dt.replace(/[^0-9]/g,'')+'-'+Math.random().toString(36).slice(2,8);
+
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//CMAF//Freccette//IT',
+    'BEGIN:VEVENT',
+    'UID:'+uid,
+    'DTSTART:'+dtStr,
+    'DTEND:'+dtEnd,
+    'SUMMARY:'+title.replace(/,/g,'\,'),
+    'DESCRIPTION:Lezione freccette - Come Migliorare a Freccette',
+    'BEGIN:VALARM',
+    'TRIGGER:-PT60M',
+    'ACTION:DISPLAY',
+    'DESCRIPTION:Promemoria lezione tra 1 ora',
+    'END:VALARM',
+    'BEGIN:VALARM',
+    'TRIGGER:-PT30M',
+    'ACTION:DISPLAY',
+    'DESCRIPTION:Promemoria lezione tra 30 minuti',
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+
+  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'lezione-freccette.ics';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 2000);
 }
 // ══════════════════════════════════════════════════
 // NOTIFICHE BROWSER — appuntamenti lezioni
