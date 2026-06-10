@@ -1,14 +1,12 @@
 {
   "name": "Come Migliorare a Freccette",
   "short_name": "Freccette",
-  "description": "Allenamento strutturato, statistiche e analisi biomeccanica per giocatori di freccette.",
+  "description": "Allenamento strutturato, statistiche e analisi biomeccanica per i giocatori di freccette.",
   "start_url": "/",
-  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0a0a0a",
   "theme_color": "#4ade80",
-  "lang": "it",
   "icons": [
     {
       "src": "/icon-192.png",
