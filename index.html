@@ -1856,6 +1856,14 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   </div>
 
   <!-- PROFILE -->
+  <!-- APPUNTAMENTI UTENTE -->
+  <div class="tab-body" id="tab-appuntamenti">
+    <h2 style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:22px;color:var(--green);margin-bottom:4px;letter-spacing:-.01em">I TUOI APPUNTAMENTI</h2>
+    <p style="font-size:13px;color:var(--mu2);margin-bottom:6px">Qui trovi tutte le lezioni che ti sono state fissate dall'accademia. Per ogni appuntamento puoi vedere l'orario, il tuo insegnante e aggiungere la lezione direttamente al calendario del tuo dispositivo — così non dimentichi nessuna lezione.</p>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:18px">Gli appuntamenti vengono aggiornati in tempo reale dall'amministratore.</p>
+    <div id="apptUserList"></div>
+  </div>
+
   <div class="tab-body" id="tab-profile">
     <div class="profile-grid">
       <div class="pc">
@@ -2643,7 +2651,8 @@ function enterApp(){
   autoLoadNextSession();
   loadPrev501Sessions();
   checkReset();
-  if(isAdmin) setTimeout(gsRestoreNotifications, 800); // schedula notifiche appuntamenti futuri
+  if(isAdmin) setTimeout(()=>{ calLoadIcsSaved(); gsRestoreNotifications(); }, 800);
+  else setTimeout(calLoadIcsSaved, 800); // carica stato ICS anche per utenti normali
 }
 
 function autoLoadNextSession(){
@@ -2783,11 +2792,12 @@ async function doLogout(){
 // ══════════════════════════════════════════════════
 const LD = {
   tabs: [
-    {id:'training',    icon:'🎯', label:'Allenamento'},
-    {id:'stats',       icon:'📊', label:'Statistiche'},
-    {id:'play501',     icon:'🏆', label:'501'},
-    {id:'checkout',    icon:'✅', label:'Checkout'},
-    {id:'profile',     icon:'👤', label:'Profilo'},
+    {id:'training',       icon:'🎯', label:'Allenamento'},
+    {id:'stats',          icon:'📊', label:'Statistiche'},
+    {id:'play501',        icon:'🏆', label:'501'},
+    {id:'checkout',       icon:'✅', label:'Checkout'},
+    {id:'appuntamenti',   icon:'📅', label:'Appuntamenti'},
+    {id:'profile',        icon:'👤', label:'Profilo'},
   ],
   adminTab:        {id:'admin',       icon:'⚙️', label:'Admin'},
   gestTab:         {id:'gestionale',  icon:'📋', label:'Gestionale'}, // admin-only
@@ -3174,12 +3184,13 @@ function showTab(name,silent=false){
   if(legacyMap[name]!==undefined) tabs[legacyMap[name]]?.classList.add('active');
   if(LD.current!==name){ ldSnapTo(name,true); }
   if(!silent){
-    if(name==='stats')       renderStats();
-    if(name==='admin')       renderAdmin();
-    if(name==='gestionale')  renderGestionale();
-    if(name==='calendario')  renderCalendario();
-    if(name==='profile')     loadProfileForm();
-    if(name==='checkout')    renderCOTables();
+    if(name==='stats')          renderStats();
+    if(name==='admin')          renderAdmin();
+    if(name==='gestionale')     renderGestionale();
+    if(name==='calendario')     renderCalendario();
+    if(name==='appuntamenti')   renderApptUser();
+    if(name==='profile')        loadProfileForm();
+    if(name==='checkout')       renderCOTables();
   }
 }
 // ══════════════════════════════════════════════════
@@ -4943,13 +4954,125 @@ function gsApptSave(){
 }
 
 // ══════════════════════════════════════════════════
+// APPUNTAMENTI UTENTE (sezione user, non admin)
+// ══════════════════════════════════════════════════
+function renderApptUser(){
+  if(!CU) return;
+  const el = document.getElementById('apptUserList');
+  if(!el) return;
+
+  // Legge il percorso dell'utente corrente
+  const p = gsGetPercorso(CU.id);
+  if(!p){
+    el.innerHTML = '<div class="gs-empty" style="padding:40px 20px">Nessun percorso di lezioni attivo. Contatta il tuo insegnante per iniziare.</div>';
+    return;
+  }
+
+  // Filtra solo lezioni con data/ora fissata
+  const appts = p.lezioni.map((l,i)=>({...l, idx:i})).filter(l=>l.dt);
+  if(!appts.length){
+    el.innerHTML = '<div class="gs-empty" style="padding:40px 20px">Nessun appuntamento fissato al momento. Il tuo insegnante aggiungerà presto le date delle lezioni.</div>';
+    return;
+  }
+
+  // Ordina per data crescente
+  appts.sort((a,b)=>a.dt.localeCompare(b.dt));
+
+  // Ottieni mappa colori (per coerenza visiva con il calendario)
+  const colorMap = (typeof calGetUserColorMap === 'function') ? calGetUserColorMap() : {};
+  const col = colorMap[CU.id] || {border:'var(--green)', color:'var(--green)'};
+
+  // Ottieni nomi admin
+  const admins = getUsers().filter(u=>u.role==='admin');
+  const adminName = (id) => {
+    const a = admins.find(a=>a.id===id);
+    return a ? a.firstName+' '+a.lastName : null;
+  };
+
+  const now = new Date();
+
+  el.innerHTML = appts.map(l=>{
+    const _dp   = l.dt.slice(0,10).split('-');
+    const d     = new Date(parseInt(_dp[0]), parseInt(_dp[1])-1, parseInt(_dp[2]),
+                    ...(l.dt.length>10 ? l.dt.slice(11,16).split(':').map(Number) : [0,0]));
+    const pad   = n => String(n).padStart(2,'0');
+    const timeStr = pad(d.getHours())+':'+pad(d.getMinutes());
+    const dateLabel = d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    const isPast = d < now;
+    const teacher = adminName(l.adminRef);
+    const isSaved = _userIcsSaved.has(String(l.idx));
+    const icsCls  = 'cal-ics-btn' + (isSaved ? ' ics-saved' : '');
+    const icsLabel= isSaved ? '&#x2713; SALVATO' : '&#x1F4C5; AGGIUNGI AL CALENDARIO';
+    const icsTitle= (teacher ? teacher : 'Lezione accademia') + ' - Lezione '+(l.idx+1)+(l.note?' - '+l.note:'');
+    return '<div class="cal-event-item" style="border-left:3px solid '+col.border+';opacity:'+(isPast?'.55':'1')+'">'
+      +'<div class="cei-time" style="color:'+col.color+'">'+timeStr+'</div>'
+      +'<div class="cei-info">'
+      +'<div class="cei-name">Lezione '+(l.idx+1)+(isPast?' <span style="font-size:10px;color:var(--muted)">· passata</span>' : '')+'</div>'
+      +'<div class="cei-meta" style="text-transform:capitalize">'+dateLabel+(l.note?' · '+l.note:'')+'</div>'
+      +(teacher ? '<div class="cei-meta" style="margin-top:3px">👨‍🏫 '+teacher+'</div>' : '')
+      +'</div>'
+      +'<div class="cei-actions">'
+      +'<button class="'+icsCls+'" data-dt="'+l.dt+'" data-idx="'+l.idx+'" data-title="'+icsTitle.replace(/"/g,'&quot;')+'" onclick="userExportICS(this)" title="Aggiungi al calendario del dispositivo">'+icsLabel+'</button>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function userExportICS(btn){
+  const dt    = btn.dataset.dt;
+  const title = btn.dataset.title || 'Lezione freccette';
+  const idx   = btn.dataset.idx;
+  if(!dt){ alert('Nessuna data impostata.'); return; }
+
+  // Registra come salvato (persiste)
+  _userIcsSaved.add(String(idx));
+  userSaveIcsSaved();
+
+  const d   = new Date(dt);
+  const pad = n => String(n).padStart(2,'0');
+  const dtStr  = d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())
+    +'T'+pad(d.getHours())+pad(d.getMinutes())+'00';
+  const dEnd   = new Date(d.getTime() + 60*60*1000);
+  const dtEnd  = dEnd.getFullYear()+pad(dEnd.getMonth()+1)+pad(dEnd.getDate())
+    +'T'+pad(dEnd.getHours())+pad(dEnd.getMinutes())+'00';
+  const uid    = 'cmaf-'+dt.replace(/[^0-9]/g,'')+'-'+Math.random().toString(36).slice(2,8);
+  const CRLF   = '\r\n';
+  const ics = [
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//CMAF//Freccette//IT',
+    'BEGIN:VEVENT','UID:'+uid,'DTSTART:'+dtStr,'DTEND:'+dtEnd,
+    'SUMMARY:'+title.replace(/,/g,'\\,'),
+    'DESCRIPTION:Lezione freccette - Come Migliorare a Freccette',
+    'BEGIN:VALARM','TRIGGER:-PT60M','ACTION:DISPLAY','DESCRIPTION:Promemoria lezione tra 1 ora','END:VALARM',
+    'BEGIN:VALARM','TRIGGER:-PT30M','ACTION:DISPLAY','DESCRIPTION:Promemoria lezione tra 30 minuti','END:VALARM',
+    'END:VEVENT','END:VCALENDAR'
+  ].join(CRLF);
+  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'lezione-freccette.ics';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 3000);
+
+  btn.classList.add('ics-saved');
+  btn.innerHTML = '&#x2713; SALVATO';
+}
+
+function userSaveIcsSaved(){
+  if(!CU) return;
+  const data = getUD(CU.id);
+  data.__userIcsSaved = Array.from(_userIcsSaved);
+  setUD(CU.id, data);
+}
+
+// ══════════════════════════════════════════════════
 // CALENDARIO LEZIONI
 // ══════════════════════════════════════════════════
 let _calYear    = new Date().getFullYear();
 let _calMonth   = new Date().getMonth();
 let _calSelDay  = null;
 let _calFilterUid = null; // uid filtro ricerca | null = tutti
-let _calIcsSaved  = new Set(); // 'uid_idx' degli appuntamenti già salvati nel calendario
+let _calIcsSaved  = new Set(); // 'uid_idx' degli appuntamenti già salvati nel calendario (admin)
+let _userIcsSaved = new Set(); // 'idx' degli appuntamenti già salvati dall'utente normale
 
 // Palette colori per utenti attivi — rotante, persistente per uid durante il percorso
 const CAL_PALETTE = [
@@ -5302,9 +5425,12 @@ function calExportICS(btn){
   const dt    = btn.dataset.dt;
   const title = btn.dataset.title || 'Lezione freccette';
   if(!dt){ alert('Nessuna data impostata per questo appuntamento.'); return; }
-  // Registra questo appuntamento come salvato (persiste tra re-render del calendario)
+  // Registra questo appuntamento come salvato (persiste tra re-render e logout)
   const icsKey = (btn.dataset.uid||'')+'_'+(btn.dataset.idx||'');
-  if(icsKey !== '_') _calIcsSaved.add(icsKey);
+  if(icsKey !== '_'){
+    _calIcsSaved.add(icsKey);
+    calSaveIcsSaved(); // persisti su Firebase
+  }
 
   const d   = new Date(dt);
   const pad = n => String(n).padStart(2,'0');
@@ -5410,6 +5536,26 @@ function gsScheduleNotifications(uid, idx, dt, note, studentUser){
     }, delay);
     _gsNotifTimers[key].push(tid);
   });
+}
+
+// ── Persistenza stato "SALVATO" pillola ICS ─────────────────────────────────
+function calSaveIcsSaved(){
+  if(!CU || CU.role!=='admin') return;
+  const data = getUD(CU.id);
+  data.__calIcsSaved = Array.from(_calIcsSaved);
+  setUD(CU.id, data);
+}
+
+function calLoadIcsSaved(){
+  if(!CU) return;
+  if(CU.role==='admin'){
+    // Admin: carica __calIcsSaved (chiavi uid_idx)
+    const saved = getUD(CU.id).__calIcsSaved;
+    if(Array.isArray(saved)) saved.forEach(k=>_calIcsSaved.add(k));
+  }
+  // Tutti: carica __userIcsSaved (idx delle proprie lezioni)
+  const userSaved = getUD(CU.id).__userIcsSaved;
+  if(Array.isArray(userSaved)) userSaved.forEach(k=>_userIcsSaved.add(k));
 }
 
 // Re-schedula notifiche al login per tutti gli appuntamenti futuri degli admin
