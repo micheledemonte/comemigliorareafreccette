@@ -595,8 +595,10 @@ select:hover{border-color:var(--green)}
 .gs-appt-btns{display:flex;gap:8px;margin-top:4px}
 .gs-appt-btns button{flex:1;padding:10px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-weight:700;font-size:16px;letter-spacing:.04em;cursor:pointer;border:none;transition:all .2s}
 /* Calendario */
-#tab-calendario .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:10px}
-#tab-calendario .cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px}
+#tab-calendario .cal-scroll-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+#tab-calendario .cal-scroll-inner{min-width:350px}
+#tab-calendario .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:0}
+#tab-calendario .cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px;margin-top:10px}
 #tab-calendario .cal-dh{text-align:center;font-size:11px;color:var(--mu2);text-transform:uppercase;letter-spacing:.06em;padding:4px 0}
 #tab-calendario .cal-day{min-height:56px;background:var(--d3);border:1px solid var(--d4);border-radius:6px;padding:4px;cursor:pointer;transition:border-color .2s}
 #tab-calendario .cal-day:hover{border-color:var(--d5)}
@@ -622,8 +624,10 @@ select:hover{border-color:var(--green)}
 @media(max-width:600px){.cal-event-item .cei-actions{width:100%;margin-top:6px;padding-top:6px;border-top:1px solid var(--d4)}}
 .cal-event-item select{background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:5px 8px;border-radius:5px;font-size:12px;cursor:pointer;max-width:160px}
 .cal-event-item select:focus{outline:none;border-color:var(--green)}
-.cal-ics-btn{height:32px;border-radius:6px;background:var(--d3);border:1px solid var(--d5);color:var(--mu2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;transition:all .2s;padding:0 10px;line-height:1;letter-spacing:.02em}
-.cal-ics-btn:hover{background:var(--gdim);border-color:var(--green);color:var(--green)}
+.cal-ics-btn{height:32px;border-radius:6px;background:var(--gdim);border:1px solid var(--green);color:var(--green);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;transition:all .2s;padding:0 10px;line-height:1;letter-spacing:.02em}
+.cal-ics-btn:hover{background:#052e16;border-color:var(--green)}
+.cal-ics-btn.ics-saved{background:var(--d3);border-color:var(--d5);color:var(--mu2);cursor:default}
+.cal-ics-btn.ics-saved:hover{background:var(--d3);border-color:var(--d5)}
 .cal-myfilter-btn{background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:6px;padding:7px 14px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
 .cal-myfilter-btn.active{background:var(--gdim);border-color:var(--green);color:var(--green)}
 
@@ -5142,8 +5146,10 @@ function calBuildHtml(){
     +'<span class="cal-month-label">'+monthNames[_calMonth]+' '+_calYear+'</span>'
     +'<button onclick="calNextMonth()">&#9654;</button>'
     +'</div>'
+    +'<div class="cal-scroll-wrap"><div class="cal-scroll-inner">'
     +'<div class="cal-head">'+['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d=>'<div class="cal-dh">'+d+'</div>').join('')+'</div>'
     +'<div class="cal-grid">'+gridHtml+'</div>'
+    +'</div></div>'
     +'<div class="cal-event-list">'+listHtml+'</div>';
 }
 function calDateStr(d){
@@ -5335,6 +5341,10 @@ function calExportICS(btn){
   document.body.appendChild(a);
   a.click();
   setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 3000);
+  // Marca il bottone come già cliccato (grigio permanente per questa sessione)
+  btn.classList.add('ics-saved');
+  btn.textContent = '✓ SALVATO';
+  btn.disabled = true;
 }
 // ══════════════════════════════════════════════════
 // NOTIFICHE BROWSER — appuntamenti lezioni
