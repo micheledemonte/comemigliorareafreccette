@@ -583,6 +583,48 @@ select:hover{border-color:var(--green)}
 .gs-del-percorso-btn:hover{background:#3d0505}
 .gs-section-title{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--mu2);letter-spacing:.08em;margin-bottom:10px;margin-top:4px}
 .gs-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px}
+/* ═══ MESSAGGISTICA RICHIESTE PERCORSO ═══ */
+.req-compose{background:var(--d2);border:1px solid var(--d4);border-radius:12px;padding:20px;margin-bottom:20px}
+.req-compose h3{font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;color:var(--light);margin-bottom:10px}
+.req-compose textarea{width:100%;box-sizing:border-box;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;resize:vertical;min-height:100px;transition:border-color .2s}
+.req-compose textarea:focus{outline:none;border-color:var(--green)}
+.req-compose textarea::placeholder{color:var(--muted)}
+.req-compose-btn{background:var(--green);color:#000;border:none;padding:10px 22px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;margin-top:10px;transition:background .2s;width:100%}
+.req-compose-btn:hover{background:var(--green2)}
+.req-compose-btn:disabled{background:var(--d4);color:var(--muted);cursor:default}
+.req-filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.req-filter-btn{background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:999px;padding:5px 14px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:12px;cursor:pointer;transition:all .2s}
+.req-filter-btn.active{background:var(--gdim);border-color:var(--green);color:var(--green)}
+.req-list{display:flex;flex-direction:column;gap:8px}
+.req-card{background:var(--d2);border:1px solid var(--d4);border-radius:10px;padding:14px 16px;cursor:pointer;transition:border-color .2s;position:relative}
+.req-card:hover{border-color:var(--d5)}
+.req-card.unread{border-left:3px solid var(--green)}
+.req-card .req-sender{font-size:15px;color:var(--light);margin-bottom:3px}
+.req-card.unread .req-sender{font-weight:700}
+.req-card .req-preview{font-size:13px;color:var(--mu2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.req-card.unread .req-preview{font-weight:600;color:var(--light)}
+.req-card .req-ts{font-size:11px;color:var(--muted);position:absolute;top:14px;right:14px}
+.req-card .req-badges{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.req-badge{font-size:10px;padding:2px 8px;border-radius:999px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.req-badge-replied{background:#052e16;color:var(--green);border:1px solid #166534}
+.req-badge-read{background:var(--d4);color:var(--mu2)}
+/* Fullscreen dettaglio messaggio */
+#reqDetailOverlay{position:fixed;inset:0;z-index:1900;background:#000;display:none;flex-direction:column;overflow-y:auto}
+#reqDetailOverlay.open{display:flex}
+.req-detail-wrap{max-width:600px;width:100%;margin:0 auto;padding:28px 20px 40px}
+.req-detail-close{background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:8px 18px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:24px;display:inline-flex;align-items:center;gap:6px;transition:all .2s}
+.req-detail-close:hover{border-color:var(--green);color:var(--green)}
+.req-detail-user{background:var(--d2);border:1px solid var(--d4);border-radius:10px;padding:16px;margin-bottom:16px}
+.req-detail-user .rdu-row{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--light);margin-bottom:5px}
+.req-detail-user .rdu-row:last-child{margin-bottom:0}
+.req-detail-user .rdu-label{font-size:11px;color:var(--mu2);text-transform:uppercase;letter-spacing:.07em;min-width:60px}
+.req-detail-msg{background:var(--d2);border:1px solid var(--d4);border-radius:10px;padding:16px;margin-bottom:16px;font-size:15px;color:var(--light);line-height:1.6;white-space:pre-wrap}
+.req-detail-ts{font-size:12px;color:var(--muted);margin-bottom:20px}
+.req-reply-btn{background:var(--gdim);border:1.5px solid var(--green);color:var(--green);padding:10px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;width:100%;margin-bottom:10px}
+.req-reply-btn:hover{background:#052e16}
+.req-reply-btn.replied{background:var(--d3);border-color:var(--d5);color:var(--mu2);cursor:default}
+/* Dot notifica dock */
+.ld-item.has-dot::after{content:'';position:absolute;top:4px;right:4px;width:8px;height:8px;background:#ef4444;border-radius:50%;border:1.5px solid var(--dark)}
 /* Popup appuntamento */
 #gsApptOverlay{position:fixed;inset:0;z-index:1800;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;padding:20px}
 #gsApptOverlay.open{display:flex}
@@ -1897,7 +1939,23 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   <!-- GESTIONALE -->
   <div class="tab-body" id="tab-gestionale">
     <h2 style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:22px;color:var(--green);margin-bottom:4px;letter-spacing:-.01em">GESTIONALE LEZIONI</h2>
-    <p style="font-size:13px;color:var(--mu2);margin-bottom:18px">Gestisci i percorsi di lezioni per ogni studente.</p>
+    <p style="font-size:13px;color:var(--mu2);margin-bottom:12px">Gestisci i percorsi di lezioni per ogni studente.</p>
+
+    <!-- RICHIESTE DI PERCORSO -->
+    <div id="reqSection" style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--light);letter-spacing:.04em;margin:0">📩 RICHIESTE DI PERCORSO</h3>
+        <span id="reqUnreadBadge" style="display:none;background:#ef4444;color:#fff;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700"></span>
+      </div>
+      <div class="req-filters">
+        <button class="req-filter-btn active" onclick="reqFilter('all',this)">Tutti</button>
+        <button class="req-filter-btn" onclick="reqFilter('unread',this)">Da leggere</button>
+        <button class="req-filter-btn" onclick="reqFilter('read',this)">Già letti</button>
+      </div>
+      <div id="reqList"></div>
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--d4);margin-bottom:20px">
 
     <!-- Riepilogo numerico -->
     <div class="gs-summary-row" id="gsSummaryRow"></div>
@@ -1938,6 +1996,14 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       <div id="calSearchDrop" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--d2);border:1px solid var(--d4);border-radius:0 0 6px 6px;z-index:20;max-height:180px;overflow-y:auto"></div>
     </div>
     <div id="calContainer"></div>
+  </div>
+
+  <!-- DETTAGLIO RICHIESTA PERCORSO (fullscreen) -->
+  <div id="reqDetailOverlay">
+    <div class="req-detail-wrap">
+      <button class="req-detail-close" onclick="reqCloseDetail()">&#8592; INDIETRO</button>
+      <div id="reqDetailContent"></div>
+    </div>
   </div>
 
   <!-- POPUP APPUNTAMENTO -->
@@ -2651,8 +2717,12 @@ function enterApp(){
   autoLoadNextSession();
   loadPrev501Sessions();
   checkReset();
-  if(isAdmin) setTimeout(()=>{ calLoadIcsSaved(); gsRestoreNotifications(); }, 800);
-  else setTimeout(calLoadIcsSaved, 800); // carica stato ICS anche per utenti normali
+  if(isAdmin) setTimeout(()=>{
+    calLoadIcsSaved();
+    gsRestoreNotifications();
+    reqStartListener(); // ascolta richieste in real-time
+  }, 800);
+  else setTimeout(calLoadIcsSaved, 800);
 }
 
 function autoLoadNextSession(){
@@ -2777,8 +2847,12 @@ function showSavingGuardPopup(remaining){
 }
 
 async function doLogout(){
+  reqStopListener(); // ferma listener richieste real-time
   CU=null;
   _dbCache=null;
+  _reqCache={};
+  _calIcsSaved=new Set();
+  _userIcsSaved=new Set();
   reset501Sessions();
   if(_fbAuth) try{ await _fbAuth.signOut(); }catch(e){}
   document.getElementById('loadingOverlay').style.display='none';
@@ -4576,6 +4650,15 @@ function gsFilter(f, btn){
 function renderGestionale(){
   if(!CU || CU.role!=='admin') return;
   gsRender();
+  // Carica richieste: usa Firebase real-time se disponibile
+  if(_firebaseOK && _fbDB){
+    reqStartListener(); // avvia listener real-time (idempotente)
+  } else {
+    // Fallback: legge da _dbCache
+    _reqCache = (_dbCache && _dbCache.requests) || {};
+    reqRenderList();
+    reqUpdateDot();
+  }
 }
 
 function gsRender(){
@@ -4964,7 +5047,14 @@ function renderApptUser(){
   // Legge il percorso dell'utente corrente
   const p = gsGetPercorso(CU.id);
   if(!p){
-    el.innerHTML = '<div class="gs-empty" style="padding:40px 20px">Nessun percorso di allenamenti attivo. Contatta il tuo insegnante per iniziare.</div>';
+    // Nessun percorso: mostra modulo per richiedere l'inizio di un percorso
+    el.innerHTML = '<div class="req-compose">'
+      + '<h3>✉️ Richiedi un percorso di allenamento</h3>'
+      + '<p style="font-size:13px;color:var(--mu2);margin-bottom:12px">Non hai ancora un percorso attivo. Scrivi un messaggio al tuo insegnante per richiedere di iniziare un percorso personalizzato.</p>'
+      + '<textarea id="reqMsgInput" placeholder="Scrivi qui il tuo messaggio... (es. Vorrei iniziare un percorso di allenamento, sono disponibile il martedì e il giovedì sera.)"></textarea>'
+      + '<button class="req-compose-btn" onclick="reqSendRequest()">📨 INVIA RICHIESTA</button>'
+      + '<div id="reqSendFeedback" style="font-size:13px;margin-top:8px;display:none"></div>'
+      + '</div>';
     return;
   }
 
@@ -5062,6 +5152,230 @@ function userSaveIcsSaved(){
   const data = getUD(CU.id);
   data.__userIcsSaved = Array.from(_userIcsSaved);
   setUD(CU.id, data);
+}
+
+// ══════════════════════════════════════════════════
+// SISTEMA RICHIESTE PERCORSO
+// ══════════════════════════════════════════════════
+// Struttura Firebase: db.requests = {
+//   [reqId]: {
+//     uid: string,          // uid mittente
+//     firstName, lastName, email, phone,
+//     msg: string,          // testo messaggio
+//     ts: number,           // timestamp
+//     readBy:    { adminId: bool },
+//     repliedBy: { adminId: bool },
+//   }
+// }
+
+let _reqFilter    = 'all';
+let _reqListener  = null;   // Firebase .on listener
+let _reqCache     = {};     // reqId → oggetto request (aggiornato live)
+let _reqDetailId  = null;   // id messaggio aperto in dettaglio
+
+// ── Invio richiesta (utente normale) ──────────────────────────────────────────
+function reqSendRequest(){
+  const ta  = document.getElementById('reqMsgInput');
+  const fb  = document.getElementById('reqSendFeedback');
+  if(!ta || !CU) return;
+  const msg = ta.value.trim();
+  if(!msg){ ta.focus(); return; }
+
+  const btn = ta.parentElement.querySelector('.req-compose-btn');
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ Invio in corso...'; }
+
+  const reqId  = 'req_'+Date.now()+'_'+CU.id.slice(-4);
+  const reqObj = {
+    uid:       CU.id,
+    firstName: CU.firstName,
+    lastName:  CU.lastName,
+    email:     CU.email,
+    phone:     CU.phone || '',
+    msg:       msg,
+    ts:        Date.now(),
+    readBy:    {},
+    repliedBy: {},
+  };
+
+  const doSave = async () => {
+    if(_firebaseOK && _fbDB){
+      await _fbDB.ref('db/requests/'+reqId).set(reqObj);
+    } else {
+      // Fallback locale: salva nel dbCache
+      if(!_dbCache.requests) _dbCache.requests = {};
+      _dbCache.requests[reqId] = reqObj;
+      saveDBToCloud();
+    }
+  };
+
+  doSave().then(()=>{
+    if(fb){ fb.style.display='block'; fb.style.color='var(--green)'; fb.textContent='✓ Richiesta inviata! Un insegnante ti risponderà al più presto.'; }
+    ta.value = '';
+    if(btn){ btn.disabled = false; btn.textContent = '📨 INVIA RICHIESTA'; }
+  }).catch(e=>{
+    if(fb){ fb.style.display='block'; fb.style.color='#f87171'; fb.textContent='Errore durante l\'invio. Riprova.'; }
+    if(btn){ btn.disabled = false; btn.textContent = '📨 INVIA RICHIESTA'; }
+  });
+}
+
+// ── Carica / ascolta richieste in real-time (admin) ───────────────────────────
+function reqStartListener(){
+  if(!_firebaseOK || !_fbDB || !CU || CU.role!=='admin') return;
+  if(_reqListener) return; // già attivo
+
+  const ref = _fbDB.ref('db/requests');
+  _reqListener = ref.on('value', snap=>{
+    _reqCache = snap.val() || {};
+    reqRenderList();
+    reqUpdateDot();
+  });
+}
+
+function reqStopListener(){
+  if(_reqListener && _fbDB){
+    _fbDB.ref('db/requests').off('value', _reqListener);
+    _reqListener = null;
+  }
+}
+
+// ── Render lista richieste ────────────────────────────────────────────────────
+function reqRenderList(){
+  const el = document.getElementById('reqList');
+  if(!el || !CU) return;
+
+  let reqs = Object.entries(_reqCache).map(([id,r])=>({id,...r}));
+  // Ordina per data decrescente
+  reqs.sort((a,b)=>b.ts-a.ts);
+
+  // Applica filtro
+  if(_reqFilter==='unread') reqs = reqs.filter(r=>!r.readBy?.[CU.id]);
+  if(_reqFilter==='read')   reqs = reqs.filter(r=>r.readBy?.[CU.id]);
+
+  if(!reqs.length){
+    el.innerHTML = '<div class="gs-empty">Nessun messaggio in questa categoria.</div>';
+    return;
+  }
+
+  el.innerHTML = reqs.map(r=>{
+    const isUnread  = !r.readBy?.[CU.id];
+    const isReplied = !!(r.repliedBy?.[CU.id]);
+    const d         = new Date(r.ts);
+    const tsStr     = d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit'})
+                    + ' ' + d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+    const preview   = r.msg.split('\n').join(' ').slice(0,60)+(r.msg.length>60?'…':'');
+
+    return '<div class="req-card'+(isUnread?' unread':'')+'" onclick="reqOpenDetail('+r.id+')">'
+      +'<div class="req-ts">'+tsStr+'</div>'
+      +'<div class="req-sender">'+r.firstName+' '+r.lastName+'</div>'
+      +'<div class="req-preview">'+preview+'</div>'
+      +'<div class="req-badges">'
+      +(isReplied ? '<span class="req-badge req-badge-replied">✓ Risposto</span>' : '')
+      +(!isUnread && !isReplied ? '<span class="req-badge req-badge-read">Letto</span>' : '')
+      +'</div>'
+      +'</div>';
+  }).join('');
+
+  // Aggiorna badge non letti
+  const unreadCount = Object.values(_reqCache).filter(r=>!r.readBy?.[CU.id]).length;
+  const badge = document.getElementById('reqUnreadBadge');
+  if(badge){
+    if(unreadCount > 0){
+      badge.style.display = 'inline-block';
+      badge.textContent   = unreadCount+' da leggere';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+}
+
+// ── Filtro richieste ──────────────────────────────────────────────────────────
+function reqFilter(f, btn){
+  _reqFilter = f;
+  document.querySelectorAll('.req-filter-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  reqRenderList();
+}
+
+// ── Apri dettaglio messaggio ──────────────────────────────────────────────────
+function reqOpenDetail(reqId){
+  const r = _reqCache[reqId];
+  if(!r || !CU) return;
+  _reqDetailId = reqId;
+
+  // Segna come letto da questo admin
+  if(!r.readBy) r.readBy = {};
+  if(!r.readBy[CU.id]){
+    r.readBy[CU.id] = true;
+    if(_firebaseOK && _fbDB){
+      _fbDB.ref('db/requests/'+reqId+'/readBy/'+CU.id).set(true);
+    }
+  }
+
+  const d         = new Date(r.ts);
+  const tsStr     = d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
+                  + ' alle '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  const isReplied = !!(r.repliedBy?.[CU.id]);
+
+  document.getElementById('reqDetailContent').innerHTML =
+    '<h2 style="font-weight:700;font-size:20px;color:var(--green);margin-bottom:18px">📩 Richiesta di percorso</h2>'
+    +'<div class="req-detail-user">'
+    +'<div class="rdu-row"><span class="rdu-label">Nome</span><strong>'+r.firstName+' '+r.lastName+'</strong></div>'
+    +'<div class="rdu-row"><span class="rdu-label">Email</span><span>'+r.email+'</span></div>'
+    +(r.phone ? '<div class="rdu-row"><span class="rdu-label">Tel</span><span>'+r.phone+'</span></div>' : '')
+    +'</div>'
+    +'<div class="req-detail-ts">'+tsStr+'</div>'
+    +'<div class="req-detail-msg">'+escHtml(r.msg)+'</div>'
+    +'<button class="req-reply-btn'+(isReplied?' replied':'')+'" id="reqReplyBtn" onclick="reqToggleReplied('+reqId+')">'
+    +(isReplied ? '✓ HAI GIÀ RISPOSTO' : '📝 SEGNA COME RISPOSTO')+'</button>';
+
+  document.getElementById('reqDetailOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Aggiorna lista in background
+  reqRenderList();
+  reqUpdateDot();
+}
+
+function reqCloseDetail(){
+  _reqDetailId = null;
+  document.getElementById('reqDetailOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  reqRenderList();
+}
+
+// ── Segna come risposto ───────────────────────────────────────────────────────
+function reqToggleReplied(reqId){
+  const r = _reqCache[reqId];
+  if(!r || !CU) return;
+  if(!r.repliedBy) r.repliedBy = {};
+  const wasReplied = !!(r.repliedBy[CU.id]);
+  r.repliedBy[CU.id] = !wasReplied;
+
+  if(_firebaseOK && _fbDB){
+    _fbDB.ref('db/requests/'+reqId+'/repliedBy/'+CU.id).set(!wasReplied);
+  }
+
+  const btn = document.getElementById('reqReplyBtn');
+  if(btn){
+    btn.classList.toggle('replied', !wasReplied);
+    btn.textContent = !wasReplied ? '✓ HAI GIÀ RISPOSTO' : '📝 SEGNA COME RISPOSTO';
+  }
+}
+
+// ── Dot notifica nel dock ─────────────────────────────────────────────────────
+function reqUpdateDot(){
+  if(!CU || CU.role!=='admin') return;
+  const unread = Object.values(_reqCache).filter(r=>!r.readBy?.[CU.id]).length;
+  // Trova il pill del gestionale nel dock
+  const gestPills = document.querySelectorAll('.ld-item[data-tab="gestionale"]');
+  gestPills.forEach(pill=>{
+    pill.classList.toggle('has-dot', unread > 0);
+  });
+}
+
+// Utility: escape HTML per il contenuto del messaggio
+function escHtml(s){
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ══════════════════════════════════════════════════
