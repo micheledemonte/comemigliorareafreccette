@@ -1959,6 +1959,17 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
         <h3 style="font-family:'Bebas Neue',sans-serif;font-size:26px;font-weight:400;color:var(--light);letter-spacing:.06em;margin:0">📩 RICHIESTE DI PERCORSO</h3>
         <span id="reqUnreadBadge" style="display:none;background:#ef4444;color:#fff;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700"></span>
       </div>
+      <!-- Barra di ricerca per nome utente -->
+      <div style="margin-bottom:10px;position:relative">
+        <input type="text" id="reqSearch" placeholder="🔍 Cerca per nome o cognome..." oninput="reqSearchUser()" autocomplete="off"
+          style="width:100%;box-sizing:border-box;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:9px 12px;border-radius:6px;font-size:14px;transition:border-color .2s">
+        <div id="reqSearchDrop" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--d2);border:1px solid var(--d4);border-radius:0 0 6px 6px;z-index:20;max-height:180px;overflow-y:auto"></div>
+      </div>
+      <!-- Badge utente filtrato -->
+      <div id="reqSearchBadge" style="display:none;margin-bottom:10px;align-items:center;gap:8px">
+        <span id="reqSearchName" style="background:var(--gdim);border:1px solid var(--green);color:var(--green);border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700"></span>
+        <button onclick="reqClearSearch()" style="background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:999px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600">✕ Rimuovi</button>
+      </div>
       <div class="req-filters">
         <button class="req-filter-btn active" id="reqFilterUnread" onclick="reqFilter('unread',this)">Da leggere</button>
         <button class="req-filter-btn" id="reqFilterRead" onclick="reqFilter('read',this)">Già letti</button>
@@ -5180,6 +5191,7 @@ function userSaveIcsSaved(){
 // }
 
 let _reqFilter    = 'unread'; // default: Da leggere
+let _reqSearchUid = null;      // uid filtro ricerca | null = tutti
 let _reqListener  = null;   // Firebase .on listener
 let _reqCache     = {};     // reqId → oggetto request (aggiornato live)
 let _reqDetailId  = null;   // id messaggio aperto in dettaglio
@@ -5267,6 +5279,9 @@ function reqRenderList(){
   let reqs = Object.entries(_reqCache).map(([id,r])=>({...r, id}));
   reqs.sort((a,b)=>b.ts-a.ts);
 
+  // Applica filtro ricerca per utente specifico
+  if(_reqSearchUid) reqs = reqs.filter(r=>r.uid===_reqSearchUid);
+
   const unreadReqs = reqs.filter(r=>reqMsgState(r)!=='replied');
   const readReqs   = reqs.filter(r=>reqMsgState(r)==='replied');
 
@@ -5329,6 +5344,58 @@ function reqFilter(f, btn){
   _reqFilter = f;
   document.querySelectorAll('.req-filter-btn').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
+  reqRenderList();
+}
+
+// ── Ricerca richieste per nome utente ────────────────────────────────────────
+function reqSearchUser(){
+  const q    = document.getElementById('reqSearch').value.trim().toLowerCase();
+  const drop = document.getElementById('reqSearchDrop');
+  if(!q){ drop.style.display='none'; return; }
+
+  // Estrae gli uid unici dai messaggi in cache
+  const senders = {};
+  Object.values(_reqCache).forEach(r=>{
+    if(!r.uid) return;
+    const fullName = ((r.firstName||'')+' '+(r.lastName||'')).toLowerCase();
+    if(fullName.includes(q)) senders[r.uid] = r;
+  });
+
+  const matches = Object.values(senders);
+  if(!matches.length){ drop.style.display='none'; return; }
+
+  drop.style.display = 'block';
+  drop.innerHTML = matches.map(function(r){
+    return '<div data-uid="'+r.uid+'" onclick="reqPinUser(this)" style="padding:10px 12px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--d4)">'
+      + r.firstName+' '+r.lastName
+      + ' <span style="font-size:12px;color:var(--muted)">'+r.email+'</span></div>';
+  }).join('');
+}
+
+function reqPinUser(el){
+  const uid = el.dataset.uid;
+  if(!uid) return;
+  document.getElementById('reqSearch').value = '';
+  document.getElementById('reqSearchDrop').style.display = 'none';
+  _reqSearchUid = uid;
+
+  // Mostra badge con nome utente
+  const r = Object.values(_reqCache).find(r=>r.uid===uid);
+  const badge = document.getElementById('reqSearchBadge');
+  const nameEl= document.getElementById('reqSearchName');
+  if(badge && nameEl && r){
+    nameEl.textContent = r.firstName+' '+r.lastName;
+    badge.style.display = 'flex';
+  }
+  reqRenderList();
+}
+
+function reqClearSearch(){
+  _reqSearchUid = null;
+  const srch = document.getElementById('reqSearch');
+  if(srch) srch.value = '';
+  const badge = document.getElementById('reqSearchBadge');
+  if(badge) badge.style.display = 'none';
   reqRenderList();
 }
 
@@ -5895,6 +5962,21 @@ function gsScheduleNotifications(uid, idx, dt, note, studentUser){
     }, delay);
     _gsNotifTimers[key].push(tid);
   });
+}
+
+// ── Elimina tutte le richieste (admin only, uso una-tantum) ─────────────────
+async function reqDeleteAllRequests(){
+  if(!CU || CU.role!=='admin') return;
+  if(!_firebaseOK || !_fbDB) return;
+  try {
+    await _fbDB.ref('db/requests').remove();
+    _reqCache = {};
+    reqRenderList();
+    reqUpdateDot();
+    console.log('✓ Tutte le richieste eliminate da Firebase');
+  } catch(e){
+    console.error('Errore eliminazione richieste:', e);
+  }
 }
 
 // ── Persistenza stato "SALVATO" pillola ICS ─────────────────────────────────
