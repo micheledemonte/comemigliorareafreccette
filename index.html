@@ -5111,7 +5111,49 @@ function calBuildGrid(events, todayStr, colorMap){
       + '</div>';
   }).join('');
 }
+
+function calDateStr(d){ return d.toISOString().slice(0,10); }
+
 // ── Ricerca utente nel calendario ────────────────────────────────────────────
+function calGetAllEvents(){
+  const users = getUsers().filter(u=>u.role!=='admin');
+  const evs   = [];
+  users.forEach(u=>{
+    const p = gsGetPercorso(u.id);
+    if(!p) return;
+    p.lezioni.forEach((l,i)=>{
+      if(!l.dt) return;
+      try{
+        const d = new Date(l.dt);
+        evs.push({uid:u.id, userName:u.firstName+' '+u.lastName, idx:i, dt:l.dt,
+          timeStr:d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}),
+          note:l.note||null, adminRef:l.adminRef||null});
+      }catch(e){}
+    });
+  });
+  evs.sort((a,b)=>a.dt.localeCompare(b.dt));
+  return evs;
+}
+
+function calSelectDay(dateStr){
+  _calSelDay = dateStr;
+  _calFilterUid = null; // torna a modalità normale quando si clicca un giorno
+  const el = document.getElementById('calContainer');
+  if(el) el.innerHTML = calBuildHtml();
+}
+
+function calPrevMonth(){
+  _calMonth--;
+  if(_calMonth<0){ _calMonth=11; _calYear--; }
+  renderCalendario();
+}
+
+function calNextMonth(){
+  _calMonth++;
+  if(_calMonth>11){ _calMonth=0; _calYear++; }
+  renderCalendario();
+}
+
 function calSearchUser(){
   const q    = document.getElementById('calSearch').value.trim().toLowerCase();
   const drop = document.getElementById('calSearchDrop');
