@@ -620,7 +620,7 @@ select:hover{border-color:var(--green)}
 .cal-event-item .cei-meta{font-size:12px;color:var(--mu2);margin-top:2px}
 .cal-event-item select{background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:5px 8px;border-radius:5px;font-size:12px;cursor:pointer}
 .cal-event-item select:focus{outline:none;border-color:var(--green)}
-.cal-ics-btn{width:32px;height:32px;border-radius:6px;background:var(--d3);border:1px solid var(--d5);color:var(--mu2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;transition:all .2s}
+.cal-ics-btn{height:32px;border-radius:6px;background:var(--d3);border:1px solid var(--d5);color:var(--mu2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;transition:all .2s;padding:0 10px;line-height:1;letter-spacing:.02em}
 .cal-ics-btn:hover{background:var(--gdim);border-color:var(--green);color:var(--green)}
 .cal-myfilter-btn{background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:6px;padding:7px 14px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
 .cal-myfilter-btn.active{background:var(--gdim);border-color:var(--green);color:var(--green)}
@@ -5046,7 +5046,7 @@ function calBuildHtml(){
             +'<div class="cei-name">'+ev.userName+' · Lezione '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+dateLabel2+(ev.note?' · '+ev.note:'')+'</div>'
             +'</div>'
-            +'<button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsT.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario">&#x1F4C5;</button>'
+            +'<button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsT.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">&#x1F4C5; AGGIUNGI AL CALENDARIO</button>'
             +'</div>';
         }).join('')
       : '<div class="gs-empty" style="padding:16px">Nessun appuntamento assegnato a te.</div>';
@@ -5074,7 +5074,7 @@ function calBuildHtml(){
             +'<div class="cei-name">Lezione '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+dateLabel+(ev.note?' · '+ev.note:'')+'</div>'
             +'</div>'
-            +'<button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsTitle1.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">&#x1F4C5;</button>'
+            +'<button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsTitle1.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">&#x1F4C5; AGGIUNGI AL CALENDARIO</button>'
             +'<select class="cal-admin-sel" data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onchange="calAssignAdmin(this)" title="Assegna insegnante">'
             +'<option value="">— Insegnante —</option>'+adminOpts+'</select>'
             +'</div>';
@@ -5105,7 +5105,7 @@ function calBuildHtml(){
             +'<div class="cei-name">'+ev.userName+' · Lezione '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+(ev.note||'Nessuna nota')+'</div>'
             +'</div>'
-            +'<button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsTitle2.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">&#x1F4C5;</button>'
+            +'<button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsTitle2.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">&#x1F4C5; AGGIUNGI AL CALENDARIO</button>'
             +'<select class="cal-admin-sel" data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onchange="calAssignAdmin(this)" title="Assegna insegnante">'
             +'<option value="">— Insegnante —</option>'+adminOpts+'</select>'
             +'</div>';
@@ -5124,7 +5124,11 @@ function calBuildHtml(){
     +'<div class="cal-grid">'+gridHtml+'</div>'
     +'<div class="cal-event-list">'+listHtml+'</div>';
 }
-function calDateStr(d){ return d.toISOString().slice(0,10); }
+function calDateStr(d){
+  // Usa componenti locali per evitare shift UTC che sfasa il giorno
+  const pad = n => String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
 
 function calGetAllEvents(){
   const users = getUsers().filter(u=>u.role!=='admin');
@@ -5260,17 +5264,16 @@ function calExportICS(btn){
   const title = btn.dataset.title || 'Lezione freccette';
   if(!dt){ alert('Nessuna data impostata per questo appuntamento.'); return; }
 
-  // Formatta data ICS: 20260610T140000
   const d   = new Date(dt);
   const pad = n => String(n).padStart(2,'0');
+  // Ora locale per il formato ICS (senza Z = ora locale)
   const dtStr  = d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())
     +'T'+pad(d.getHours())+pad(d.getMinutes())+'00';
-  // Fine lezione = 1 ora dopo
-  const dEnd = new Date(d.getTime() + 60*60*1000);
-  const dtEnd = dEnd.getFullYear()+pad(dEnd.getMonth()+1)+pad(dEnd.getDate())
+  const dEnd   = new Date(d.getTime() + 60*60*1000);
+  const dtEnd  = dEnd.getFullYear()+pad(dEnd.getMonth()+1)+pad(dEnd.getDate())
     +'T'+pad(dEnd.getHours())+pad(dEnd.getMinutes())+'00';
-  // UID univoco evento
-  const uid = 'cmaf-'+dt.replace(/[^0-9]/g,'')+'-'+Math.random().toString(36).slice(2,8);
+  const uid    = 'cmaf-'+dt.replace(/[^0-9]/g,'')+'-'+Math.random().toString(36).slice(2,8);
+  const CRLF   = '\r\n';
 
   const ics = [
     'BEGIN:VCALENDAR',
@@ -5280,7 +5283,7 @@ function calExportICS(btn){
     'UID:'+uid,
     'DTSTART:'+dtStr,
     'DTEND:'+dtEnd,
-    'SUMMARY:'+title.replace(/,/g,'\,'),
+    'SUMMARY:'+title.replace(/,/g,'\\,'),
     'DESCRIPTION:Lezione freccette - Come Migliorare a Freccette',
     'BEGIN:VALARM',
     'TRIGGER:-PT60M',
@@ -5294,16 +5297,20 @@ function calExportICS(btn){
     'END:VALARM',
     'END:VEVENT',
     'END:VCALENDAR'
-  ].join('\r\n');
+  ].join(CRLF);
 
   const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
   const url  = URL.createObjectURL(blob);
+  // Non impostare .download → il browser apre il file direttamente nel calendario
+  // (iOS Safari, macOS Safari, Chrome Android aprono l'app calendario;
+  //  Chrome desktop chiede come aprirlo oppure lo apre nel visualizzatore)
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = 'lezione-freccette.ics';
+  a.target   = '_blank';
+  a.rel      = 'noopener';
   document.body.appendChild(a);
   a.click();
-  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 2000);
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 3000);
 }
 // ══════════════════════════════════════════════════
 // NOTIFICHE BROWSER — appuntamenti lezioni
