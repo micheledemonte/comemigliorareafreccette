@@ -623,8 +623,9 @@ select:hover{border-color:var(--green)}
 .req-reply-btn{background:var(--gdim);border:1.5px solid var(--green);color:var(--green);padding:10px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;width:100%;margin-bottom:10px}
 .req-reply-btn:hover{background:#052e16}
 .req-reply-btn.replied{background:var(--d3);border-color:var(--d5);color:var(--mu2);cursor:default}
-/* Dot notifica dock */
-.ld-item.has-dot::after{content:'';position:absolute;top:4px;right:4px;width:8px;height:8px;background:#ef4444;border-radius:50%;border:1.5px solid var(--dark)}
+/* Dot notifica dock — sulla ld-icon del gestionale */
+.ld-dot{position:absolute;top:-3px;right:-5px;width:9px;height:9px;background:#ef4444;border-radius:50%;border:1.5px solid var(--dark);display:none}
+.ld-dot.visible{display:block}
 /* Popup appuntamento */
 #gsApptOverlay{position:fixed;inset:0;z-index:1800;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;padding:20px}
 #gsApptOverlay.open{display:flex}
@@ -1944,7 +1945,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <!-- RICHIESTE DI PERCORSO -->
     <div id="reqSection" style="margin-bottom:28px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--light);letter-spacing:.04em;margin:0">📩 RICHIESTE DI PERCORSO</h3>
+        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--light);letter-spacing:.06em;margin:0">📩 RICHIESTE DI PERCORSO</h3>
         <span id="reqUnreadBadge" style="display:none;background:#ef4444;color:#fff;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700"></span>
       </div>
       <div class="req-filters">
@@ -2926,7 +2927,7 @@ function ldBuildDock(showAdmin){
       ? 'style="color:rgba(239,68,68,0.75)"'
       : '';
     return `<div class="ld-item${isFirst?' active':''}" data-tab="${t.id}" ${style}>
-      <span class="ld-icon">${t.icon}</span>
+      <span class="ld-icon" style="position:relative">${t.icon}${t.id==='gestionale'?'<span class="ld-dot"></span>':''}</span>
       <span class="ld-label" style="${isLogout?'color:rgba(239,68,68,0.6)':''}">${t.label}</span>
     </div>`;
   }).join('');
@@ -5264,7 +5265,7 @@ function reqRenderList(){
                     + ' ' + d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
     const preview   = r.msg.split('\n').join(' ').slice(0,60)+(r.msg.length>60?'…':'');
 
-    return '<div class="req-card'+(isUnread?' unread':'')+'" onclick="reqOpenDetail('+r.id+')">'
+    return '<div class="req-card'+(isUnread?' unread':'')+'" data-reqid="'+r.id+'" onclick="reqClickCard(this)">'
       +'<div class="req-ts">'+tsStr+'</div>'
       +'<div class="req-sender">'+r.firstName+' '+r.lastName+'</div>'
       +'<div class="req-preview">'+preview+'</div>'
@@ -5297,6 +5298,11 @@ function reqFilter(f, btn){
 }
 
 // ── Apri dettaglio messaggio ──────────────────────────────────────────────────
+function reqClickCard(el){
+  const reqId = el.dataset.reqid;
+  if(reqId) reqOpenDetail(reqId);
+}
+
 function reqOpenDetail(reqId){
   const r = _reqCache[reqId];
   if(!r || !CU) return;
@@ -5366,10 +5372,9 @@ function reqToggleReplied(reqId){
 function reqUpdateDot(){
   if(!CU || CU.role!=='admin') return;
   const unread = Object.values(_reqCache).filter(r=>!r.readBy?.[CU.id]).length;
-  // Trova il pill del gestionale nel dock
-  const gestPills = document.querySelectorAll('.ld-item[data-tab="gestionale"]');
-  gestPills.forEach(pill=>{
-    pill.classList.toggle('has-dot', unread > 0);
+  // Trova tutti i dot nel dock (generati da ldBuildDock)
+  document.querySelectorAll('.ld-dot').forEach(dot=>{
+    dot.classList.toggle('visible', unread > 0);
   });
 }
 
