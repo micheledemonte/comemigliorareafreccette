@@ -1935,7 +1935,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       <label>Note (opzionale)</label>
       <input type="text" id="gsApptNote">
       <label>Insegnante</label>
-      <select id="gsApptAdmin">
+      <select id="gsApptAdmin" onchange="if(_gsApptCtx)_gsApptCtx.adminId=this.value">
         <option value="">— Nessuno assegnato —</option>
       </select>
       <div class="gs-appt-btns">
@@ -4874,6 +4874,8 @@ function gsOpenAppt(uid, idx){
   const admins = getUsers().filter(u=>u.role==='admin');
   sel.innerHTML = '<option value="">— Nessuno assegnato —</option>'
     + admins.map(a=>'<option value="'+a.id+'"'+(l.adminRef===a.id?' selected':'')+'>'+a.firstName+' '+a.lastName+'</option>').join('');
+  // Inizializza adminId in _gsApptCtx dalla lezione corrente
+  if(_gsApptCtx) _gsApptCtx.adminId = l.adminRef || '';
   document.getElementById('gsApptOverlay').classList.add('open');
 }
 
@@ -4903,7 +4905,9 @@ function gsApptSave(){
   if(!p) return;
   const dt      = document.getElementById('gsApptDt').value;
   const note    = document.getElementById('gsApptNote').value.trim();
-  const adminId = document.getElementById('gsApptAdmin').value;
+  // Legge adminId sia dal DOM sia da _gsApptCtx.adminId (onchange fallback)
+  const _adminSel = document.getElementById('gsApptAdmin');
+  const adminId = (_adminSel && _adminSel.value) || (_gsApptCtx && _gsApptCtx.adminId) || '';
   p.lezioni[idx].dt       = dt       || null;
   p.lezioni[idx].note     = note     || null;
   p.lezioni[idx].adminRef = adminId  || null;
@@ -5306,8 +5310,10 @@ function calExportICS(btn){
   //  Chrome desktop chiede come aprirlo oppure lo apre nel visualizzatore)
   const a    = document.createElement('a');
   a.href     = url;
-  a.target   = '_blank';
-  a.rel      = 'noopener';
+  a.download = 'lezione-freccette.ics';
+  // Niente target='_blank': evita la finestra/tab vuota.
+  // Su iOS Safari e macOS: il sistema riconosce .ics e apre l'app Calendario.
+  // Su Android e desktop: il file viene scaricato, si apre con un tap/doppio click.
   document.body.appendChild(a);
   a.click();
   setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 3000);
