@@ -613,12 +613,14 @@ select:hover{border-color:var(--green)}
 .cal-nav button:hover{border-color:var(--green);color:var(--green)}
 .cal-nav .cal-month-label{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--light);letter-spacing:.06em}
 .cal-event-list{margin-top:16px}
-.cal-event-item{background:var(--d2);border:1px solid var(--d4);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
-.cal-event-item .cei-time{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--green);min-width:50px}
-.cal-event-item .cei-info{flex:1}
+.cal-event-item{background:var(--d2);border:1px solid var(--d4);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cal-event-item .cei-time{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--green);min-width:50px;flex-shrink:0}
+.cal-event-item .cei-info{flex:1;min-width:120px}
 .cal-event-item .cei-name{font-weight:600;font-size:14px;color:var(--light)}
 .cal-event-item .cei-meta{font-size:12px;color:var(--mu2);margin-top:2px}
-.cal-event-item select{background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:5px 8px;border-radius:5px;font-size:12px;cursor:pointer}
+.cal-event-item .cei-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0}
+@media(max-width:600px){.cal-event-item .cei-actions{width:100%;margin-top:6px;padding-top:6px;border-top:1px solid var(--d4)}}
+.cal-event-item select{background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:5px 8px;border-radius:5px;font-size:12px;cursor:pointer;max-width:160px}
 .cal-event-item select:focus{outline:none;border-color:var(--green)}
 .cal-ics-btn{height:32px;border-radius:6px;background:var(--d3);border:1px solid var(--d5);color:var(--mu2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;transition:all .2s;padding:0 10px;line-height:1;letter-spacing:.02em}
 .cal-ics-btn:hover{background:var(--gdim);border-color:var(--green);color:var(--green)}
@@ -1935,7 +1937,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       <label>Note (opzionale)</label>
       <input type="text" id="gsApptNote">
       <label>Insegnante</label>
-      <select id="gsApptAdmin" onchange="if(_gsApptCtx)_gsApptCtx.adminId=this.value">
+      <select id="gsApptAdmin" onchange="gsApptAdminChange(this)">
         <option value="">— Nessuno assegnato —</option>
       </select>
       <div class="gs-appt-btns">
@@ -4884,6 +4886,18 @@ function gsApptCancel(){
   document.getElementById('gsApptOverlay').classList.remove('open');
 }
 
+// Salva adminRef IMMEDIATAMENTE quando l'utente cambia l'insegnante nel popup
+// Non aspetta il click su SALVA — garantisce il salvataggio anche in caso di bug UI
+function gsApptAdminChange(sel){
+  if(!_gsApptCtx) return;
+  const {uid, idx} = _gsApptCtx;
+  _gsApptCtx.adminId = sel.value; // backup in memoria
+  const p = gsGetPercorso(uid);
+  if(!p) return;
+  p.lezioni[idx].adminRef = sel.value || null;
+  gsSetPercorso(uid, p); // salva subito su Firebase
+}
+
 function gsApptClear(){
   if(!_gsApptCtx) return;
   const {uid, idx} = _gsApptCtx;
@@ -4905,12 +4919,16 @@ function gsApptSave(){
   if(!p) return;
   const dt      = document.getElementById('gsApptDt').value;
   const note    = document.getElementById('gsApptNote').value.trim();
-  // Legge adminId sia dal DOM sia da _gsApptCtx.adminId (onchange fallback)
+  // adminRef è già salvato da gsApptAdminChange (onchange immediato).
+  // Leggiamo comunque dal DOM come conferma finale, con fallback su ctx e su valore esistente.
   const _adminSel = document.getElementById('gsApptAdmin');
-  const adminId = (_adminSel && _adminSel.value) || (_gsApptCtx && _gsApptCtx.adminId) || '';
+  const adminId = (_adminSel && _adminSel.value)
+    || (_gsApptCtx && _gsApptCtx.adminId)
+    || p.lezioni[idx].adminRef  // mantieni il valore già salvato se il DOM non risponde
+    || null;
   p.lezioni[idx].dt       = dt       || null;
   p.lezioni[idx].note     = note     || null;
-  p.lezioni[idx].adminRef = adminId  || null;
+  p.lezioni[idx].adminRef = adminId;  // non || null: se adminId è '' vogliamo null, gestito sopra
   gsSetPercorso(uid, p);
   if(dt) gsScheduleNotifications(uid, idx, dt, note, getUsers().find(u=>u.id===uid));
   gsApptCancel();
@@ -5050,7 +5068,7 @@ function calBuildHtml(){
             +'<div class="cei-name">'+ev.userName+' · Lezione '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+dateLabel2+(ev.note?' · '+ev.note:'')+'</div>'
             +'</div>'
-            +'<button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsT.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">&#x1F4C5; AGGIUNGI AL CALENDARIO</button>'
+            +'<div class="cei-actions"><button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsT.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">&#x1F4C5; AGGIUNGI AL CALENDARIO</button></div>'
             +'</div>';
         }).join('')
       : '<div class="gs-empty" style="padding:16px">Nessun appuntamento assegnato a te.</div>';
@@ -5078,9 +5096,9 @@ function calBuildHtml(){
             +'<div class="cei-name">Lezione '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+dateLabel+(ev.note?' · '+ev.note:'')+'</div>'
             +'</div>'
-            +'<button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsTitle1.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">&#x1F4C5; AGGIUNGI AL CALENDARIO</button>'
+            +'<div class="cei-actions"><button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsTitle1.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">&#x1F4C5; AGGIUNGI AL CALENDARIO</button>'
             +'<select class="cal-admin-sel" data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onchange="calAssignAdmin(this)" title="Assegna insegnante">'
-            +'<option value="">— Insegnante —</option>'+adminOpts+'</select>'
+            +'<option value="">— Insegnante —</option>'+adminOpts+'</select></div>'
             +'</div>';
         }).join('')
       : '<div class="gs-empty" style="padding:16px">Nessuna prenotazione per questo studente.</div>';
@@ -5109,9 +5127,9 @@ function calBuildHtml(){
             +'<div class="cei-name">'+ev.userName+' · Lezione '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+(ev.note||'Nessuna nota')+'</div>'
             +'</div>'
-            +'<button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsTitle2.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">&#x1F4C5; AGGIUNGI AL CALENDARIO</button>'
+            +'<div class="cei-actions"><button class="cal-ics-btn" data-dt="'+ev.dt+'" data-title="'+icsTitle2.replace(/"/g,'&quot;')+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">&#x1F4C5; AGGIUNGI AL CALENDARIO</button>'
             +'<select class="cal-admin-sel" data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onchange="calAssignAdmin(this)" title="Assegna insegnante">'
-            +'<option value="">— Insegnante —</option>'+adminOpts+'</select>'
+            +'<option value="">— Insegnante —</option>'+adminOpts+'</select></div>'
             +'</div>';
         }).join('')
       : '<div class="gs-empty" style="padding:20px">Nessuna lezione in questo giorno.</div>';
