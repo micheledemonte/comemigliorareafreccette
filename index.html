@@ -2106,6 +2106,11 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       </div>
       <button onclick="confirmResetUserPassword()" style="width:100%;margin-top:10px;padding:11px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;background:transparent;border:1.5px solid var(--green);color:var(--green);cursor:pointer;transition:all .2s" onmouseover="this.style.background='var(--gdim)'" onmouseout="this.style.background='transparent'">📧 INVIA RESET PASSWORD</button>
       <div class="amsg" id="aeMsg"></div>
+      <!-- Dispositivi registrati -->
+      <div style="margin-top:14px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--mu2);letter-spacing:.08em;margin-bottom:8px">📱 DISPOSITIVI REGISTRATI</div>
+        <div id="aeDevicesPanel"></div>
+      </div>
     </div>
 
     <!-- 4. STATISTICHE UTENTE -->
@@ -2129,11 +2134,13 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <div id="blockedSection" style="display:none;max-width:460px;margin:0 auto 32px;padding:0 20px">
       <div style="background:var(--d3);border:1.5px solid #ef4444;border-radius:14px;padding:28px 24px;text-align:center">
         <div style="font-size:48px;margin-bottom:12px">🔒</div>
-        <h2 style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#f87171;margin-bottom:10px;letter-spacing:.06em">ACCESSO BLOCCATO</h2>
-        <p style="font-size:13px;color:var(--mu2);line-height:1.7;margin-bottom:20px">Il tuo profilo è stato temporaneamente bloccato da un amministratore. Puoi inviare un messaggio per richiedere lo sblocco.</p>
-        <textarea id="blockedMsgInput" placeholder="Scrivi qui la tua richiesta di sblocco..." style="width:100%;min-height:80px;background:var(--d4);border:1px solid var(--d5);color:var(--light);border-radius:8px;padding:10px 12px;font-size:13px;resize:vertical;font-family:'DM Sans',sans-serif;box-sizing:border-box;margin-bottom:10px"></textarea>
-        <button class="req-compose-btn" onclick="reqSendUnblock()" style="width:100%;margin-top:0">📨 RICHIEDI SBLOCCO</button>
-        <div id="blockedMsgFeedback" style="font-size:13px;margin-top:8px;display:none"></div>
+        <h2 id="blockedTitle" style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#f87171;margin-bottom:10px;letter-spacing:.06em">ACCESSO BLOCCATO</h2>
+        <p id="blockedDesc" style="font-size:13px;color:var(--mu2);line-height:1.7;margin-bottom:20px">Il tuo profilo è stato temporaneamente bloccato da un amministratore. Puoi inviare un messaggio per richiedere lo sblocco.</p>
+        <div id="blockedForm" data-type="unblock">
+          <textarea id="blockedMsgInput" placeholder="Scrivi qui la tua richiesta..." style="width:100%;min-height:80px;background:var(--d4);border:1px solid var(--d5);color:var(--light);border-radius:8px;padding:10px 12px;font-size:13px;resize:vertical;font-family:'DM Sans',sans-serif;box-sizing:border-box;margin-bottom:10px"></textarea>
+          <button class="req-compose-btn" onclick="reqSendUnblock()" style="width:100%;margin-top:0">📨 INVIA RICHIESTA</button>
+          <div id="blockedMsgFeedback" style="font-size:13px;margin-top:8px;display:none"></div>
+        </div>
       </div>
     </div>
     <!-- Separatore visivo solo se bloccato -->
@@ -2449,14 +2456,23 @@ if(_fbAuth){
           const idx=users.findIndex(x=>x.id===u.id);
           if(idx>=0){ users[idx].loginCount=1; saveUsers(users); CU=users[idx]; }
         }
-        // Increment loginCount on every successful login (min 1 after first entry into app)
-        // This also backfills loginCount for existing users who predate this field
+        // Incrementa loginCount ad ogni login riuscito
         const users2=getUsers();
         const idx2=users2.findIndex(x=>x.id===CU.id);
         if(idx2>=0){
           users2[idx2].loginCount = Math.max(1, (users2[idx2].loginCount||0)+1);
           saveUsers(users2);
           CU=users2[idx2];
+        }
+        // ── Controllo dispositivi (solo utenti non-admin) ──────────────────
+        if(CU.role !== 'admin'){
+          const deviceResult = checkAndRegisterDevice(CU.id);
+          if(deviceResult === 'limit_reached'){
+            // Troppi dispositivi: entra in modalità bloccata-dispositivo
+            CU._deviceBlocked = true;
+            enterApp();
+            return;
+          }
         }
         enterApp();
       }
@@ -2688,6 +2704,13 @@ async function doLogin(){
     if(!u){openLogin();err.textContent='Email o password errati.';return;}
     if(u.blocked){ CU=u; enterApp(); return; }
     CU=u;
+    // ── Controllo dispositivi (solo utenti non-admin) ──────────────────
+    if(CU.role !== 'admin'){
+      const deviceResult = checkAndRegisterDevice(CU.id);
+      if(deviceResult === 'limit_reached'){
+        CU._deviceBlocked = true;
+      }
+    }
     if(u.mustChangePw){ document.getElementById('lv').classList.add('off');document.getElementById('cpv').classList.add('on');openLogin(); }
     else enterApp();
     return;
@@ -2763,24 +2786,197 @@ async function doChangePw(){
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// DEVICE FINGERPRINT & CONTROLLO DISPOSITIVI
+// Limite: max 3 dispositivi per utente (non si applica agli admin)
+// ═══════════════════════════════════════════════════════════════════════
+
+const MAX_DEVICES = 3;
+
+function getDeviceFingerprint(){
+  // Combina parametri stabili del browser/dispositivo in un hash leggero
+  const raw = [
+    navigator.userAgent,
+    navigator.language || '',
+    screen.width + 'x' + screen.height,
+    screen.colorDepth || '',
+    new Date().getTimezoneOffset(),
+    navigator.hardwareConcurrency || '',
+    navigator.platform || '',
+  ].join('|');
+  // djb2 hash — semplice, non crittografico, abbastanza stabile
+  let h = 5381;
+  for(let i = 0; i < raw.length; i++){
+    h = ((h << 5) + h) ^ raw.charCodeAt(i);
+    h = h >>> 0; // mantieni unsigned 32bit
+  }
+  return 'dev_' + h.toString(36);
+}
+
+function getDeviceName(){
+  const ua = navigator.userAgent;
+  let os = 'Desktop';
+  if(/iPhone/i.test(ua))       os = 'iPhone';
+  else if(/iPad/i.test(ua))    os = 'iPad';
+  else if(/Android/i.test(ua)) os = 'Android';
+  else if(/Mac/i.test(ua))     os = 'Mac';
+  else if(/Windows/i.test(ua)) os = 'Windows';
+  else if(/Linux/i.test(ua))   os = 'Linux';
+  let br = 'Browser';
+  if(/Chrome/i.test(ua) && !/Chromium|Edge|OPR/i.test(ua)) br = 'Chrome';
+  else if(/Firefox/i.test(ua))  br = 'Firefox';
+  else if(/Safari/i.test(ua) && !/Chrome/i.test(ua)) br = 'Safari';
+  else if(/Edg/i.test(ua))      br = 'Edge';
+  else if(/OPR|Opera/i.test(ua)) br = 'Opera';
+  return os + ' · ' + br;
+}
+
+// Legge __devices da userData[uid]
+function getDevices(uid){
+  const data = getUD(uid);
+  return data.__devices || {};
+}
+
+// Salva __devices in userData[uid]
+function saveDevices(uid, devices){
+  const data = getUD(uid);
+  data.__devices = devices;
+  setUD(uid, data);
+}
+
+// Controlla e registra il dispositivo corrente.
+// Restituisce: 'ok' | 'limit_reached'
+function checkAndRegisterDevice(uid){
+  if(!uid) return 'ok';
+  const fp   = getDeviceFingerprint();
+  const devs = getDevices(uid);
+  // Se il dispositivo è già registrato → ok (aggiorna lastSeen)
+  if(devs[fp]){
+    devs[fp].lastSeen = Date.now();
+    saveDevices(uid, devs);
+    return 'ok';
+  }
+  // Nuovo dispositivo: controlla il limite
+  const count = Object.keys(devs).length;
+  if(count >= MAX_DEVICES){
+    return 'limit_reached';
+  }
+  // Registra il nuovo dispositivo
+  devs[fp] = {
+    name:       getDeviceName(),
+    firstSeen:  Date.now(),
+    lastSeen:   Date.now(),
+  };
+  saveDevices(uid, devs);
+  return 'ok';
+}
+
+// ── Admin: aggiunge un dispositivo dalla richiesta nel dettaglio messaggio ────
+function adminAddDeviceFromRequest(uid, fp, name){
+  const devs  = getDevices(uid);
+  const count = Object.keys(devs).length;
+  const user  = getUsers().find(u=>u.id===uid);
+  const uName = user ? user.firstName+' '+user.lastName : uid;
+  if(devs[fp]){
+    showConfirmPopup('Già registrato','Questo dispositivo è già nella lista di '+uName+'.',null,{okLabel:'OK',okBg:'var(--green)',okColor:'#000'});
+    return;
+  }
+  if(count >= MAX_DEVICES){
+    showConfirmPopup('Limite raggiunto',uName+' ha già '+MAX_DEVICES+' dispositivi. Rimuovine uno prima di aggiungerne un altro.',null,{okLabel:'OK',okBg:'#dc2626',okColor:'#fff'});
+    return;
+  }
+  devs[fp]={name:name||'Dispositivo sconosciuto',firstSeen:Date.now(),lastSeen:Date.now()};
+  saveDevices(uid,devs);
+  showConfirmPopup('Dispositivo aggiunto','Il dispositivo è stato aggiunto. '+uName+' avrà accesso normale al prossimo login.',null,{okLabel:'OK',okBg:'var(--green)',okColor:'#000'});
+  reqCloseDetail();
+}
+
+// Admin: rimuove un dispositivo dalla lista di un utente
+function adminRemoveDevice(uid, fp){
+  showConfirmPopup(
+    'Rimuovi dispositivo',
+    'Vuoi rimuovere questo dispositivo dalla lista? Al prossimo accesso da quel dispositivo conterà come nuovo.',
+    ()=>{
+      const devs = getDevices(uid);
+      delete devs[fp];
+      saveDevices(uid, devs);
+      // Aggiorna la sezione dispositivi nel pannello admin
+      const el = document.getElementById('aeDevices_'+uid);
+      if(el) el.innerHTML = renderDeviceList(uid);
+    },
+    {okLabel:'RIMUOVI', okBg:'#dc2626', okColor:'#fff'}
+  );
+}
+
+// Admin: rimuove tutti i dispositivi di un utente (reset completo)
+function adminResetDevices(uid){
+  showConfirmPopup(
+    'Reset dispositivi',
+    'Vuoi rimuovere tutti i dispositivi registrati? L\'utente potrà registrare nuovi dispositivi dal prossimo accesso.',
+    ()=>{
+      saveDevices(uid, {});
+      const el = document.getElementById('aeDevices_'+uid);
+      if(el) el.innerHTML = renderDeviceList(uid);
+    },
+    {okLabel:'RESET', okBg:'#dc2626', okColor:'#fff'}
+  );
+}
+
+// Rende l'HTML della lista dispositivi per un utente (usato nell'Admin panel)
+function renderDeviceList(uid){
+  const devs   = getDevices(uid);
+  const keys   = Object.keys(devs);
+  const myFp   = getDeviceFingerprint();
+  const count  = keys.length;
+  const color  = count >= MAX_DEVICES ? '#f87171' : count >= 2 ? '#facc15' : 'var(--green)';
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+    <span style="font-size:12px;color:${color};font-weight:700">${count}/${MAX_DEVICES} dispositivi registrati</span>
+    ${count>0?`<button onclick="adminResetDevices('${uid}')" style="background:transparent;border:1px solid #ef4444;color:#f87171;border-radius:5px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">RESET TUTTI</button>`:''}
+  </div>`;
+  if(!keys.length){
+    return html + '<div style="font-size:12px;color:var(--muted)">Nessun dispositivo registrato.</div>';
+  }
+  html += keys.map(fp=>{
+    const d = devs[fp];
+    const isThis = fp === myFp;
+    const lastSeen = d.lastSeen ? new Date(d.lastSeen).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--d4);flex-wrap:wrap">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;color:var(--light);font-weight:600">📱 ${d.name||'Dispositivo sconosciuto'}${isThis?' <span style="font-size:10px;color:var(--green)">(questo)</span>':''}</div>
+        <div style="font-size:10px;color:var(--muted)">Ultimo accesso: ${lastSeen}</div>
+        <div style="font-size:10px;color:var(--muted);font-family:monospace">${fp}</div>
+      </div>
+      <button onclick="adminRemoveDevice('${uid}','${fp}')" style="background:transparent;border:1px solid #ef4444;color:#f87171;border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;flex-shrink:0">✕</button>
+    </div>`;
+  }).join('');
+  return html;
+}
+
 function enterApp(){
   document.getElementById('loadingOverlay').style.display='none';
   closeLogin();
-  const isAdmin   = CU.role==='admin';
-  const isBlocked = CU.blocked === true;
+  const isAdmin        = CU.role==='admin';
+  const isBlocked      = CU.blocked === true;
+  const isDeviceBlocked= CU._deviceBlocked === true;
   document.getElementById('adminTabBtn').style.display=isAdmin?'':'none';
   loadProfileForm();
   document.getElementById('appLayer').classList.add('visible');
 
-  if(isBlocked){
-    // Utente bloccato: dock solo con logout, apre direttamente quella tab
+  if(isBlocked || isDeviceBlocked){
     ldBuildDockBlocked();
     ldInitEvents();
     document.getElementById('liquidDock').style.display='block';
     document.getElementById('ldLogout').style.display='none';
-    // Mostra sezione bloccato nel tab logout
-    const blockedSec = document.getElementById('blockedSection');
-    const blockedSep = document.getElementById('blockedSeparator');
+    const blockedSec  = document.getElementById('blockedSection');
+    const blockedSep  = document.getElementById('blockedSeparator');
+    const blockedTitle= document.getElementById('blockedTitle');
+    const blockedDesc = document.getElementById('blockedDesc');
+    const blockedForm = document.getElementById('blockedForm');
+    if(isDeviceBlocked && !isBlocked){
+      if(blockedTitle) blockedTitle.textContent = 'ACCESSO DA NUOVO DISPOSITIVO';
+      if(blockedDesc)  blockedDesc.textContent  = 'Hai raggiunto il limite di '+MAX_DEVICES+' dispositivi registrati. Invia una richiesta all\'amministratore per sbloccare questo dispositivo oppure rimuoverne uno precedente.';
+      if(blockedForm)  blockedForm.dataset.type = 'device';
+    }
     if(blockedSec) blockedSec.style.display='block';
     if(blockedSep) blockedSep.style.display='block';
     showTab('__logout', true);
@@ -4509,6 +4705,12 @@ function selAdmin(uid){
   const bb=document.getElementById('aeBlockBtn');
   if(selAU.id===CU.id){bb.style.display='none';}
   else { updateBlockBtn(bb, selAU.blocked); }
+  // Mostra dispositivi registrati (non per se stessi)
+  const devPanel = document.getElementById('aeDevicesPanel');
+  if(devPanel && selAU.id !== CU.id){
+    devPanel.id = 'aeDevices_'+selAU.id;
+    devPanel.innerHTML = renderDeviceList(selAU.id);
+  }
 }
 
 function updateBlockBtn(bb, isBlocked){
@@ -4644,28 +4846,31 @@ function renderAdmin501Panel(uid){
       const legColor = isCrown ? '#facc15' : (isTourSess ? (won?'var(--green)':'#f87171') : 'var(--green)');
       const scoresId = `adm_legscores_${uid}_${idx}_${i}`;
       const scoresHtml = scores.length
-        ? `<div id="${scoresId}" style="display:none;margin-top:4px;padding:4px 6px;background:var(--d2);border-radius:4px;font-size:10px">
+        ? `<div id="${scoresId}" style="display:none;margin-top:5px;padding:5px 8px;background:var(--d2);border-radius:4px;font-size:10px;white-space:nowrap;overflow-x:auto">
             <span style="color:var(--muted)">Turni: </span>`
           + scores.map(v=>{
               const vc=(v===180||v===177||v===174||v===171||v===170)?'#facc15':v===0?'var(--muted)':v>=100?'var(--green)':'var(--light)';
-              return `<span style="display:inline-block;min-width:24px;text-align:center;margin:1px;padding:1px 3px;border-radius:3px;background:var(--d3);color:${vc}">${v}</span>`;
+              return `<span style="display:inline-block;min-width:22px;text-align:center;margin:0 1px;padding:1px 3px;border-radius:3px;background:var(--d3);color:${vc}">${v}</span>`;
             }).join('')
           + `</div>` : '';
       const toggleBtn = scores.length
         ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Punti per turno" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px;line-height:1;vertical-align:middle">🎯${isCrown?'👑':''}</button>` : '';
       let legExtra = '';
       if(isTourSess){
-        if(!won && l.remainingScore!=null) legExtra=`<div style="font-size:10px;color:#f87171;margin-top:2px">Rimasto: ${l.remainingScore}</div>`;
-        else if(won && l.checkoutScore!=null) legExtra=`<div style="font-size:10px;color:var(--green);margin-top:2px">Checkout da: ${l.checkoutScore}</div>`;
+        if(!won && l.remainingScore!=null) legExtra=`<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${l.remainingScore}</span></div>`;
+        else if(won && l.checkoutScore!=null) legExtra=`<div><span style="color:var(--muted)">Da: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`;
       }
-      return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:4px;font-size:11px;padding:5px 0;border-bottom:1px solid var(--d4)">
-        <div style="color:${legColor};font-weight:600">Leg ${i+1} ${toggleBtn}</div>
-        <div><span style="color:var(--muted)">T: </span>${l.rounds||0}</div>
-        <div><span style="color:var(--muted)">F: </span>${darts}</div>
-        <div><span style="color:var(--muted)">M: </span>${l.avgPerRound||0}</div>
-        <div><span style="color:var(--muted)">D: </span>${l.doublesThrown||0}/${l.doublesHit||0}</div>
-        <div><span style="color:var(--muted)">%: </span>${(l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0}%</div>
-        ${legExtra}
+      const admRowClass = isTourSess ? (won ? 'tour-leg-row won' : 'tour-leg-row lost') : '';
+      return `<div class="${admRowClass}" style="${admRowClass?'':'padding:5px 0;border-bottom:1px solid var(--d4)'}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:4px;font-size:11px${admRowClass?';margin-bottom:3px':''}">
+          <div style="color:${legColor};font-weight:600">Leg ${i+1} ${toggleBtn}</div>
+          <div><span style="color:var(--muted)">T: </span>${l.rounds||0}</div>
+          <div><span style="color:var(--muted)">F: </span>${darts}</div>
+          <div><span style="color:var(--muted)">M: </span>${l.avgPerRound||0}</div>
+          <div><span style="color:var(--muted)">D: </span>${l.doublesThrown||0}/${l.doublesHit||0}</div>
+          <div><span style="color:var(--muted)">%: </span>${(l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0}%</div>
+          ${legExtra}
+        </div>
         ${scoresHtml}
       </div>`;
     }).join('');
@@ -5614,11 +5819,13 @@ function reqSendGeneric(){
   });
 }
 
-// ── Richiesta sblocco utente bloccato ─────────────────────────────────────────
+// ── Richiesta sblocco utente bloccato / nuovo dispositivo ─────────────────────
 function reqSendUnblock(){
   if(!CU) return;
   const ta  = document.getElementById('blockedMsgInput');
   const fb  = document.getElementById('blockedMsgFeedback');
+  const formEl = document.getElementById('blockedForm');
+  const reqType = (formEl && formEl.dataset.type === 'device') ? 'device' : 'unblock';
   if(!ta) return;
   const msg = ta.value.trim();
   if(!msg){ ta.focus(); return; }
@@ -5637,7 +5844,8 @@ function reqSendUnblock(){
     ts:        Date.now(),
     readBy:    {},
     repliedBy: {},
-    type:      'unblock',
+    type:      reqType,
+    ...(reqType==='device' ? {deviceFp: getDeviceFingerprint(), deviceName: getDeviceName()} : {}),
   };
 
   const doSave = async () => {
@@ -5653,10 +5861,11 @@ function reqSendUnblock(){
   doSave().then(()=>{
     if(fb){ fb.style.display='block'; fb.style.color='var(--green)'; fb.textContent='✓ Richiesta inviata! Un amministratore la esaminerà al più presto.'; }
     ta.value = '';
-    if(btn){ btn.disabled = false; btn.textContent = '📨 RICHIEDI SBLOCCO'; }
+    const label = reqType==='device' ? '📨 INVIA RICHIESTA' : '📨 INVIA RICHIESTA';
+    if(btn){ btn.disabled = false; btn.textContent = label; }
   }).catch(()=>{
     if(fb){ fb.style.display='block'; fb.style.color='#f87171'; fb.textContent='Errore durante l\'invio. Riprova.'; }
-    if(btn){ btn.disabled = false; btn.textContent = '📨 RICHIEDI SBLOCCO'; }
+    if(btn){ btn.disabled = false; btn.textContent = '📨 INVIA RICHIESTA'; }
   });
 }
 
@@ -5748,6 +5957,7 @@ function reqRenderSection(el, reqs, isReadSection){
     const isReschedule = r.type === 'reschedule';
     const isGeneric    = r.type === 'generic';
     const isUnblock    = r.type === 'unblock';
+    const isDevice     = r.type === 'device';
     let senderLabel;
     if(isReschedule){
       senderLabel = '<span style="font-size:11px;color:var(--amber);font-weight:700;letter-spacing:.06em;text-transform:uppercase">📆 SPOSTAMENTO</span> — <span style="color:var(--light)">'+r.firstName+' '+r.lastName+'</span>';
@@ -5755,6 +5965,8 @@ function reqRenderSection(el, reqs, isReadSection){
       senderLabel = '<span style="font-size:11px;color:var(--light);font-weight:700;letter-spacing:.06em;text-transform:uppercase">💬 GENERICO</span> — <span style="color:var(--light)">'+r.firstName+' '+r.lastName+'</span>';
     } else if(isUnblock){
       senderLabel = '<span style="font-size:11px;color:#f87171;font-weight:700;letter-spacing:.06em;text-transform:uppercase">🔒 SBLOCCO</span> — <span style="color:var(--light)">'+r.firstName+' '+r.lastName+'</span>';
+    } else if(isDevice){
+      senderLabel = '<span style="font-size:11px;color:#f87171;font-weight:700;letter-spacing:.06em;text-transform:uppercase">📱 DISPOSITIVO</span> — <span style="color:var(--light)">'+r.firstName+' '+r.lastName+'</span>';
     } else {
       senderLabel = '<span style="font-size:11px;color:var(--green);font-weight:700;letter-spacing:.06em;text-transform:uppercase">🎯 PERCORSO</span> — <span style="color:var(--light)">'+r.firstName+' '+r.lastName+'</span>';
     }
@@ -5859,11 +6071,21 @@ function reqOpenDetail(reqId){
   const isReschedule = r.type === 'reschedule';
   const isGeneric    = r.type === 'generic';
   const isUnblock    = r.type === 'unblock';
+  const isDevice     = r.type === 'device';
   const detailTitle = isReschedule ? '📆 Richiesta di spostamento'
-    : isGeneric ? '💬 Messaggio generico'
-    : isUnblock ? '🔒 Richiesta di sblocco'
+    : isGeneric  ? '💬 Messaggio generico'
+    : isUnblock  ? '🔒 Richiesta di sblocco'
+    : isDevice   ? '📱 Richiesta sblocco dispositivo'
     : '🎯 Richiesta di percorso';
-  const detailColor = isReschedule ? 'var(--amber)' : isGeneric ? 'var(--light)' : isUnblock ? '#f87171' : 'var(--green)';
+  const detailColor = isReschedule ? 'var(--amber)'
+    : (isUnblock||isDevice) ? '#f87171'
+    : isGeneric ? 'var(--light)'
+    : 'var(--green)';
+
+  // Bottone azione rapida per richieste dispositivo
+  const deviceActionBtn = isDevice && r.deviceFp && r.uid
+    ? `<button onclick="adminAddDeviceFromRequest('${r.uid}','${r.deviceFp}','${(r.deviceName||'').replace(/'/g,'\\\'')}')" style="width:100%;background:var(--green);color:#000;border:none;padding:11px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:10px">✅ AGGIUNGI QUESTO DISPOSITIVO</button>`
+    : '';
 
   document.getElementById('reqDetailContent').innerHTML =
     '<h2 style="font-weight:700;font-size:20px;color:'+detailColor+';margin-bottom:18px">'+detailTitle+'</h2>'
@@ -5872,9 +6094,11 @@ function reqOpenDetail(reqId){
     +'<div class="rdu-row"><span class="rdu-label">Email</span><span>'+r.email+'</span></div>'
     +(r.phone ? '<div class="rdu-row"><span class="rdu-label">Tel</span><span>'+r.phone+'</span></div>' : '')
     +(isReschedule && r.lessonIdx !== undefined ? '<div class="rdu-row"><span class="rdu-label">Lezione</span><span>Lezione '+(r.lessonIdx+1)+'</span></div>' : '')
+    +(isDevice && r.deviceName ? '<div class="rdu-row"><span class="rdu-label">Dispositivo</span><span>'+r.deviceName+'</span></div>' : '')
     +'</div>'
     +'<div class="req-detail-ts">'+tsStr+'</div>'
     +'<div class="req-detail-msg">'+escHtml(r.msg)+'</div>'
+    +deviceActionBtn
     +'<button class="req-reply-btn'+(isReplied?' replied':'')+'" id="reqReplyBtn" data-reqid="'+reqId+'" onclick="reqToggleReplied(this)">'
     +(isReplied ? '✓ HAI GIÀ RISPOSTO' : '📝 SEGNA COME RISPOSTO')+'</button>';
 
@@ -8061,38 +8285,43 @@ function render501SessPanel(){
       const dblStr = `${l.doublesHit||0}/${l.doublesThrown||0}`;
       const legLabelBase = isTour ? `Set ${l.setNum||1} · Leg ${l.legNum||li+1}` : `Leg ${li+1}`;
 
-      // Corona: leg vinto in 3 turni (9 frecce)
+      // Corona: leg vinto in ≤3 turni (9 frecce)
       const isCrown = won && (l.rounds||0)<=3 && darts<=9;
       const legColor = isCrown ? '#facc15' : (isTour ? (won ? 'var(--green)' : '#f87171') : 'var(--green)');
 
-      // Punti per turno
+      // Sfondo colorato per leg torneo (classe esistente)
+      const rowClass = isTour ? (won ? 'tour-leg-row won' : 'tour-leg-row lost') : '';
+
+      // Punti per turno — pannello orizzontale su una riga
       const scores  = l.legScores || [];
       const scoresId = `legscores_${keyBase}_${li}`;
       const scoresHtml = scores.length
-        ? `<div id="${scoresId}" style="display:none;margin-top:6px;padding:6px 8px;background:var(--d2);border-radius:5px;font-size:11px;line-height:1.8">
+        ? `<div id="${scoresId}" style="display:none;margin-top:6px;padding:5px 8px;background:var(--d2);border-radius:5px;font-size:11px;white-space:nowrap;overflow-x:auto">
             <span style="color:var(--muted);margin-right:4px">Turni:</span>`
-          + scores.map(v=>`<span style="display:inline-block;min-width:28px;text-align:center;margin:1px 2px;padding:1px 5px;border-radius:4px;background:var(--d3);color:${scoreColor(v)}">${v}</span>`).join('')
+          + scores.map(v=>`<span style="display:inline-block;min-width:26px;text-align:center;margin:0 2px;padding:1px 4px;border-radius:4px;background:var(--d3);color:${scoreColor(v)}">${v}</span>`).join('')
           + `</div>` : '';
       const toggleBtn = scores.length
         ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Mostra punti per turno" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;vertical-align:middle">🎯${isCrown?'👑':''}</button>` : '';
 
-      // Extra dati per leg torneo: rimasto o checkout
-      let legExtra = '';
-      if(isTour){
-        if(!won && l.remainingScore!=null)
-          legExtra = `<div style="font-size:10px;color:#f87171;margin-top:2px">Rimasto: ${l.remainingScore}</div>`;
-        else if(won && l.checkoutScore!=null)
-          legExtra = `<div style="font-size:10px;color:var(--green);margin-top:2px">Checkout da: ${l.checkoutScore}</div>`;
-      }
+      // Dati extra torneo: rimasto (leg perso) o checkout (leg vinto)
+      const remainCell = (isTour && !won && l.remainingScore!=null)
+        ? `<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${l.remainingScore}</span></div>`
+        : '';
+      const checkoutCell = (isTour && won && l.checkoutScore!=null)
+        ? `<div><span style="color:var(--muted)">Da: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`
+        : '';
 
-      return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:5px;font-size:12px;padding:6px 0;border-bottom:1px solid var(--d4)">
-        <div style="color:${legColor};font-weight:600">${legLabelBase} ${toggleBtn}</div>
-        <div><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
-        <div><span style="color:var(--muted)">Frecce: </span>${darts}</div>
-        <div><span style="color:var(--muted)">Media: </span>${avgVal}</div>
-        <div><span style="color:var(--muted)">Doppie: </span>${dblStr}</div>
-        <div><span style="color:var(--muted)">%: </span>${dblPct(l)}%</div>
-        ${legExtra}
+      return `<div class="${rowClass}" style="${rowClass?'':'padding:6px 0;border-bottom:1px solid var(--d4)'}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:5px;font-size:12px${rowClass?';margin-bottom:4px':''}">
+          <div style="color:${legColor};font-weight:600">${legLabelBase} ${toggleBtn}</div>
+          <div><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
+          <div><span style="color:var(--muted)">Frecce: </span>${darts}</div>
+          <div><span style="color:var(--muted)">Media: </span>${avgVal}</div>
+          <div><span style="color:var(--muted)">Doppie: </span>${dblStr}</div>
+          <div><span style="color:var(--muted)">%: </span>${dblPct(l)}%</div>
+          ${remainCell}
+          ${checkoutCell}
+        </div>
         ${scoresHtml}
       </div>`;
     }
