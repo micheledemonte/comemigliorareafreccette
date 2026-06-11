@@ -4567,15 +4567,26 @@ function renderAdmin501Panel(uid){
   }
   selected.forEach((s,idx)=>{
     const sum=calc501SessSummary(s.legs);
-    const legRows=s.legs.map((l,i)=>`
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:4px;font-size:11px;padding:5px 0;border-bottom:1px solid var(--d4)">
-        <div style="color:var(--green)">Leg ${i+1}</div>
+    const legRows=s.legs.map((l,i)=>{
+      const scores = l.legScores || [];
+      const scoresId = `adm_legscores_${uid}_${idx}_${i}`;
+      const scoresHtml = scores.length
+        ? `<div id="${scoresId}" style="display:none;margin-top:4px;padding:4px 6px;background:var(--d2);border-radius:4px;font-size:10px">
+            <span style="color:var(--muted)">Turni: </span>`
+          + scores.map(v=>`<span style="display:inline-block;min-width:24px;text-align:center;margin:1px;padding:1px 3px;border-radius:3px;background:var(--d3);color:${v===0?'var(--muted)':v>=100?'var(--green)':'var(--light)'}">${v}</span>`).join('')
+          + `</div>` : '';
+      const toggleBtn = scores.length
+        ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Punti per turno" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px;line-height:1;vertical-align:middle">🎯</button>` : '';
+      return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:4px;font-size:11px;padding:5px 0;border-bottom:1px solid var(--d4)">
+        <div style="color:var(--green)">Leg ${i+1} ${toggleBtn}</div>
         <div><span style="color:var(--muted)">T: </span>${l.rounds||0}</div>
         <div><span style="color:var(--muted)">F: </span>${l.dartsThrown||0}</div>
         <div><span style="color:var(--muted)">M: </span>${l.avgPerRound||0}</div>
         <div><span style="color:var(--muted)">D: </span>${l.doublesThrown||0}/${l.doublesHit||0}</div>
         <div><span style="color:var(--muted)">%: </span>${(l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0}%</div>
-      </div>`).join('');
+        ${scoresHtml}
+      </div>`;
+    }).join('');
     html+=`<div style="background:var(--d3);border-radius:8px;padding:12px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--light)">📅 ${s.date} — ${s.legs.length} legs</div>
@@ -7217,6 +7228,8 @@ function tourSaveCurrentLeg(won){
     doublesThrown: G.legDoublesThrown || 0,
     doublesHit: G.legDoublesHit || 0,
     won: won,
+    remainingScore: won ? 0 : G.score,      // punteggio rimasto se leg perso
+    checkoutScore:  won ? G._checkoutFrom || null : null, // punti da cui si è fatto checkout
   };
   // Store in current set
   if(!GT.sets[GT.currentSet]) GT.sets[GT.currentSet] = {legs:[]};
@@ -7316,6 +7329,20 @@ function saveTourName(key){
   render501SessPanel();
 }
 
+// ── Salva nome sessione interna (per sessioni unite) ──────────────────────────
+function saveInnerSessName(key, setIdx){
+  const inp = document.getElementById('innerSessName_'+key+'_'+setIdx);
+  if(!inp||!CU) return;
+  const name = inp.value.trim();
+  const data = getUD(CU.id);
+  if(data[key]?.sets?.[setIdx]) data[key].sets[setIdx].sessionName = name;
+  setUD(CU.id, data);
+  // Aggiorna rawSets in memoria
+  const s = _selected501Sessions.find(s=>s.key===key);
+  if(s && s.rawSets?.[setIdx]) s.rawSets[setIdx].sessionName = name;
+  render501SessPanel();
+}
+
 // ══ AUTO-NAME HELPER ══
 // Returns "Partita N" where N is progressive per date across all tour sessions
 function genTourAutoName(data, dateStr){
@@ -7336,7 +7363,7 @@ function mergeTournamentSessions(){
   const n = tourSessions.length;
   showConfirmPopup(
     'Unisci sessioni',
-    'Vuoi unire ' + n + ' sessioni in una sola? Le sessioni originali verranno eliminate.',
+    'Vuoi unire ' + n + ' sessioni in una sola? Potrai nominare ogni sessione interna. Le sessioni originali verranno eliminate.',
     ()=>_doMergeTournamentSessions(tourSessions),
     {okLabel:'UNISCI', okBg:'var(--green)', okColor:'#000'}
   );
@@ -7353,10 +7380,12 @@ function _doMergeTournamentSessions(tourSessions){
     return da.localeCompare(db);
   });
 
-  // Merge sets from all sessions
+  // Merge sets from all sessions — ogni set mantiene sessionName originale
   const mergedSets = sorted.flatMap(s=>{
     const orig = data[s.key];
-    return orig?.sets || [{legs: s.legs}];
+    const sessionName = s.tourName || orig?.__meta?.tourName || '';
+    const sets = orig?.sets || [{legs: s.legs}];
+    return sets.map(set=>({...set, sessionName}));
   });
 
   const savedAt = data[sorted[0].key]?.__meta?.savedAt || new Date().toISOString();
@@ -7583,6 +7612,7 @@ function g501OKBtn(){
   if(newScore===0){
     // Save pre-checkout state so ANNULLA can fully restore it
     G._preCheckoutSnap = g501Snap();
+    G._checkoutFrom = G.score; // punteggio da cui si è fatto checkout
     G.turns.push(g501Snap());
     G.score=0; G.legScores.push(pts); G.legDartsThrown+=3; G.totalDarts+=3; G.round++;
     G.enteredStr='';
@@ -7671,10 +7701,10 @@ function legDone_training(completed){
   const res={
     legNum:G.currentLeg+1,
     closures:G.closures,
-    // round was already incremented after the last throw, so it's correct
     rounds:G.round-1,
     dartsThrown:G.legDartsThrown,
-    avgPerRound:G.legScores.length ? +(G.legScores.reduce((a,b)=>a+b,0)/G.legScores.length).toFixed(1) : 0
+    avgPerRound:G.legScores.length ? +(G.legScores.reduce((a,b)=>a+b,0)/G.legScores.length).toFixed(1) : 0,
+    legScores:[...G.legScores],
   };
   G.legsResults.push(res);
   G.currentLeg++;
@@ -7761,8 +7791,12 @@ function finishFreeLeg(){
     dartsThrown: darts,
     doublesThrown: G.legDoublesThrown,
     doublesHit: G.legDoublesHit,
-    avgPerRound: avg
+    avgPerRound: avg,
+    legScores: [...G.legScores],
+    checkoutScore: G._checkoutFrom || null,
+    won: true,
   };
+  G._checkoutFrom = null;
   G.legsResults.push(res);
   // Tournament mode: save leg as won and let tourAdvance handle flow
   if(G.mode==='tournament' && GT.active){
@@ -7863,6 +7897,7 @@ function showPrev501Sess(){
     const allLegs=(sess.sets||[]).flatMap(set=>set.legs||[]);
     _selected501Sessions.push({key, date, legs:allLegs, isTournament:true,
       tourName: sess.__meta.tourName||'',
+      rawSets: sess.sets||[],
       meta:{totalSets:sess.__meta.totalSets, legsPerSet:sess.__meta.legsPerSet}});
   } else {
     if(!sess?.legs) return;
@@ -7900,21 +7935,47 @@ function render501SessPanel(){
       const legLabel = isTour ? `Set ${l.setNum||1} · Leg ${l.legNum||i+1} ${wIcon}` : `Leg ${i+1}`;
       const darts = l.dartsThrown||l.darts||0;
       const avgVal = isTour ? tourAvg(l) : (l.avgPerRound||l.avg||0);
-      // Doppie: colpite/tirate (inverted)
       const dblStr = `${l.doublesHit||0}/${l.doublesThrown||0}`;
+      // Punti per turno (legScores) — toggle con emoji 🎯
+      const scores = l.legScores || [];
+      const scoresId = `legscores_${s.key}_${i}`;
+      const scoresHtml = scores.length
+        ? `<div id="${scoresId}" style="display:none;margin-top:6px;padding:6px 8px;background:var(--d2);border-radius:5px;font-size:11px;line-height:1.8">
+            <span style="color:var(--muted);margin-right:4px">Turni:</span>`
+          + scores.map((v,ti)=>`<span style="display:inline-block;min-width:28px;text-align:center;margin:1px 2px;padding:1px 5px;border-radius:4px;background:var(--d3);color:${v===0?'var(--muted)':v>=100?'var(--green)':'var(--light)'}">${v}</span>`).join('')
+          + `</div>`
+        : '';
+      const toggleBtn = scores.length
+        ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Mostra punti per turno" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;vertical-align:middle">🎯</button>`
+        : '';
       return `<div class="${rowClass}" style="${rowClass?'':'display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:5px;font-size:12px;padding:6px 0;border-bottom:1px solid var(--d4)'}">
         ${rowClass?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:5px;font-size:12px">`:''}
-        <div style="color:${won?'var(--green)':'#f87171'};font-weight:600">${legLabel}</div>
+        <div style="color:${won?'var(--green)':'#f87171'};font-weight:600">${legLabel} ${toggleBtn}</div>
         <div><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
         <div><span style="color:var(--muted)">Frecce: </span>${darts}</div>
         <div><span style="color:var(--muted)">Media: </span>${avgVal}</div>
         <div><span style="color:var(--muted)">Doppie: </span>${dblStr}</div>
         <div><span style="color:var(--muted)">%: </span>${dblPct(l)}%</div>
         ${rowClass?'</div>':''}
+        ${scoresHtml}
       </div>`;
     }).join('');
     // Summary computed on filteredLegs (respects filter)
     const summary = calcTourSessSummary(filteredLegs, isTour);
+    // Dati extra per torneo: punteggi rimasti (leg persi) e checkout (leg vinti)
+    let extraTourStats = '';
+    if(isTour){
+      const lostLegs = filteredLegs.filter(l=>!l.won && (l.remainingScore !== undefined && l.remainingScore !== null));
+      const wonLegs  = filteredLegs.filter(l=> l.won && (l.checkoutScore  !== undefined && l.checkoutScore  !== null));
+      if(lostLegs.length){
+        const remainScores = lostLegs.map(l=>l.remainingScore).join(', ');
+        extraTourStats += `<div style="margin-top:5px"><span style="color:var(--muted)">Rimasto (leg persi): </span><span style="color:#f87171">${remainScores}</span></div>`;
+      }
+      if(wonLegs.length){
+        const coScores = wonLegs.map(l=>l.checkoutScore).join(', ');
+        extraTourStats += `<div style="margin-top:3px"><span style="color:var(--muted)">Checkout da: </span><span style="color:var(--green)">${coScores}</span></div>`;
+      }
+    }
     // Name input for tournament sessions
     const nameField = isTour ? `
       <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">
@@ -7922,6 +7983,29 @@ function render501SessPanel(){
           style="background:var(--d4);border:1px solid var(--d5);color:var(--light);border-radius:6px;padding:5px 10px;font-size:13px;flex:1;min-width:140px;max-width:260px"/>
         <button onclick="saveTourName('${s.key}')" style="background:var(--green);border:none;color:#000;font-family:'DM Sans',sans-serif;font-weight:700;font-size:13px;padding:5px 14px;border-radius:6px;cursor:pointer">SALVA</button>
       </div>` : '';
+    // Nome sessioni interne (solo per sessioni unite — sets con sessionName)
+    let internalNamesHtml = '';
+    if(isTour && s.rawSets && s.rawSets.length > 1){
+      const uniqueGroups = [];
+      const seen = new Set();
+      s.rawSets.forEach((set,si)=>{
+        const k = set.sessionName||'';
+        if(!seen.has(k+si)){ seen.add(k+si); uniqueGroups.push({si, name:k}); }
+      });
+      if(uniqueGroups.length > 1){
+        internalNamesHtml = `<div style="margin-top:10px;padding:10px;background:var(--d4);border-radius:6px">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--mu2);letter-spacing:.06em;margin-bottom:8px">NOMI SESSIONI INTERNE</div>
+          ${uniqueGroups.map((g,gi)=>`
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+              <span style="font-size:12px;color:var(--mu2);min-width:56px">Sessione ${gi+1}</span>
+              <input type="text" id="innerSessName_${s.key}_${g.si}" value="${g.name}"
+                placeholder="Nome sessione..."
+                style="flex:1;background:var(--d3);border:1px solid var(--d5);color:var(--light);border-radius:5px;padding:5px 8px;font-size:12px;min-width:110px"/>
+              <button onclick="saveInnerSessName('${s.key}',${g.si})" style="background:var(--green);border:none;color:#000;font-family:'DM Sans',sans-serif;font-weight:700;font-size:12px;padding:5px 10px;border-radius:5px;cursor:pointer">SALVA</button>
+            </div>`).join('')}
+        </div>`;
+      }
+    }
     return `<div style="background:var(--d3);border-radius:8px;padding:14px;margin-bottom:10px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px">
         <div>
@@ -7933,6 +8017,7 @@ function render501SessPanel(){
           <button onclick="delete501Sess('${s.key}')" style="background:#3d0505;border:1px solid #ef4444;color:#f87171;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><img src="/cestino.svg" style="width:15px;height:15px;vertical-align:middle" alt=""> ELIMINA</button>
         </div>
       </div>
+      ${internalNamesHtml}
       ${legRows}
       <div style="margin-top:8px;padding:8px;background:var(--d4);border-radius:6px;font-size:12px">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--green);margin-bottom:6px">RIEPILOGO SESSIONE${isTour&&_tourCompareFilter!=='all'?' ('+(_tourCompareFilter==='won'?'Solo vinti':'Solo persi')+')':''}</div>
@@ -7943,6 +8028,7 @@ function render501SessPanel(){
           <div><span style="color:var(--muted)">Doppie tot: </span>${summary.totDbl}</div>
           <div><span style="color:var(--muted)">% avg: </span>${summary.avgPct}%</div>
         </div>
+        ${extraTourStats}
       </div>
     </div>`;
   }
@@ -8039,18 +8125,16 @@ function render501Compare(){
 function calc501SessSummary(legs){
   const n=legs.length||1;
   const avg=(arr,key)=>+(arr.reduce((s,l)=>s+(l[key]||0),0)/n).toFixed(1);
-  const avgPct=legs.reduce((s,l)=>{
-    const t=l.doublesThrown||0, h=l.doublesHit||0;
-    return s+(t>0?Math.round(h/t*100):0);
-  },0)/n;
   const totHitT = legs.reduce((s,l)=>s+(l.doublesHit||0),0);
   const totThrownT = legs.reduce((s,l)=>s+(l.doublesThrown||0),0);
+  // % avg = colpite_tot / tirate_tot (non media delle singole %)
+  const avgPct = totThrownT > 0 ? Math.round(totHitT / totThrownT * 100) : 0;
   return {
     avgRounds: avg(legs,'rounds'),
     avgDarts: avg(legs,'dartsThrown'),
     avgPts: avg(legs,'avgPerRound'),
     totDbl: totHitT+'/'+totThrownT,
-    avgPct: Math.round(avgPct)
+    avgPct
   };
 }
 
@@ -8080,14 +8164,8 @@ function calcTourSessSummary(legs, isTour){
   const totHit = sumOf('doublesHit');
   const totThrown = sumOf('doublesThrown');
   const totDbl = totHit + '/' + totThrown;
-  // % avg: media delle percentuali solo dei leg con almeno 1 doppia tirata
-  const legsWithDbl = legs.filter(l=>(l.doublesThrown||0)>0);
-  const avgPct = legsWithDbl.length
-    ? Math.round(legsWithDbl.reduce((s,l)=>{
-        const t=l.doublesThrown||0, h=l.doublesHit||0;
-        return s+Math.round(h/t*100);
-      },0) / legsWithDbl.length)
-    : 0;
+  // % avg = colpite_tot / tirate_tot (coerente con "Doppie tot:")
+  const avgPct = totThrown > 0 ? Math.round(totHit / totThrown * 100) : 0;
   return { avgRounds, avgDarts, avgPts, totDbl, avgPct };
 }
 
