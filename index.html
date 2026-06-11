@@ -643,10 +643,11 @@ select:hover{border-color:var(--green)}
 .gs-appt-card{background:var(--d2);border:1.5px solid var(--green);border-radius:14px;padding:28px 24px;width:100%;max-width:380px;box-shadow:0 0 0 1px rgba(74,222,128,.12),0 24px 60px rgba(0,0,0,.7)}
 .gs-appt-card .modal-title{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--light);letter-spacing:.04em;margin-bottom:20px;text-align:center}
 .gs-appt-card label{font-size:11px;color:var(--mu2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;display:block}
-.gs-appt-card input,.gs-appt-card select{box-sizing:border-box;width:100%;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:10px 12px;border-radius:6px;font-size:14px;margin-bottom:14px;transition:border-color .2s}
+.gs-appt-card input,.gs-appt-card select{box-sizing:border-box;width:100%;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:10px 12px;border-radius:6px;font-size:14px;line-height:1.4;min-height:44px;margin-bottom:14px;transition:border-color .2s}
 .gs-appt-card input:focus,.gs-appt-card select:focus{outline:none;border-color:var(--green)}
 .gs-appt-card .dt-wrap{display:block;width:100%;overflow:hidden;margin-bottom:14px}
-.gs-appt-card .dt-wrap input[type=datetime-local]{display:block;width:100%;box-sizing:border-box;margin-bottom:0;-webkit-appearance:none;appearance:none}
+.gs-appt-card .dt-wrap input[type=datetime-local]{display:block;width:100%;box-sizing:border-box;margin-bottom:0;padding:10px 12px;min-height:44px;line-height:1.4;font-size:14px;-webkit-appearance:none;appearance:none;background:var(--d3);border:1px solid var(--d5);color:var(--light);border-radius:6px;transition:border-color .2s}
+.gs-appt-card .dt-wrap input[type=datetime-local]:focus{outline:none;border-color:var(--green)}
 .gs-appt-card .dt-wrap input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.6}
 .gs-appt-btns{display:flex;gap:8px;margin-top:4px}
 .gs-appt-btns button{flex:1;padding:10px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-weight:700;font-size:16px;letter-spacing:.04em;cursor:pointer;border:none;transition:all .2s}
@@ -1949,6 +1950,15 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
         </div>
       </div>
     </div>
+
+    <!-- Riquadro contatto admin -->
+    <div class="cw" style="margin-top:18px" id="profileContactBox">
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:20px;font-weight:400;color:var(--light);letter-spacing:.06em;margin-bottom:6px">💬 CONTATTA L'AMMINISTRATORE</h3>
+      <p style="font-size:13px;color:var(--mu2);margin-bottom:12px">Hai domande, richieste o hai bisogno di assistenza? Scrivi un messaggio e ti risponderemo al più presto.</p>
+      <textarea id="genericMsgInput" placeholder="Scrivi qui il tuo messaggio..." style="width:100%;min-height:90px;background:var(--d3);border:1px solid var(--d5);color:var(--light);border-radius:8px;padding:10px 12px;font-size:14px;resize:vertical;font-family:'DM Sans',sans-serif;box-sizing:border-box;transition:border-color .2s"></textarea>
+      <button class="req-compose-btn" onclick="reqSendGeneric()" style="margin-top:10px;width:100%">📨 INVIA MESSAGGIO</button>
+      <div id="genericMsgFeedback" style="font-size:13px;margin-top:8px;display:none"></div>
+    </div>
   </div>
 
 
@@ -1960,7 +1970,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <!-- RICHIESTE DI PERCORSO -->
     <div id="reqSection" style="margin-bottom:28px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:26px;font-weight:400;color:var(--light);letter-spacing:.06em;margin:0">📩 RICHIESTE DI PERCORSO</h3>
+        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:26px;font-weight:400;color:var(--light);letter-spacing:.06em;margin:0">📩 MESSAGGI RICEVUTI</h3>
         <span id="reqUnreadBadge" style="display:none;background:#ef4444;color:#fff;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700"></span>
       </div>
       <!-- Barra di ricerca per nome utente -->
@@ -4271,6 +4281,9 @@ function loadProfileForm(){
   document.getElementById('pLn').value=CU.lastName||'';
   document.getElementById('pEm').value=CU.email||'';
   document.getElementById('pPh').value=CU.phone||'';
+  // Mostra riquadro contatto solo agli utenti non-admin
+  const contactBox = document.getElementById('profileContactBox');
+  if(contactBox) contactBox.style.display = (CU.role==='admin') ? 'none' : '';
 }
 
 function saveProfile(){
@@ -5161,7 +5174,7 @@ function renderApptUser(){
   // Ordina per data crescente
   appts.sort((a,b)=>a.dt.localeCompare(b.dt));
 
-  // Ottieni mappa colori (per coerenza visiva con il calendario)
+  // Ottieni mappa colori
   const colorMap = (typeof calGetUserColorMap === 'function') ? calGetUserColorMap() : {};
   const col = colorMap[CU.id] || {border:'var(--green)', color:'var(--green)'};
 
@@ -5174,7 +5187,27 @@ function renderApptUser(){
 
   const now = new Date();
 
-  el.innerHTML = appts.map(l=>{
+  // Stato filtro (da svolgere / svolte)
+  if(typeof window._apptFilter === 'undefined') window._apptFilter = 'todo';
+
+  // Header con filtri
+  const filterHtml = '<div style="display:flex;gap:8px;margin-bottom:14px">'
+    +'<button onclick="apptSetFilter(\'todo\')" id="apptFTodo" style="flex:1;padding:8px 0;border-radius:999px;font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:13px;cursor:pointer;border:1px solid var(--green);background:'+(window._apptFilter==='todo'?'var(--green)':'transparent')+';color:'+(window._apptFilter==='todo'?'#000':'var(--green)')+'">📅 DA SVOLGERE</button>'
+    +'<button onclick="apptSetFilter(\'done\')" id="apptFDone" style="flex:1;padding:8px 0;border-radius:999px;font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:13px;cursor:pointer;border:1px solid var(--d5);background:'+(window._apptFilter==='done'?'var(--d5)':'transparent')+';color:'+(window._apptFilter==='done'?'var(--light)':'var(--mu2)')+'">✅ SVOLTE</button>'
+    +'</div>';
+
+  // Filtra in base allo stato selezionato
+  const filtered = appts.filter(l=>{
+    const _dp2 = l.dt.slice(0,10).split('-');
+    const d2   = new Date(parseInt(_dp2[0]), parseInt(_dp2[1])-1, parseInt(_dp2[2]),
+                   ...(l.dt.length>10 ? l.dt.slice(11,16).split(':').map(Number) : [0,0]));
+    const isPast2 = d2 < now;
+    const isDone  = isPast2 || l.svolta;
+    return window._apptFilter === 'done' ? isDone : !isDone;
+  });
+
+  const rowsHtml = filtered.length
+    ? filtered.map(l=>{
     const _dp    = l.dt.slice(0,10).split('-');
     const d      = new Date(parseInt(_dp[0]), parseInt(_dp[1])-1, parseInt(_dp[2]),
                      ...(l.dt.length>10 ? l.dt.slice(11,16).split(':').map(Number) : [0,0]));
@@ -5231,8 +5264,8 @@ function renderApptUser(){
     return '<div class="cal-event-item" style="border-left:3px solid '+col.border+';opacity:'+(locked?'.5':'1')+';flex-direction:column;align-items:stretch;padding:12px 14px;gap:4px">'
       // Riga 1: LEZIONE N — font grande
       +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--light);letter-spacing:.06em;line-height:1.1">LEZIONE '+(l.idx+1)+'</div>'
-      // Riga 2: data e orario — font più grande, colore utente
-      +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:'+col.color+';letter-spacing:.04em;line-height:1.2">'+dateLabel+'</div>'
+      // Riga 2: data e orario — font più grande del nome lezione, colore utente
+      +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;color:'+col.color+';letter-spacing:.04em;line-height:1.15">'+dateLabel+'</div>'
       // Riga 3: insegnante in piccolo con emoji (sempre)
       +(teacher
         ? '<div style="font-size:12px;color:var(--mu2);margin-top:2px">👨‍🏫 '+teacher+(l.note?' · <span style="color:var(--muted)">'+l.note+'</span>':'')+(setAtStr?' · <span style="color:var(--muted)">📌 Fissato il '+setAtStr+'</span>':'')+'</div>'
@@ -5252,7 +5285,16 @@ function renderApptUser(){
       +'<div id="rescheduleFeedback_'+l.idx+'" style="font-size:12px;margin-top:6px;display:none"></div>'
       +'</div>'
       +'</div>';
-  }).join('');
+  }).join('')
+    : '<div class="gs-empty" style="padding:28px 20px">Nessun appuntamento in questa categoria.</div>';
+
+  el.innerHTML = filterHtml + rowsHtml;
+}
+
+// ── Imposta filtro appuntamenti utente ────────────────────────────────────────
+function apptSetFilter(f){
+  window._apptFilter = f;
+  renderApptUser();
 }
 
 function userExportICS(btn){
@@ -5343,6 +5385,7 @@ function reqSendRequest(){
     ts:        Date.now(),
     readBy:    {},
     repliedBy: {},
+    type:      'percorso',
   };
 
   const doSave = async () => {
@@ -5431,6 +5474,53 @@ function reqSendReschedule(idx){
   });
 }
 
+// ── Messaggio generico dal profilo utente ─────────────────────────────────────
+function reqSendGeneric(){
+  if(!CU) return;
+  const ta  = document.getElementById('genericMsgInput');
+  const fb  = document.getElementById('genericMsgFeedback');
+  if(!ta) return;
+  const msg = ta.value.trim();
+  if(!msg){ ta.focus(); return; }
+
+  const btn = document.querySelector('#profileContactBox .req-compose-btn');
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ Invio in corso...'; }
+
+  const reqId  = 'req_'+Date.now()+'_'+CU.id.slice(-4);
+  const reqObj = {
+    uid:       CU.id,
+    firstName: CU.firstName,
+    lastName:  CU.lastName,
+    email:     CU.email,
+    phone:     CU.phone || '',
+    msg:       msg,
+    ts:        Date.now(),
+    readBy:    {},
+    repliedBy: {},
+    type:      'generic',
+  };
+
+  const doSave = async () => {
+    if(_firebaseOK && _fbDB){
+      await _fbDB.ref('db/requests/'+reqId).set(reqObj);
+    } else {
+      if(!_dbCache.requests) _dbCache.requests = {};
+      _dbCache.requests[reqId] = reqObj;
+      saveDBToCloud();
+    }
+  };
+
+  doSave().then(()=>{
+    if(fb){ fb.style.display='block'; fb.style.color='var(--green)'; fb.textContent='✓ Messaggio inviato! Ti risponderemo al più presto.'; }
+    ta.value = '';
+    if(btn){ btn.disabled = false; btn.textContent = '📨 INVIA MESSAGGIO'; }
+    setTimeout(()=>{ if(fb) fb.style.display='none'; }, 4000);
+  }).catch(()=>{
+    if(fb){ fb.style.display='block'; fb.style.color='#f87171'; fb.textContent='Errore durante l\'invio. Riprova.'; }
+    if(btn){ btn.disabled = false; btn.textContent = '📨 INVIA MESSAGGIO'; }
+  });
+}
+
 // ── Carica / ascolta richieste in real-time (admin) ───────────────────────────
 function reqStartListener(){
   if(!_firebaseOK || !_fbDB || !CU || CU.role!=='admin') return;
@@ -5515,11 +5605,18 @@ function reqRenderSection(el, reqs, isReadSection){
     let badges = '';
     if(isReplied) badges += '<span class="req-badge req-badge-replied">\u2713 Risposto</span>';
     if(needsRep)  badges += '<span class="req-badge req-badge-read">Letto</span><span class="req-badge req-badge-needs-reply">\u26a0 Da rispondere</span>';
-    // Titolo diverso per richieste di spostamento
+    // Titolo anteprima in base al tipo di richiesta
     const isReschedule = r.type === 'reschedule';
-    const senderLabel = isReschedule
-      ? '<span style="font-size:11px;color:var(--amber);font-weight:700;letter-spacing:.06em;text-transform:uppercase">📆 SPOSTAMENTO</span> — '+r.firstName+' '+r.lastName
-      : r.firstName+' '+r.lastName;
+    const isGeneric    = r.type === 'generic';
+    let senderLabel;
+    if(isReschedule){
+      senderLabel = '<span style="font-size:11px;color:var(--amber);font-weight:700;letter-spacing:.06em;text-transform:uppercase">📆 SPOSTAMENTO</span> — <span style="color:var(--light)">'+r.firstName+' '+r.lastName+'</span>';
+    } else if(isGeneric){
+      senderLabel = '<span style="font-size:11px;color:var(--light);font-weight:700;letter-spacing:.06em;text-transform:uppercase">💬 GENERICO</span> — <span style="color:var(--light)">'+r.firstName+' '+r.lastName+'</span>';
+    } else {
+      // Richiesta percorso (default)
+      senderLabel = '<span style="font-size:11px;color:var(--green);font-weight:700;letter-spacing:.06em;text-transform:uppercase">📩 PERCORSO</span> — <span style="color:var(--light)">'+r.firstName+' '+r.lastName+'</span>';
+    }
     return '<div class="'+cls+'" data-reqid="'+r.id+'" onclick="reqClickCard(this)">'
       +'<div class="req-ts">'+tsStr+'</div>'
       +'<div class="req-sender">'+senderLabel+'</div>'
@@ -5619,12 +5716,14 @@ function reqOpenDetail(reqId){
                   + ' alle '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
   const isReplied = !!(r.repliedBy?.[CU.id]);
   const isReschedule = r.type === 'reschedule';
-  const detailTitle = isReschedule
-    ? '📆 Richiesta di spostamento'
+  const isGeneric    = r.type === 'generic';
+  const detailTitle = isReschedule ? '📆 Richiesta di spostamento'
+    : isGeneric ? '💬 Messaggio generico'
     : '📩 Richiesta di percorso';
+  const detailColor = isReschedule ? 'var(--amber)' : isGeneric ? 'var(--light)' : 'var(--green)';
 
   document.getElementById('reqDetailContent').innerHTML =
-    '<h2 style="font-weight:700;font-size:20px;color:'+(isReschedule?'var(--amber)':'var(--green)')+';margin-bottom:18px">'+detailTitle+'</h2>'
+    '<h2 style="font-weight:700;font-size:20px;color:'+detailColor+';margin-bottom:18px">'+detailTitle+'</h2>'
     +'<div class="req-detail-user">'
     +'<div class="rdu-row"><span class="rdu-label">Nome</span><strong>'+r.firstName+' '+r.lastName+'</strong></div>'
     +'<div class="rdu-row"><span class="rdu-label">Email</span><span>'+r.email+'</span></div>'
