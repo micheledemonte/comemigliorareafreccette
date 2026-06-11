@@ -34,8 +34,6 @@ button{cursor:pointer}
 
 /* ═══ LAYER SYSTEM ═══ */
 #landing{position:relative;z-index:1;min-height:100vh}
-/* Scroll chaining: i contenitori interni non bloccano lo scroll della pagina */
-.ul,[id$="SearchDrop"],[id$="UserList"],[id$="DropList"],.req-read-list{overscroll-behavior-y:auto}
 #appLayer{position:fixed;inset:0;z-index:10;display:none;flex-direction:column;background:var(--dark);overflow-y:auto}
 #appLayer.visible{display:flex}
 #loginModal{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s}
@@ -682,11 +680,11 @@ select:hover{border-color:var(--green)}
 @media(max-width:600px){.cal-event-item .cei-actions{width:100%;margin-top:6px;padding-top:6px;border-top:1px solid var(--d4)}}
 .cal-event-item select{background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:5px 8px;border-radius:5px;font-size:12px;cursor:pointer;max-width:160px}
 .cal-event-item select:focus{outline:none;border-color:var(--green)}
-.cal-ics-btn{height:32px;border-radius:6px;background:var(--gdim);border:1px solid var(--green);color:var(--green);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;transition:all .2s;padding:0 10px;line-height:1;letter-spacing:.02em}
+.cal-ics-btn{height:32px;border-radius:999px;background:var(--gdim);border:1px solid var(--green);color:var(--green);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;transition:all .2s;padding:0 12px;line-height:1;letter-spacing:.02em}
 .cal-ics-btn:hover{background:#052e16;border-color:var(--green)}
 .cal-ics-btn.ics-saved{background:var(--d3);border-color:var(--d5);color:var(--mu2);cursor:default}
 .cal-ics-btn.ics-saved:hover{background:var(--d3);border-color:var(--d5)}
-.cal-move-btn{height:32px;border-radius:6px;background:transparent;border:1px solid var(--amber);color:var(--amber);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;padding:0 10px;line-height:1;letter-spacing:.02em}
+.cal-move-btn{height:32px;border-radius:999px;background:transparent;border:1px solid var(--amber);color:var(--amber);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;padding:0 12px;line-height:1;letter-spacing:.02em}
 .cal-move-btn:hover{background:rgba(245,158,11,.12)}
 .cal-myfilter-btn{background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:6px;padding:7px 14px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
 .cal-myfilter-btn.active{background:var(--gdim);border-color:var(--green);color:var(--green)}
@@ -5207,43 +5205,45 @@ function renderApptUser(){
     // Pillola stato pagamento (sempre visibile)
     let pagBadge = '';
     if(p.tipoPagamento === 'anticipato'){
-      pagBadge = '<span style="display:inline-flex;align-items:center;height:32px;padding:0 10px;border-radius:6px;font-size:11px;font-weight:700;background:#1e3a5f;color:#93c5fd;border:1px solid #1d4ed8;white-space:nowrap">💰 PAGATA</span>';
+      pagBadge = '<span style="display:inline-flex;align-items:center;height:32px;padding:0 12px;border-radius:999px;font-size:11px;font-weight:700;background:#1e3a5f;color:#93c5fd;border:1px solid #1d4ed8;white-space:nowrap">💰 PAGATA</span>';
     } else {
       if(l.pagata && l.svolta)
-        pagBadge = '<span style="display:inline-flex;align-items:center;height:32px;padding:0 10px;border-radius:6px;font-size:11px;font-weight:700;background:#052e16;color:var(--green);border:1px solid var(--green);white-space:nowrap">🏆 PAGATA + SVOLTA</span>';
+        pagBadge = '<span style="display:inline-flex;align-items:center;height:32px;padding:0 12px;border-radius:999px;font-size:11px;font-weight:700;background:#052e16;color:var(--green);border:1px solid var(--green);white-space:nowrap">🏆 PAGATA + SVOLTA</span>';
       else if(l.pagata)
-        pagBadge = '<span style="display:inline-flex;align-items:center;height:32px;padding:0 10px;border-radius:6px;font-size:11px;font-weight:700;background:#1e3a5f;color:#93c5fd;border:1px solid #1d4ed8;white-space:nowrap">💰 PAGATA</span>';
+        pagBadge = '<span style="display:inline-flex;align-items:center;height:32px;padding:0 12px;border-radius:999px;font-size:11px;font-weight:700;background:#1e3a5f;color:#93c5fd;border:1px solid #1d4ed8;white-space:nowrap">💰 PAGATA</span>';
       else if(l.svolta)
-        pagBadge = '<span style="display:inline-flex;align-items:center;height:32px;padding:0 10px;border-radius:6px;font-size:11px;font-weight:700;background:#052e16;color:#86efac;border:1px solid #166534;white-space:nowrap">✅ SVOLTA</span>';
+        pagBadge = '<span style="display:inline-flex;align-items:center;height:32px;padding:0 12px;border-radius:999px;font-size:11px;font-weight:700;background:#052e16;color:#86efac;border:1px solid #166534;white-space:nowrap">✅ SVOLTA</span>';
       else
-        pagBadge = '<span style="display:inline-flex;align-items:center;height:32px;padding:0 10px;border-radius:6px;font-size:11px;font-weight:700;background:var(--d3);color:var(--mu2);border:1px solid var(--d5);white-space:nowrap">DA PAGARE</span>';
+        pagBadge = '<span style="display:inline-flex;align-items:center;height:32px;padding:0 12px;border-radius:999px;font-size:11px;font-weight:700;background:var(--d3);color:var(--mu2);border:1px solid var(--d5);white-space:nowrap">DA PAGARE</span>';
     }
 
     // Pillola spostamento (solo se non locked)
     const spostaB = locked ? '' : (
       '<button onclick="reqToggleRescheduleForm('+l.idx+')"'
-      +' style="display:inline-flex;align-items:center;height:32px;background:transparent;border:1px solid var(--amber);color:var(--amber);border-radius:6px;padding:0 10px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.04em;white-space:nowrap">📆 SPOSTA</button>'
+      +' style="display:inline-flex;align-items:center;height:32px;background:transparent;border:1px solid var(--amber);color:var(--amber);border-radius:999px;padding:0 12px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.04em;white-space:nowrap">📆 SPOSTA</button>'
     );
 
-    // Data fissazione
+    // Data fissazione (stringa compatta per uso inline)
     const setAtStr = l.setAt
-      ? ' · <span style="font-size:10px;color:var(--muted)">Fissato il '+new Date(l.setAt).toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'})+'</span>'
+      ? new Date(l.setAt).toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'})
       : '';
 
-    return '<div class="cal-event-item" style="border-left:3px solid '+col.border+';opacity:'+(locked?'.5':'1')+';flex-direction:column;align-items:stretch;padding:10px 12px;gap:6px">'
-      // Riga 1: nome lezione + data
-      +'<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">'
-      +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:15px;color:var(--light);letter-spacing:.04em;white-space:nowrap">LEZIONE '+(l.idx+1)+'</div>'
-      +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:13px;color:'+col.color+';letter-spacing:.03em;flex:1;min-width:0">'+dateLabel+'</div>'
-      +(l.note ? '<div style="font-size:11px;color:var(--muted)">'+l.note+'</div>' : '')
-      +setAtStr
+    return '<div class="cal-event-item" style="border-left:3px solid '+col.border+';opacity:'+(locked?'.5':'1')+';flex-direction:column;align-items:stretch;padding:12px 14px;gap:4px">'
+      // Riga 1: LEZIONE N — font grande
+      +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--light);letter-spacing:.06em;line-height:1.1">LEZIONE '+(l.idx+1)+'</div>'
+      // Riga 2: data e orario — font più grande, colore utente
+      +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:'+col.color+';letter-spacing:.04em;line-height:1.2">'+dateLabel+'</div>'
+      // Riga 3: insegnante in piccolo con emoji (sempre)
+      +(teacher
+        ? '<div style="font-size:12px;color:var(--mu2);margin-top:2px">👨‍🏫 '+teacher+(l.note?' · <span style="color:var(--muted)">'+l.note+'</span>':'')+(setAtStr?' · <span style="color:var(--muted)">📌 Fissato il '+setAtStr+'</span>':'')+'</div>'
+        : '<div style="font-size:12px;color:var(--muted);margin-top:2px">Insegnante non assegnato'+(l.note?' · '+l.note:'')+(setAtStr?' · <span style="color:var(--muted)">📌 Fissato il '+setAtStr+'</span>':'')+'</div>'
+      )
+      // Riga 4: pillole (ICS, SPOSTA, stato pagamento) — tutte arrotondate
+      +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px">'
+      +icsB + spostaB + pagBadge
       +'</div>'
-      // Riga 2: pillole tutte sulla stessa riga (ICS, Insegnante, Stato)
-      +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
-      +icsB + teacherB + spostaB + pagBadge
-      +'</div>'
-      // Form spostamento (collassabile)
-      +'<div id="rescheduleForm_'+l.idx+'" style="display:none;margin-top:4px;padding-top:10px;border-top:1px solid var(--d4)">'
+      // Form spostamento collassabile
+      +'<div id="rescheduleForm_'+l.idx+'" style="display:none;margin-top:6px;padding-top:10px;border-top:1px solid var(--d4)">'
       +'<textarea id="rescheduleMsg_'+l.idx+'" placeholder="Scrivi qui la tua richiesta di spostamento..." style="width:100%;min-height:70px;background:var(--d3);border:1px solid var(--d5);color:var(--light);border-radius:6px;padding:8px 10px;font-size:13px;resize:vertical;font-family:DM Sans,sans-serif"></textarea>'
       +'<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">'
       +'<button data-idx="'+l.idx+'" onclick="reqSendReschedule('+l.idx+')" class="req-compose-btn" style="flex:1;font-size:13px;padding:8px 12px">📨 INVIA RICHIESTA</button>'
@@ -6056,25 +6056,31 @@ function calClearFilter(){
 }
 
 // ── Helper: genera bottone ICS con stato salvato ─────────────────────────────
-// ── Helper: genera bottoni azioni appuntamento per admin (ordine: ICS, Insegnante, Sposta, Cestino)
+// ── Helper: genera bottoni azioni appuntamento per admin (ordine: ICS, Insegnante/Select, Sposta, Cestino)
 function calAdminBtns(ev, titleStr, adminOpts){
   // Determina se l'appuntamento è passato o la lezione è già svolta
   const evDate = ev.dt ? new Date(ev.dt) : null;
   const isPast = evDate && evDate < new Date();
-  // Verifica se la lezione è segnata come svolta nel percorso
-  const evUser = getUsers().find(u=>u.id===ev.uid);
-  const evPerc = evUser ? gsGetPercorso(ev.uid) : null;
+  const evPerc = gsGetPercorso(ev.uid);
   const isSvolto = evPerc && evPerc.lezioni[ev.idx] && evPerc.lezioni[ev.idx].svolta;
   const locked = isPast || isSvolto;
 
   const icsB = locked ? '' : calIcsBtn(ev, titleStr);
 
-  // Pillola insegnante (sempre visibile)
+  // Se locked → badge insegnante (sola lettura, angoli tondi)
+  // Se non locked → select modificabile (solo nelle viste con adminOpts)
   const adminsAll = getUsers().filter(u=>u.role==='admin');
   const teacher = adminsAll.find(a=>a.id===ev.adminRef);
   const teacherName = teacher ? teacher.firstName+' '+teacher.lastName : null;
-  const teacherB = teacherName
-    ? '<span style="display:inline-flex;align-items:center;height:32px;padding:0 10px;border-radius:6px;background:var(--d3);border:1px solid var(--d5);color:var(--mu2);font-size:11px;font-weight:700;white-space:nowrap">'+teacherName+'</span>'
+
+  const teacherB = (locked && teacherName)
+    ? '<span style="display:inline-flex;align-items:center;height:32px;padding:0 12px;border-radius:999px;background:var(--d3);border:1px solid var(--d5);color:var(--mu2);font-size:11px;font-weight:700;white-space:nowrap">'+teacherName+'</span>'
+    : '';
+
+  const selB = (!locked && adminOpts !== undefined)
+    ? '<select class="cal-admin-sel" data-uid="'+ev.uid+'" data-idx="'+ev.idx
+      +'" onchange="calAssignAdmin(this)" title="Assegna insegnante">'
+      +'<option value="">— Insegnante —</option>'+adminOpts+'</select>'
     : '';
 
   const moveB = locked ? '' : '<button class="cal-move-btn" data-uid="'+ev.uid+'" data-idx="'+ev.idx
@@ -6083,12 +6089,9 @@ function calAdminBtns(ev, titleStr, adminOpts){
     +'" onclick="calDeleteAppt(this.dataset.uid,parseInt(this.dataset.idx))" title="Elimina appuntamento"'
     +' style="background:transparent;border:1px solid #ef4444;color:#ef4444;border-radius:5px;padding:5px 8px;cursor:pointer;display:inline-flex;align-items:center">'
     +'<img src="/cestino.svg" style="width:14px;height:14px;vertical-align:middle;filter:none" alt="elimina"></button>';
-  const selB = (!locked && adminOpts !== undefined)
-    ? '<select class="cal-admin-sel" data-uid="'+ev.uid+'" data-idx="'+ev.idx
-      +'" onchange="calAssignAdmin(this)" title="Assegna insegnante">'
-      +'<option value="">— Insegnante —</option>'+adminOpts+'</select>'
-    : '';
-  return icsB + teacherB + moveB + delB + selB;
+
+  // Ordine: ICS → teacher badge (se locked) / select (se non locked) → Sposta → Cestino
+  return icsB + teacherB + selB + moveB + delB;
 }
 
 function calIcsBtn(ev, titleStr){
@@ -9849,6 +9852,66 @@ function closeLegal(){
 document.addEventListener('keydown', function(e){
   if(e.key === 'Escape') closeLegal();
 });
+
+// ═══════════════════════════════════════════════════════════════════════
+// SCROLL CHAINING — mobile/tablet (touch) + desktop (wheel)
+// Quando un contenitore interno raggiunge il limite, lo scroll
+// viene passato al genitore (#appLayer o documentElement)
+// ═══════════════════════════════════════════════════════════════════════
+(function initScrollChaining(){
+  const SELECTORS = ['.ul','#gsUserList','.req-read-list'];
+  let _ty = 0;
+
+  function scrollParent(el){
+    let p = el.parentElement;
+    while(p && p !== document.body){
+      const ov = getComputedStyle(p).overflowY;
+      if((ov==='auto'||ov==='scroll') && p.scrollHeight > p.clientHeight) return p;
+      p = p.parentElement;
+    }
+    return document.getElementById('appLayer') || document.documentElement;
+  }
+
+  function attach(el){
+    if(el._sc) return;
+    el._sc = true;
+
+    el.addEventListener('touchstart', e=>{ _ty = e.touches[0].clientY; }, {passive:true});
+
+    el.addEventListener('touchmove', function(e){
+      const dy     = e.touches[0].clientY - _ty;
+      const atTop  = el.scrollTop <= 0;
+      const atBot  = el.scrollHeight - el.clientHeight - el.scrollTop < 2;
+      if((dy > 0 && atTop) || (dy < 0 && atBot)){
+        const p = scrollParent(el);
+        if(p && p !== el){ p.scrollTop -= dy; }
+        // non chiamiamo preventDefault() così iOS non blocca
+      }
+    }, {passive:true});
+
+    el.addEventListener('wheel', function(e){
+      const atTop = el.scrollTop <= 0;
+      const atBot = el.scrollHeight - el.clientHeight - el.scrollTop < 2;
+      if((e.deltaY < 0 && atTop) || (e.deltaY > 0 && atBot)){
+        e.preventDefault();
+        const p = scrollParent(el);
+        if(p && p !== el) p.scrollTop += e.deltaY;
+      }
+    }, {passive:false});
+  }
+
+  function attachAll(){
+    SELECTORS.forEach(s=>document.querySelectorAll(s).forEach(attach));
+  }
+
+  const obs = new MutationObserver(attachAll);
+  function ready(){
+    attachAll();
+    obs.observe(document.body,{childList:true,subtree:true});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',ready);
+  else ready();
+})();
 </script>
 </body>
 </html>
