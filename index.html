@@ -1953,7 +1953,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 
     <!-- Riquadro contatto admin -->
     <div class="cw" style="margin-top:18px" id="profileContactBox">
-      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:20px;font-weight:400;color:var(--light);letter-spacing:.06em;margin-bottom:6px">💬 CONTATTA L'AMMINISTRATORE</h3>
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:20px;font-weight:400;color:var(--light);letter-spacing:.06em;margin-bottom:6px">💬 INVIA UN MESSAGGIO</h3>
       <p style="font-size:13px;color:var(--mu2);margin-bottom:12px">Hai domande, richieste o hai bisogno di assistenza? Scrivi un messaggio e ti risponderemo al più presto.</p>
       <textarea id="genericMsgInput" placeholder="Scrivi qui il tuo messaggio..." style="width:100%;min-height:90px;background:var(--d3);border:1px solid var(--d5);color:var(--light);border-radius:8px;padding:10px 12px;font-size:14px;resize:vertical;font-family:'DM Sans',sans-serif;box-sizing:border-box;transition:border-color .2s"></textarea>
       <button class="req-compose-btn" onclick="reqSendGeneric()" style="margin-top:10px;width:100%">📨 INVIA MESSAGGIO</button>
@@ -4281,9 +4281,9 @@ function loadProfileForm(){
   document.getElementById('pLn').value=CU.lastName||'';
   document.getElementById('pEm').value=CU.email||'';
   document.getElementById('pPh').value=CU.phone||'';
-  // Mostra riquadro contatto solo agli utenti non-admin
+  // Il riquadro contatto è visibile a tutti
   const contactBox = document.getElementById('profileContactBox');
-  if(contactBox) contactBox.style.display = (CU.role==='admin') ? 'none' : '';
+  if(contactBox) contactBox.style.display = '';
 }
 
 function saveProfile(){
@@ -5190,10 +5190,10 @@ function renderApptUser(){
   // Stato filtro (da svolgere / svolte)
   if(typeof window._apptFilter === 'undefined') window._apptFilter = 'todo';
 
-  // Header con filtri
-  const filterHtml = '<div style="display:flex;gap:8px;margin-bottom:14px">'
-    +'<button onclick="apptSetFilter(\'todo\')" id="apptFTodo" style="flex:1;padding:8px 0;border-radius:999px;font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:13px;cursor:pointer;border:1px solid var(--green);background:'+(window._apptFilter==='todo'?'var(--green)':'transparent')+';color:'+(window._apptFilter==='todo'?'#000':'var(--green)')+'">📅 DA SVOLGERE</button>'
-    +'<button onclick="apptSetFilter(\'done\')" id="apptFDone" style="flex:1;padding:8px 0;border-radius:999px;font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:13px;cursor:pointer;border:1px solid var(--d5);background:'+(window._apptFilter==='done'?'var(--d5)':'transparent')+';color:'+(window._apptFilter==='done'?'var(--light)':'var(--mu2)')+'">✅ SVOLTE</button>'
+  // Header con filtri — stesso stile di "Da leggere"/"Già letti" nel gestionale
+  const filterHtml = '<div class="req-filters" style="margin-bottom:14px">'
+    +'<button class="req-filter-btn'+(window._apptFilter==='todo'?' active':'')+'" onclick="apptSetFilter(\'todo\')">📅 DA SVOLGERE</button>'
+    +'<button class="req-filter-btn'+(window._apptFilter==='done'?' active':'')+'" onclick="apptSetFilter(\'done\')">✅ SVOLTE</button>'
     +'</div>';
 
   // Filtra in base allo stato selezionato
@@ -5213,9 +5213,9 @@ function renderApptUser(){
                      ...(l.dt.length>10 ? l.dt.slice(11,16).split(':').map(Number) : [0,0]));
     const pad    = n => String(n).padStart(2,'0');
     const timeStr = pad(d.getHours())+':'+pad(d.getMinutes());
-    // Data formattata: "MARTEDÌ 16 GIUGNO 2026 ALLE ORE 16:30"
-    const dateRaw = d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-    const dateLabel = (dateRaw + ' ALLE ORE ' + timeStr).toUpperCase();
+    // Data formattata: "MARTEDÌ 16 GIUGNO ORE 16:30" (senza anno)
+    const dateRaw = d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+    const dateLabel = (dateRaw + ' ORE ' + timeStr).toUpperCase();
     const isPast  = d < now;
     const teacher = adminName(l.adminRef);
     const isSaved = _userIcsSaved.has(String(l.idx));
@@ -5278,9 +5278,9 @@ function renderApptUser(){
       // Form spostamento collassabile
       +'<div id="rescheduleForm_'+l.idx+'" style="display:none;margin-top:6px;padding-top:10px;border-top:1px solid var(--d4)">'
       +'<textarea id="rescheduleMsg_'+l.idx+'" placeholder="Scrivi qui la tua richiesta di spostamento..." style="width:100%;min-height:70px;background:var(--d3);border:1px solid var(--d5);color:var(--light);border-radius:6px;padding:8px 10px;font-size:13px;resize:vertical;font-family:DM Sans,sans-serif"></textarea>'
-      +'<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">'
-      +'<button data-idx="'+l.idx+'" onclick="reqSendReschedule('+l.idx+')" class="req-compose-btn" style="flex:1;font-size:13px;padding:8px 12px">📨 INVIA RICHIESTA</button>'
-      +'<button onclick="document.getElementById(\'rescheduleForm_'+l.idx+'\').style.display=\'none\'" style="background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:6px;padding:8px 12px;font-size:13px;cursor:pointer">ANNULLA</button>'
+      +'<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:stretch">'
+      +'<button data-idx="'+l.idx+'" onclick="reqSendReschedule('+l.idx+')" class="req-compose-btn" style="flex:1;font-size:13px;padding:10px 12px;margin-top:0">📨 INVIA RICHIESTA</button>'
+      +'<button onclick="document.getElementById(\'rescheduleForm_'+l.idx+'\').style.display=\'none\'" style="background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:6px;padding:10px 12px;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-weight:600">ANNULLA</button>'
       +'</div>'
       +'<div id="rescheduleFeedback_'+l.idx+'" style="font-size:12px;margin-top:6px;display:none"></div>'
       +'</div>'
@@ -5615,7 +5615,7 @@ function reqRenderSection(el, reqs, isReadSection){
       senderLabel = '<span style="font-size:11px;color:var(--light);font-weight:700;letter-spacing:.06em;text-transform:uppercase">💬 GENERICO</span> — <span style="color:var(--light)">'+r.firstName+' '+r.lastName+'</span>';
     } else {
       // Richiesta percorso (default)
-      senderLabel = '<span style="font-size:11px;color:var(--green);font-weight:700;letter-spacing:.06em;text-transform:uppercase">📩 PERCORSO</span> — <span style="color:var(--light)">'+r.firstName+' '+r.lastName+'</span>';
+      senderLabel = '<span style="font-size:11px;color:var(--green);font-weight:700;letter-spacing:.06em;text-transform:uppercase">🎯 PERCORSO</span> — <span style="color:var(--light)">'+r.firstName+' '+r.lastName+'</span>';
     }
     return '<div class="'+cls+'" data-reqid="'+r.id+'" onclick="reqClickCard(this)">'
       +'<div class="req-ts">'+tsStr+'</div>'
@@ -5719,7 +5719,7 @@ function reqOpenDetail(reqId){
   const isGeneric    = r.type === 'generic';
   const detailTitle = isReschedule ? '📆 Richiesta di spostamento'
     : isGeneric ? '💬 Messaggio generico'
-    : '📩 Richiesta di percorso';
+    : '🎯 Richiesta di percorso';
   const detailColor = isReschedule ? 'var(--amber)' : isGeneric ? 'var(--light)' : 'var(--green)';
 
   document.getElementById('reqDetailContent').innerHTML =
@@ -9954,12 +9954,10 @@ document.addEventListener('keydown', function(e){
 
 // ═══════════════════════════════════════════════════════════════════════
 // SCROLL CHAINING — mobile/tablet (touch) + desktop (wheel)
-// Quando un contenitore interno raggiunge il limite, lo scroll
-// viene passato al genitore (#appLayer o documentElement)
+// Trasferimento fluido e proporzionale quando si raggiunge il limite
 // ═══════════════════════════════════════════════════════════════════════
 (function initScrollChaining(){
   const SELECTORS = ['.ul','#gsUserList','.req-read-list'];
-  let _ty = 0;
 
   function scrollParent(el){
     let p = el.parentElement;
@@ -9975,22 +9973,61 @@ document.addEventListener('keydown', function(e){
     if(el._sc) return;
     el._sc = true;
 
-    el.addEventListener('touchstart', e=>{ _ty = e.touches[0].clientY; }, {passive:true});
+    let startY = 0;
+    let lastY  = 0;
+    let vel    = 0;
+    let inertiaId = null;
+    let overflow = false; // true quando stiamo scorrendo il genitore
+
+    el.addEventListener('touchstart', function(e){
+      startY  = e.touches[0].clientY;
+      lastY   = startY;
+      vel     = 0;
+      overflow = false;
+      if(inertiaId){ cancelAnimationFrame(inertiaId); inertiaId = null; }
+    }, {passive:true});
 
     el.addEventListener('touchmove', function(e){
-      const dy     = e.touches[0].clientY - _ty;
-      const atTop  = el.scrollTop <= 0;
-      const atBot  = el.scrollHeight - el.clientHeight - el.scrollTop < 2;
+      const curY = e.touches[0].clientY;
+      const dy   = curY - lastY;          // delta rispetto al frame precedente
+      vel        = dy;                    // velocità istantanea (px/evento)
+      lastY      = curY;
+
+      const atTop = el.scrollTop <= 0;
+      const atBot = el.scrollHeight - el.clientHeight - el.scrollTop < 1;
+
+      // Se il contenitore è al limite, passa tutto lo scroll al genitore
       if((dy > 0 && atTop) || (dy < 0 && atBot)){
+        overflow = true;
+      }
+
+      if(overflow){
         const p = scrollParent(el);
-        if(p && p !== el){ p.scrollTop -= dy; }
-        // non chiamiamo preventDefault() così iOS non blocca
+        if(p && p !== el){
+          p.scrollTop -= dy;    // proporzionale, stesso pixel del dito
+        }
       }
     }, {passive:true});
 
+    el.addEventListener('touchend', function(){
+      if(!overflow || Math.abs(vel) < 1) return;
+      // Inerzia sul genitore dopo il rilascio per continuità
+      const p = scrollParent(el);
+      if(!p || p === el) return;
+      let v = vel * 8;   // amplifica la velocità finale
+      function inertia(){
+        if(Math.abs(v) < 0.5) return;
+        p.scrollTop -= v;
+        v *= 0.88;        // decelerazione naturale
+        inertiaId = requestAnimationFrame(inertia);
+      }
+      inertiaId = requestAnimationFrame(inertia);
+    }, {passive:true});
+
+    // Wheel (desktop): trasferimento proporzionale immediato
     el.addEventListener('wheel', function(e){
       const atTop = el.scrollTop <= 0;
-      const atBot = el.scrollHeight - el.clientHeight - el.scrollTop < 2;
+      const atBot = el.scrollHeight - el.clientHeight - el.scrollTop < 1;
       if((e.deltaY < 0 && atTop) || (e.deltaY > 0 && atBot)){
         e.preventDefault();
         const p = scrollParent(el);
