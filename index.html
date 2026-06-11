@@ -645,6 +645,7 @@ select:hover{border-color:var(--green)}
 .gs-appt-card label{font-size:11px;color:var(--mu2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;display:block}
 .gs-appt-card input,.gs-appt-card select{box-sizing:border-box;width:100%;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:10px 12px;border-radius:6px;font-size:14px;margin-bottom:14px;transition:border-color .2s}
 .gs-appt-card input:focus,.gs-appt-card select:focus{outline:none;border-color:var(--green)}
+.gs-appt-card input[type=datetime-local]{width:100%;max-width:100%;overflow:hidden}
 .gs-appt-card input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.6}
 .gs-appt-btns{display:flex;gap:8px;margin-top:4px}
 .gs-appt-btns button{flex:1;padding:10px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-weight:700;font-size:16px;letter-spacing:.04em;cursor:pointer;border:none;transition:all .2s}
@@ -1913,7 +1914,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   <!-- APPUNTAMENTI UTENTE -->
   <div class="tab-body" id="tab-appuntamenti">
     <h2 style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:22px;color:var(--green);margin-bottom:4px;letter-spacing:-.01em">I TUOI APPUNTAMENTI</h2>
-    <p style="font-size:13px;color:var(--mu2);margin-bottom:6px">Qui trovi tutte le sessioni di allenamento che ti sono state fissate dall'amministratore. Per ogni appuntamento puoi vedere l'orario, il tuo insegnante e aggiungere l'allenamento direttamente al calendario del tuo dispositivo, così non dimentichi nessuna sessione.</p>
+    <p style="font-size:13px;color:var(--mu2);margin-bottom:6px">Qui trovi tutte le sessioni di allenamento tecnico che ti sono state fissate dall'amministratore. Per ogni appuntamento puoi vedere l'orario, chi terrà l'allenamento e aggiungere la sessione direttamente al calendario del tuo dispositivo, così potrai ricevere i promemoria.</p>
     <p style="font-size:12px;color:var(--muted);margin-bottom:18px">Gli appuntamenti vengono aggiornati in tempo reale dall'amministratore.</p>
     <div id="apptUserList"></div>
   </div>
@@ -1998,7 +1999,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     </div>
 
     <!-- Lista utenti -->
-    <div id="gsUserList"></div>
+    <div id="gsUserList" style="max-height:820px;overflow-y:auto;padding-right:4px"></div>
   </div>
 
   <!-- CALENDARIO -->
@@ -3410,7 +3411,7 @@ function mkI(gid,k,val,ph='',st='',nm=''){
 function gcrd(gid,name,sub,info,body,extraBtn=''){
   return `<div class="gc" id="card_${gid}"><div class="gc-hdr">
     <div style="flex:1"><div class="gc-name">${name}</div><div class="gc-sub">${sub}</div></div>
-    <div class="gc-hdr-btns">${extraBtn}<button class="ibtn" onclick="document.getElementById('ib_${gid}')?.classList.toggle('open')" title="Regole">i</button></div>
+    <div class="gc-hdr-btns">${extraBtn}<button class="ibtn" onclick="document.getElementById('ib_${gid}')?.classList.toggle('open')" title="Regole">?</button></div>
   </div><div class="gc-body">
     <div class="ibox" id="ib_${gid}">${info}</div>${body}
   </div></div>`;
@@ -4396,13 +4397,19 @@ function selAdmin(uid){
   renderAdmin();
   document.getElementById('astTitle').textContent=`STATISTICHE — ${selAU.firstName.toUpperCase()} ${selAU.lastName.toUpperCase()}`;
   // Reset admin 501 session selections for this user
-  if(!_adminSelected501[selAU.id]) _adminSelected501[selAU.id]=[];
+  if(!_adminSelected501[selAU.id]) _adminSelected501[selAU.id]={training:[], tournament:[]};
+  if(!_admin501Mode) _admin501Mode = {};
+  if(!_admin501Mode[selAU.id]) _admin501Mode[selAU.id] = 'training';
   // Render full stats + 501 sessions for this user
   document.getElementById('astContent').innerHTML=`
     <div id="adminStatsContainer" style="margin-top:8px"></div>
     <div class="cw" style="margin-top:12px">
-      <h3>Sessioni 501 — ${selAU.firstName} ${selAU.lastName}</h3>
-      <div id="admin501Sessions">${render501SessionsFor(selAU.id)}</div>
+      <h3>SESSIONI 501 — ${selAU.firstName} ${selAU.lastName}</h3>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button id="admin501ModeTraining_${selAU.id}" onclick="setAdmin501Mode('${selAU.id}','training')" style="flex:1;padding:8px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;cursor:pointer;border:1px solid var(--green);background:var(--green);color:#000">ALLENAMENTO</button>
+        <button id="admin501ModeTournament_${selAU.id}" onclick="setAdmin501Mode('${selAU.id}','tournament')" style="flex:1;padding:8px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;cursor:pointer;border:1px solid var(--d5);background:var(--d3);color:var(--mu2)">TORNEO</button>
+      </div>
+      <div id="admin501Sessions">${render501SessionsFor(selAU.id, 'training')}</div>
     </div>`;
   renderStatsInto(document.getElementById('adminStatsContainer'), selAU.id);
   const ed=document.getElementById('adminEditUser');
@@ -4438,27 +4445,70 @@ function selAdmin(uid){
 
 // Admin: selected 501 sessions per user
 let _adminSelected501 = {};
+let _admin501Mode = {}; // {uid: 'training'|'tournament'}
 
-function render501SessionsFor(uid){
+function setAdmin501Mode(uid, mode){
+  if(!_admin501Mode) _admin501Mode = {};
+  _admin501Mode[uid] = mode;
+  // Aggiorna stile bottoni
+  const tBtn = document.getElementById('admin501ModeTraining_'+uid);
+  const rBtn = document.getElementById('admin501ModeTournament_'+uid);
+  if(tBtn){
+    tBtn.style.background = mode==='training' ? 'var(--green)' : 'var(--d3)';
+    tBtn.style.color      = mode==='training' ? '#000' : 'var(--mu2)';
+    tBtn.style.borderColor= mode==='training' ? 'var(--green)' : 'var(--d5)';
+  }
+  if(rBtn){
+    rBtn.style.background = mode==='tournament' ? 'var(--blue)' : 'var(--d3)';
+    rBtn.style.color      = mode==='tournament' ? '#fff' : 'var(--mu2)';
+    rBtn.style.borderColor= mode==='tournament' ? 'var(--blue)' : 'var(--d5)';
+  }
+  // Reset selezioni correnti per questa modalità
+  if(!_adminSelected501[uid]) _adminSelected501[uid] = {training:[], tournament:[]};
+  const panel = document.getElementById('admin501Panel_'+uid);
+  if(panel) panel.innerHTML = '';
+  // Re-render lista sessioni
+  const sessEl = document.getElementById('admin501Sessions');
+  if(sessEl) sessEl.innerHTML = render501SessionsFor(uid, mode);
+}
+
+function render501SessionsFor(uid, mode){
+  mode = mode || (_admin501Mode && _admin501Mode[uid]) || 'training';
   const data=getUD(uid);
-  const sessions=Object.entries(data)
-    .filter(([k,v])=>v?.__meta?.type==='501free')
-    .sort((a,b)=>new Date(b[1].__meta.savedAt)-new Date(a[1].__meta.savedAt))
-    .slice(0,10);
-  if(!sessions.length) return '<p style="color:var(--muted);font-size:13px;padding:8px 0">Nessuna sessione 501 registrata.</p>';
 
-  if(!_adminSelected501[uid]) _adminSelected501[uid]=[];
+  let sessions;
+  if(mode === 'training'){
+    sessions = Object.entries(data)
+      .filter(([k,v])=>v?.__meta?.type==='501free')
+      .sort((a,b)=>new Date(b[1].__meta.savedAt)-new Date(a[1].__meta.savedAt))
+      .slice(0,10);
+  } else {
+    sessions = Object.entries(data)
+      .filter(([k,v])=>v?.__meta?.type==='501tournament')
+      .sort((a,b)=>new Date(b[1].__meta.savedAt)-new Date(a[1].__meta.savedAt))
+      .slice(0,10);
+  }
 
+  if(!sessions.length) return '<p style="color:var(--muted);font-size:13px;padding:8px 0">Nessuna sessione '+(mode==='training'?'allenamento':'torneo')+' registrata.</p>';
+
+  if(!_adminSelected501[uid]) _adminSelected501[uid]={training:[], tournament:[]};
+  const modeArr = _adminSelected501[uid][mode] || [];
+
+  const selColor = mode==='training' ? 'var(--green)' : 'var(--blue)';
   const selectOpts='<option value="">— Seleziona sessione —</option>'+
-    sessions.map(([k,v])=>`<option value="${k}">${new Date(v.__meta.savedAt).toLocaleDateString('it-IT')} — ${(v.legs||[]).length} legs</option>`).join('');
+    sessions.map(([k,v])=>{
+      const d = new Date(v.__meta.savedAt).toLocaleDateString('it-IT');
+      const count = mode==='training'
+        ? `${(v.legs||[]).length} legs`
+        : `${(v.sets||[]).flatMap(s=>s.legs||[]).length} legs`;
+      return `<option value="${k}">${d} — ${count}</option>`;
+    }).join('');
 
-  let html=`<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+  return `<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
     <select id="admin501Sel_${uid}" style="flex:1;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:8px 10px;border-radius:6px;font-size:13px">${selectOpts}</select>
-    <button onclick="addAdmin501Sess('${uid}')" style="background:var(--green);color:#000;border:none;padding:8px 16px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;cursor:pointer;white-space:nowrap">AGGIUNGI</button>
+    <button onclick="addAdmin501Sess('${uid}')" style="background:${selColor};color:#000;border:none;padding:8px 16px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;cursor:pointer;white-space:nowrap">AGGIUNGI</button>
   </div>
   <div id="admin501Panel_${uid}"></div>`;
-
-  return html;
 }
 
 function addAdmin501Sess(uid){
@@ -4466,18 +4516,28 @@ function addAdmin501Sess(uid){
   if(!sel) return;
   const key=sel.value; if(!key) return;
   const data=getUD(uid);
-  const sess=data[key]; if(!sess?.legs) return;
-  if(!_adminSelected501[uid]) _adminSelected501[uid]=[];
-  if(_adminSelected501[uid].find(s=>s.key===key)) return;
+  const sess=data[key]; if(!sess) return;
+  if(!_adminSelected501[uid]) _adminSelected501[uid]={training:[], tournament:[]};
+  const mode = (_admin501Mode && _admin501Mode[uid]) || 'training';
+  const arr = _adminSelected501[uid][mode];
+  if(arr.find(s=>s.key===key)) return;
   const date=new Date(sess.__meta.savedAt).toLocaleDateString('it-IT');
-  _adminSelected501[uid].push({key,date,legs:sess.legs});
+  if(mode==='training'){
+    if(!sess.legs) return;
+    arr.push({key,date,legs:sess.legs});
+  } else {
+    const allLegs=(sess.sets||[]).flatMap(s=>s.legs||[]);
+    arr.push({key,date,legs:allLegs,sets:sess.sets||[]});
+  }
   renderAdmin501Panel(uid);
 }
 
 function renderAdmin501Panel(uid){
   const panel=document.getElementById('admin501Panel_'+uid);
   if(!panel) return;
-  const selected=_adminSelected501[uid]||[];
+  if(!_adminSelected501[uid]) _adminSelected501[uid]={training:[], tournament:[]};
+  const mode = (_admin501Mode && _admin501Mode[uid]) || 'training';
+  const selected=_adminSelected501[uid][mode]||[];
   if(!selected.length){panel.innerHTML='';return;}
   let html='';
   // Compare toggle button inline
@@ -4504,7 +4564,7 @@ function renderAdmin501Panel(uid){
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--light)">📅 ${s.date} — ${s.legs.length} legs</div>
         <div style="display:flex;gap:5px">
-          <button onclick="_adminSelected501['${uid}'].splice(${idx},1);renderAdmin501Panel('${uid}')" style="background:transparent;border:1px solid var(--d5);color:var(--muted);border-radius:4px;padding:4px 10px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:12px;cursor:pointer">✕ NASCONDI</button>
+          <button onclick="_adminSelected501['${uid}']['${mode}'].splice(${idx},1);renderAdmin501Panel('${uid}')" style="background:transparent;border:1px solid var(--d5);color:var(--muted);border-radius:4px;padding:4px 10px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:12px;cursor:pointer">✕ NASCONDI</button>
           <button onclick="deleteAdmin501Sess('${uid}','${s.key}')" style="background:#3d0505;border:1px solid #ef4444;color:#f87171;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px"><img src="/cestino.svg" style="width:13px;height:13px;vertical-align:middle" alt=""> ELIMINA</button>
         </div>
       </div>
@@ -4546,8 +4606,10 @@ function deleteAdmin501Sess(uid, key){
       delete data[key];
       setUD(uid,data);
       if(_adminSelected501[uid]){
-        const idx=_adminSelected501[uid].findIndex(s=>s.key===key);
-        if(idx>=0) _adminSelected501[uid].splice(idx,1);
+        const mode = (_admin501Mode && _admin501Mode[uid]) || 'training';
+        const arr = _adminSelected501[uid][mode] || [];
+        const idx=arr.findIndex(s=>s.key===key);
+        if(idx>=0) arr.splice(idx,1);
       }
       renderAdmin501Panel(uid);
     }
@@ -4555,7 +4617,9 @@ function deleteAdmin501Sess(uid, key){
 }
 
 function renderAdmin501Compare(uid){
-  const selected=_adminSelected501[uid]||[];
+  const mode = (_admin501Mode && _admin501Mode[uid]) || 'training';
+  if(!_adminSelected501[uid]) _adminSelected501[uid]={training:[], tournament:[]};
+  const selected=_adminSelected501[uid][mode]||[];
   const summaries=selected.map(s=>({date:s.date,...calc501SessSummary(s.legs)}));
   const header=summaries.map(s=>`<th style="padding:5px 8px;font-size:11px;color:var(--light)">${s.date}</th>`).join('');
   const rows=[
@@ -5072,7 +5136,7 @@ function renderApptUser(){
     // Nessun percorso: mostra modulo per richiedere l'inizio di un percorso
     el.innerHTML = '<div class="req-compose">'
       + '<h3>✉️ Richiedi un percorso di allenamento</h3>'
-      + '<p style="font-size:13px;color:var(--mu2);margin-bottom:12px">Non hai ancora un percorso attivo. Scrivi un messaggio al tuo insegnante per richiedere di iniziare un percorso personalizzato.</p>'
+      + '<p style="font-size:13px;color:var(--mu2);margin-bottom:12px">Non hai ancora un percorso attivo. Scrivi un messaggio per richiedere di iniziare un percorso personalizzato.</p>'
       + '<textarea id="reqMsgInput" placeholder="Scrivi qui il tuo messaggio... (es. Vorrei iniziare un percorso di allenamento, sono disponibile il martedì e il giovedì sera.)"></textarea>'
       + '<button class="req-compose-btn" onclick="reqSendRequest()">📨 INVIA RICHIESTA</button>'
       + '<div id="reqSendFeedback" style="font-size:13px;margin-top:8px;display:none"></div>'
@@ -5116,7 +5180,8 @@ function renderApptUser(){
     const icsCls  = 'cal-ics-btn' + (isSaved ? ' ics-saved' : '');
     const icsLabel= isSaved ? '&#x2713; SALVATO' : '&#x1F4C5; AGGIUNGI AL CALENDARIO';
     const icsTitle= (teacher ? teacher : 'Lezione accademia') + ' - Lezione '+(l.idx+1)+(l.note?' - '+l.note:'');
-    return '<div class="cal-event-item" style="border-left:3px solid '+col.border+';opacity:'+(isPast?'.55':'1')+'">'
+    return '<div class="cal-event-item" style="border-left:3px solid '+col.border+';opacity:'+(isPast?'.55':'1')+';flex-direction:column;align-items:stretch">'
+      +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
       +'<div class="cei-time" style="color:'+col.color+'">'+timeStr+'</div>'
       +'<div class="cei-info">'
       +'<div class="cei-name">Lezione '+(l.idx+1)+(isPast?' <span style="font-size:10px;color:var(--muted)">· passata</span>' : '')+'</div>'
@@ -5125,6 +5190,18 @@ function renderApptUser(){
       +'</div>'
       +'<div class="cei-actions">'
       +'<button class="'+icsCls+'" data-dt="'+l.dt+'" data-idx="'+l.idx+'" data-title="'+icsTitle.replace(/"/g,'&quot;')+'" onclick="userExportICS(this)" title="Aggiungi al calendario del dispositivo">'+icsLabel+'</button>'
+      +'</div>'
+      +'</div>'
+      +'<div id="rescheduleForm_'+l.idx+'" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--d4)">'
+      +'<textarea id="rescheduleMsg_'+l.idx+'" placeholder="Scrivi qui la tua richiesta di spostamento..." style="width:100%;min-height:70px;background:var(--d3);border:1px solid var(--d5);color:var(--light);border-radius:6px;padding:8px 10px;font-size:13px;resize:vertical;font-family:DM Sans,sans-serif"></textarea>'
+      +'<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">'
+      +'<button data-idx="'+l.idx+'" onclick="reqSendReschedule('+l.idx+')" class="req-compose-btn" style="flex:1;font-size:13px;padding:8px 12px">📨 INVIA RICHIESTA</button>'
+      +'<button onclick="document.getElementById(\'rescheduleForm_'+l.idx+'\').style.display=\'none\'" style="background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:6px;padding:8px 12px;font-size:13px;cursor:pointer">ANNULLA</button>'
+      +'</div>'
+      +'<div id="rescheduleFeedback_'+l.idx+'" style="font-size:12px;margin-top:6px;display:none"></div>'
+      +'</div>'
+      +'<div style="margin-top:8px">'
+      +'<button onclick="reqToggleRescheduleForm('+l.idx+')" style="background:transparent;border:1px solid var(--d5);color:var(--mu2);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.04em">📆 RICHIEDI SPOSTAMENTO</button>'
       +'</div>'
       +'</div>';
   }).join('');
@@ -5241,6 +5318,71 @@ function reqSendRequest(){
   });
 }
 
+// ── Richiesta spostamento appuntamento ─────────────────────────────────────
+function reqToggleRescheduleForm(idx){
+  const form = document.getElementById('rescheduleForm_'+idx);
+  if(!form) return;
+  const isOpen = form.style.display !== 'none';
+  form.style.display = isOpen ? 'none' : 'block';
+  if(!isOpen){
+    const ta = document.getElementById('rescheduleMsg_'+idx);
+    if(ta) ta.focus();
+  }
+}
+
+function reqSendReschedule(idx){
+  if(!CU) return;
+  const ta  = document.getElementById('rescheduleMsg_'+idx);
+  const fb  = document.getElementById('rescheduleFeedback_'+idx);
+  if(!ta) return;
+  const msg = ta.value.trim();
+  if(!msg){ ta.focus(); return; }
+
+  const p = gsGetPercorso(CU.id);
+  const lezione = p && p.lezioni[idx];
+  const dateLabel = lezione && lezione.dt
+    ? new Date(lezione.dt.slice(0,10).split('-').map(Number).reduce((a,v,i)=>i===1?v-1:v, 0) && lezione.dt).toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'})
+    : 'data non disponibile';
+
+  const btn = ta.closest('div').querySelector('.req-compose-btn');
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ Invio...'; }
+
+  const reqId  = 'req_'+Date.now()+'_'+CU.id.slice(-4);
+  const reqObj = {
+    uid:       CU.id,
+    firstName: CU.firstName,
+    lastName:  CU.lastName,
+    email:     CU.email,
+    phone:     CU.phone || '',
+    msg:       msg,
+    ts:        Date.now(),
+    readBy:    {},
+    repliedBy: {},
+    type:      'reschedule',
+    lessonIdx: idx,
+  };
+
+  const doSave = async () => {
+    if(_firebaseOK && _fbDB){
+      await _fbDB.ref('db/requests/'+reqId).set(reqObj);
+    } else {
+      if(!_dbCache.requests) _dbCache.requests = {};
+      _dbCache.requests[reqId] = reqObj;
+      saveDBToCloud();
+    }
+  };
+
+  doSave().then(()=>{
+    if(fb){ fb.style.display='block'; fb.style.color='var(--green)'; fb.textContent='✓ Richiesta inviata!'; }
+    ta.value = '';
+    if(btn){ btn.disabled = false; btn.textContent = '📨 INVIA RICHIESTA'; }
+    setTimeout(()=>{ const form=document.getElementById('rescheduleForm_'+idx); if(form) form.style.display='none'; },2000);
+  }).catch(()=>{
+    if(fb){ fb.style.display='block'; fb.style.color='#f87171'; fb.textContent='Errore durante l\'invio. Riprova.'; }
+    if(btn){ btn.disabled = false; btn.textContent = '📨 INVIA RICHIESTA'; }
+  });
+}
+
 // ── Carica / ascolta richieste in real-time (admin) ───────────────────────────
 function reqStartListener(){
   if(!_firebaseOK || !_fbDB || !CU || CU.role!=='admin') return;
@@ -5325,9 +5467,14 @@ function reqRenderSection(el, reqs, isReadSection){
     let badges = '';
     if(isReplied) badges += '<span class="req-badge req-badge-replied">\u2713 Risposto</span>';
     if(needsRep)  badges += '<span class="req-badge req-badge-read">Letto</span><span class="req-badge req-badge-needs-reply">\u26a0 Da rispondere</span>';
+    // Titolo diverso per richieste di spostamento
+    const isReschedule = r.type === 'reschedule';
+    const senderLabel = isReschedule
+      ? '<span style="font-size:11px;color:var(--amber);font-weight:700;letter-spacing:.06em;text-transform:uppercase">📆 SPOSTAMENTO</span> — '+r.firstName+' '+r.lastName
+      : r.firstName+' '+r.lastName;
     return '<div class="'+cls+'" data-reqid="'+r.id+'" onclick="reqClickCard(this)">'
       +'<div class="req-ts">'+tsStr+'</div>'
-      +'<div class="req-sender">'+r.firstName+' '+r.lastName+'</div>'
+      +'<div class="req-sender">'+senderLabel+'</div>'
       +'<div class="req-preview">'+preview+'</div>'
       +(badges ? '<div class="req-badges">'+badges+'</div>' : '')
       +'</div>';
@@ -5423,13 +5570,18 @@ function reqOpenDetail(reqId){
   const tsStr     = d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
                   + ' alle '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
   const isReplied = !!(r.repliedBy?.[CU.id]);
+  const isReschedule = r.type === 'reschedule';
+  const detailTitle = isReschedule
+    ? '📆 Richiesta di spostamento'
+    : '📩 Richiesta di percorso';
 
   document.getElementById('reqDetailContent').innerHTML =
-    '<h2 style="font-weight:700;font-size:20px;color:var(--green);margin-bottom:18px">📩 Richiesta di percorso</h2>'
+    '<h2 style="font-weight:700;font-size:20px;color:'+(isReschedule?'var(--amber)':'var(--green)')+';margin-bottom:18px">'+detailTitle+'</h2>'
     +'<div class="req-detail-user">'
     +'<div class="rdu-row"><span class="rdu-label">Nome</span><strong>'+r.firstName+' '+r.lastName+'</strong></div>'
     +'<div class="rdu-row"><span class="rdu-label">Email</span><span>'+r.email+'</span></div>'
     +(r.phone ? '<div class="rdu-row"><span class="rdu-label">Tel</span><span>'+r.phone+'</span></div>' : '')
+    +(isReschedule && r.lessonIdx !== undefined ? '<div class="rdu-row"><span class="rdu-label">Lezione</span><span>Lezione '+(r.lessonIdx+1)+'</span></div>' : '')
     +'</div>'
     +'<div class="req-detail-ts">'+tsStr+'</div>'
     +'<div class="req-detail-msg">'+escHtml(r.msg)+'</div>'
@@ -5622,7 +5774,9 @@ function calBuildHtml(){
             +'<div class="cei-name">'+ev.userName+' · Lezione '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+dateLabel2+(ev.note?' · '+ev.note:'')+'</div>'
             +'</div>'
-            +'<div class="cei-actions">'+calIcsBtn(ev,icsT)+'</div>'
+            +'<div class="cei-actions">'+calIcsBtn(ev,icsT)
+            +'<button data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onclick="calDeleteAppt(this.dataset.uid,parseInt(this.dataset.idx))" title="Elimina appuntamento" style="background:transparent;border:1px solid #ef4444;color:#ef4444;border-radius:5px;padding:5px 8px;cursor:pointer;display:inline-flex;align-items:center"><img src="/cestino.svg" style="width:14px;height:14px;vertical-align:middle;filter:none" alt="elimina"></button>'
+            +'</div>'
             +'</div>';
         }).join('')
       : '<div class="gs-empty" style="padding:16px">Nessun appuntamento assegnato a te.</div>';
@@ -5651,6 +5805,7 @@ function calBuildHtml(){
             +'<div class="cei-meta">'+dateLabel+(ev.note?' · '+ev.note:'')+'</div>'
             +'</div>'
             +'<div class="cei-actions">'+calIcsBtn(ev,icsTitle1)
+            +'<button data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onclick="calDeleteAppt(this.dataset.uid,parseInt(this.dataset.idx))" title="Elimina appuntamento" style="background:transparent;border:1px solid #ef4444;color:#ef4444;border-radius:5px;padding:5px 8px;cursor:pointer;display:inline-flex;align-items:center"><img src="/cestino.svg" style="width:14px;height:14px;vertical-align:middle;filter:none" alt="elimina"></button>'
             +'<select class="cal-admin-sel" data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onchange="calAssignAdmin(this)" title="Assegna insegnante">'
             +'<option value="">— Insegnante —</option>'+adminOpts+'</select></div>'
             +'</div>';
@@ -5682,6 +5837,7 @@ function calBuildHtml(){
             +'<div class="cei-meta">'+(ev.note||'Nessuna nota')+'</div>'
             +'</div>'
             +'<div class="cei-actions">'+calIcsBtn(ev,icsTitle2)
+            +'<button data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onclick="calDeleteAppt(this.dataset.uid,parseInt(this.dataset.idx))" title="Elimina appuntamento" style="background:transparent;border:1px solid #ef4444;color:#ef4444;border-radius:5px;padding:5px 8px;cursor:pointer;display:inline-flex;align-items:center"><img src="/cestino.svg" style="width:14px;height:14px;vertical-align:middle;filter:none" alt="elimina"></button>'
             +'<select class="cal-admin-sel" data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onchange="calAssignAdmin(this)" title="Assegna insegnante">'
             +'<option value="">— Insegnante —</option>'+adminOpts+'</select></div>'
             +'</div>';
@@ -5776,6 +5932,30 @@ function calAssignAdmin(elOrUid, idxOrUndef, adminIdOrUndef){
     const u = getUsers().find(u=>u.id===uid);
     if(u) body.innerHTML = gsRenderUserBody(u, p);
   }
+}
+
+// ── Elimina appuntamento dal calendario ──────────────────────────────────────
+function calDeleteAppt(uid, idx){
+  showConfirmPopup(
+    'Elimina appuntamento',
+    'Vuoi rimuovere questo appuntamento? Il cerchio tornerà disponibile per fissarne uno nuovo.',
+    ()=>{
+      const p = gsGetPercorso(uid);
+      if(!p || !p.lezioni[idx]) return;
+      p.lezioni[idx].dt   = null;
+      p.lezioni[idx].note = null;
+      // Mantieni adminRef (insegnante assegnato) e stato pagamento/svolta
+      gsSetPercorso(uid, p);
+      // Aggiorna card gestionale se aperta
+      const body = document.getElementById('gsBody_'+uid);
+      if(body && body.classList.contains('open')){
+        const u = getUsers().find(u=>u.id===uid);
+        if(u) body.innerHTML = gsRenderUserBody(u, p);
+      }
+      renderCalendario();
+    },
+    {okLabel:'ELIMINA', okBg:'#dc2626', okColor:'#fff'}
+  );
 }
 
 // ── Ricerca utente nel calendario ────────────────────────────────────────────
