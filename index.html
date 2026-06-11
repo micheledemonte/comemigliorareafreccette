@@ -683,6 +683,8 @@ select:hover{border-color:var(--green)}
 .cal-ics-btn:hover{background:#052e16;border-color:var(--green)}
 .cal-ics-btn.ics-saved{background:var(--d3);border-color:var(--d5);color:var(--mu2);cursor:default}
 .cal-ics-btn.ics-saved:hover{background:var(--d3);border-color:var(--d5)}
+.cal-move-btn{height:32px;border-radius:6px;background:transparent;border:1px solid var(--amber);color:var(--amber);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;padding:0 10px;line-height:1;letter-spacing:.02em}
+.cal-move-btn:hover{background:rgba(245,158,11,.12)}
 .cal-myfilter-btn{background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:6px;padding:7px 14px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
 .cal-myfilter-btn.active{background:var(--gdim);border-color:var(--green);color:var(--green)}
 
@@ -4886,6 +4888,12 @@ function gsRenderUserBody(u, p){
   const pct    = Math.round(svolte/p.totLezioni*100);
   const tipoPagLabel = p.tipoPagamento==='anticipato'?'Pagate tutte in anticipo':'Pagamento lezione per lezione';
 
+  // Insegnante principale del percorso
+  const admins = getUsers().filter(u=>u.role==='admin');
+  const adminOpts = admins.map(a=>'<option value="'+a.id+'"'+(p.mainAdmin===a.id?' selected':'')+'>'+a.firstName+' '+a.lastName+'</option>').join('');
+  const mainAdminName = p.mainAdmin ? (admins.find(a=>a.id===p.mainAdmin)||{firstName:'',lastName:''}) : null;
+  const mainAdminLabel = mainAdminName ? mainAdminName.firstName+' '+mainAdminName.lastName : 'Non assegnato';
+
   const lezioniHtml = p.lezioni.map((l,i)=>gsLezBtnHtml(uid,l,i,p.tipoPagamento)).join('');
 
   // legenda in base al tipo
@@ -4926,7 +4934,13 @@ function gsRenderUserBody(u, p){
       </div>
     </div>
     <div style="font-size:12px;color:var(--mu2);margin-bottom:12px">💰 <span style="color:var(--light)">${tipoPagLabel}</span></div>
-    <div class="gs-section-title">LEZIONI</div>
+    <div class="gs-section-title" style="margin-top:4px">INSEGNANTE PERCORSO</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+      <select id="gsMainAdmin_${uid}" style="flex:1;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:9px 12px;border-radius:6px;font-size:13px">
+        <option value="">— Nessun insegnante —</option>${adminOpts}
+      </select>
+      <button onclick="gsSaveMainAdmin('${uid}')" style="background:var(--green);color:#000;border:none;padding:9px 18px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap">SALVA</button>
+    </div>
     <div style="font-size:11px;color:var(--mu2);margin-bottom:6px">${p.tipoPagamento==='anticipato'
       ? 'Tocca il cerchio per segnare svolta. Il tasto 📅 (angolo in basso a destra di ogni cerchio) imposta data e ora appuntamento.'
       : 'Tocca il cerchio per cambiare stato. Il tasto 📅 (angolo in basso a destra di ogni cerchio) imposta data e ora appuntamento.'}</div>
@@ -5112,7 +5126,8 @@ function gsApptSave(){
     || null;
   p.lezioni[idx].dt       = dt       || null;
   p.lezioni[idx].note     = note     || null;
-  p.lezioni[idx].adminRef = adminId;  // non || null: se adminId è '' vogliamo null, gestito sopra
+  p.lezioni[idx].adminRef = adminId;
+  if(dt) p.lezioni[idx].setAt = Date.now(); // timestamp di quando è stato fissato/spostato
   gsSetPercorso(uid, p);
   if(dt) gsScheduleNotifications(uid, idx, dt, note, getUsers().find(u=>u.id===uid));
   gsApptCancel();
@@ -5120,6 +5135,33 @@ function gsApptSave(){
   const body = document.getElementById('gsBody_'+uid);
   if(body && u) body.innerHTML = gsRenderUserBody(u, p);
   if(document.getElementById('tab-calendario').classList.contains('active')) renderCalendario();
+  // Se l'utente è nella sezione appuntamenti, aggiorna anche quella
+  if(document.getElementById('tab-appuntamenti') && document.getElementById('tab-appuntamenti').classList.contains('active')){
+    renderApptUser();
+  }
+}
+
+// ── Salva insegnante principale del percorso ─────────────────────────────────
+function gsSaveMainAdmin(uid){
+  const sel = document.getElementById('gsMainAdmin_'+uid);
+  if(!sel) return;
+  const adminId = sel.value || null;
+  const p = gsGetPercorso(uid);
+  if(!p) return;
+  p.mainAdmin = adminId;
+  // Propaga su tutte le lezioni che non hanno già un adminRef specifico
+  p.lezioni.forEach(l=>{ if(!l.adminRef) l.adminRef = adminId; });
+  gsSetPercorso(uid, p);
+  // Feedback visivo
+  const btn = sel.nextElementSibling;
+  if(btn){ const orig=btn.textContent; btn.textContent='✓'; setTimeout(()=>btn.textContent=orig, 1200); }
+  // Aggiorna corpo card senza re-render completo
+  const u    = getUsers().find(u=>u.id===uid);
+  const body = document.getElementById('gsBody_'+uid);
+  if(body && u) body.innerHTML = gsRenderUserBody(u, p);
+  // Aggiorna calendario e sezione appuntamenti
+  if(document.getElementById('tab-calendario') && document.getElementById('tab-calendario').classList.contains('active')) renderCalendario();
+  if(document.getElementById('tab-appuntamenti') && document.getElementById('tab-appuntamenti').classList.contains('active')) renderApptUser();
 }
 
 // ══════════════════════════════════════════════════
@@ -5180,17 +5222,43 @@ function renderApptUser(){
     const icsCls  = 'cal-ics-btn' + (isSaved ? ' ics-saved' : '');
     const icsLabel= isSaved ? '&#x2713; SALVATO' : '&#x1F4C5; AGGIUNGI AL CALENDARIO';
     const icsTitle= (teacher ? teacher : 'Lezione accademia') + ' - Lezione '+(l.idx+1)+(l.note?' - '+l.note:'');
+
+    // Stato pagamento (da lezione del percorso)
+    let pagBadge = '';
+    if(p.tipoPagamento === 'anticipato'){
+      pagBadge = '<span style="font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;background:#1e3a5f;color:#93c5fd;border:1px solid #1d4ed8">💰 PAGATA</span>';
+    } else {
+      if(l.pagata && l.svolta)
+        pagBadge = '<span style="font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;background:#052e16;color:var(--green);border:1px solid var(--green)">🏆 PAGATA + SVOLTA</span>';
+      else if(l.pagata)
+        pagBadge = '<span style="font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;background:#1e3a5f;color:#93c5fd;border:1px solid #1d4ed8">💰 PAGATA</span>';
+      else if(l.svolta)
+        pagBadge = '<span style="font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;background:#052e16;color:#86efac;border:1px solid #166534">✅ SVOLTA</span>';
+      else
+        pagBadge = '<span style="font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;background:var(--d3);color:var(--mu2);border:1px solid var(--d5)">DA PAGARE</span>';
+    }
+
+    // Data/ora in cui l'appuntamento è stato fissato (salvata in l.setAt se disponibile, altrimenti non mostrata)
+    const setAtStr = l.setAt
+      ? '<div class="cei-meta" style="font-size:10px;color:var(--muted)">📌 Fissato il '+new Date(l.setAt).toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'})+' alle '+new Date(l.setAt).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})+'</div>'
+      : '';
+
     return '<div class="cal-event-item" style="border-left:3px solid '+col.border+';opacity:'+(isPast?'.55':'1')+';flex-direction:column;align-items:stretch">'
       +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
       +'<div class="cei-time" style="color:'+col.color+'">'+timeStr+'</div>'
-      +'<div class="cei-info">'
+      +'<div class="cei-info" style="flex:1;min-width:0">'
       +'<div class="cei-name">Lezione '+(l.idx+1)+(isPast?' <span style="font-size:10px;color:var(--muted)">· passata</span>' : '')+'</div>'
       +'<div class="cei-meta" style="text-transform:capitalize">'+dateLabel+(l.note?' · '+l.note:'')+'</div>'
-      +(teacher ? '<div class="cei-meta" style="margin-top:3px">👨‍🏫 '+teacher+'</div>' : '')
+      +(teacher ? '<div class="cei-meta" style="margin-top:3px">👨‍🏫 '+teacher+'</div>' : '<div class="cei-meta" style="margin-top:3px;color:var(--muted)">Insegnante non assegnato</div>')
+      +setAtStr
       +'</div>'
-      +'<div class="cei-actions">'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px">'
+      +pagBadge
+      +'</div>'
+      +'<div class="cei-actions" style="margin-top:8px">'
       +'<button class="'+icsCls+'" data-dt="'+l.dt+'" data-idx="'+l.idx+'" data-title="'+icsTitle.replace(/"/g,'&quot;')+'" onclick="userExportICS(this)" title="Aggiungi al calendario del dispositivo">'+icsLabel+'</button>'
-      +'</div>'
+      +'<button onclick="reqToggleRescheduleForm('+l.idx+')" style="background:transparent;border:1px solid var(--amber);color:var(--amber);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.04em;height:32px">📆 SPOSTA</button>'
       +'</div>'
       +'<div id="rescheduleForm_'+l.idx+'" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--d4)">'
       +'<textarea id="rescheduleMsg_'+l.idx+'" placeholder="Scrivi qui la tua richiesta di spostamento..." style="width:100%;min-height:70px;background:var(--d3);border:1px solid var(--d5);color:var(--light);border-radius:6px;padding:8px 10px;font-size:13px;resize:vertical;font-family:DM Sans,sans-serif"></textarea>'
@@ -5199,9 +5267,6 @@ function renderApptUser(){
       +'<button onclick="document.getElementById(\'rescheduleForm_'+l.idx+'\').style.display=\'none\'" style="background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:6px;padding:8px 12px;font-size:13px;cursor:pointer">ANNULLA</button>'
       +'</div>'
       +'<div id="rescheduleFeedback_'+l.idx+'" style="font-size:12px;margin-top:6px;display:none"></div>'
-      +'</div>'
-      +'<div style="margin-top:8px">'
-      +'<button onclick="reqToggleRescheduleForm('+l.idx+')" style="background:transparent;border:1px solid var(--d5);color:var(--mu2);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.04em">📆 RICHIEDI SPOSTAMENTO</button>'
       +'</div>'
       +'</div>';
   }).join('');
@@ -5774,8 +5839,7 @@ function calBuildHtml(){
             +'<div class="cei-name">'+ev.userName+' · Lezione '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+dateLabel2+(ev.note?' · '+ev.note:'')+'</div>'
             +'</div>'
-            +'<div class="cei-actions">'+calIcsBtn(ev,icsT)
-            +'<button data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onclick="calDeleteAppt(this.dataset.uid,parseInt(this.dataset.idx))" title="Elimina appuntamento" style="background:transparent;border:1px solid #ef4444;color:#ef4444;border-radius:5px;padding:5px 8px;cursor:pointer;display:inline-flex;align-items:center"><img src="/cestino.svg" style="width:14px;height:14px;vertical-align:middle;filter:none" alt="elimina"></button>'
+            +'<div class="cei-actions">'+calAdminBtns(ev,icsT,undefined)
             +'</div>'
             +'</div>';
         }).join('')
@@ -5804,10 +5868,8 @@ function calBuildHtml(){
             +'<div class="cei-name">Lezione '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+dateLabel+(ev.note?' · '+ev.note:'')+'</div>'
             +'</div>'
-            +'<div class="cei-actions">'+calIcsBtn(ev,icsTitle1)
-            +'<button data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onclick="calDeleteAppt(this.dataset.uid,parseInt(this.dataset.idx))" title="Elimina appuntamento" style="background:transparent;border:1px solid #ef4444;color:#ef4444;border-radius:5px;padding:5px 8px;cursor:pointer;display:inline-flex;align-items:center"><img src="/cestino.svg" style="width:14px;height:14px;vertical-align:middle;filter:none" alt="elimina"></button>'
-            +'<select class="cal-admin-sel" data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onchange="calAssignAdmin(this)" title="Assegna insegnante">'
-            +'<option value="">— Insegnante —</option>'+adminOpts+'</select></div>'
+            +'<div class="cei-actions">'+calAdminBtns(ev,icsTitle1,adminOpts)
+            +'</div>'
             +'</div>';
         }).join('')
       : '<div class="gs-empty" style="padding:16px">Nessuna prenotazione per questo studente.</div>';
@@ -5836,10 +5898,8 @@ function calBuildHtml(){
             +'<div class="cei-name">'+ev.userName+' · Lezione '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+(ev.note||'Nessuna nota')+'</div>'
             +'</div>'
-            +'<div class="cei-actions">'+calIcsBtn(ev,icsTitle2)
-            +'<button data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onclick="calDeleteAppt(this.dataset.uid,parseInt(this.dataset.idx))" title="Elimina appuntamento" style="background:transparent;border:1px solid #ef4444;color:#ef4444;border-radius:5px;padding:5px 8px;cursor:pointer;display:inline-flex;align-items:center"><img src="/cestino.svg" style="width:14px;height:14px;vertical-align:middle;filter:none" alt="elimina"></button>'
-            +'<select class="cal-admin-sel" data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" onchange="calAssignAdmin(this)" title="Assegna insegnante">'
-            +'<option value="">— Insegnante —</option>'+adminOpts+'</select></div>'
+            +'<div class="cei-actions">'+calAdminBtns(ev,icsTitle2,adminOpts)
+            +'</div>'
             +'</div>';
         }).join('')
       : '<div class="gs-empty" style="padding:20px">Nessuna lezione in questo giorno.</div>';
@@ -5958,6 +6018,19 @@ function calDeleteAppt(uid, idx){
   );
 }
 
+// ── Sposta data appuntamento (admin) — riusa il popup gsOpenAppt ─────────────
+function calMoveAppt(uid, idx){
+  // Riusa il popup di impostazione appuntamento già esistente nel gestionale
+  gsOpenAppt(uid, idx);
+  // Personalizza titolo per indicare che è uno spostamento
+  const titleEl = document.getElementById('gsApptTitle');
+  if(titleEl){
+    const u = getUsers().find(u=>u.id===uid);
+    const name = u ? u.firstName+' '+u.lastName : '';
+    titleEl.textContent = '📆 SPOSTA — '+name+' Lez.'+(idx+1);
+  }
+}
+
 // ── Ricerca utente nel calendario ────────────────────────────────────────────
 function calSearchUser(){
   const q    = document.getElementById('calSearch').value.trim().toLowerCase();
@@ -6000,6 +6073,23 @@ function calClearFilter(){
 }
 
 // ── Helper: genera bottone ICS con stato salvato ─────────────────────────────
+// ── Helper: genera bottoni azioni appuntamento per admin (ordine: ICS, Sposta, Cestino, Insegnante)
+function calAdminBtns(ev, titleStr, adminOpts){
+  const icsB = calIcsBtn(ev, titleStr);
+  const moveB = '<button class="cal-move-btn" data-uid="'+ev.uid+'" data-idx="'+ev.idx
+    +'" onclick="calMoveAppt(this.dataset.uid,parseInt(this.dataset.idx))" title="Sposta data appuntamento">📆 SPOSTA</button>';
+  const delB = '<button data-uid="'+ev.uid+'" data-idx="'+ev.idx
+    +'" onclick="calDeleteAppt(this.dataset.uid,parseInt(this.dataset.idx))" title="Elimina appuntamento"'
+    +' style="background:transparent;border:1px solid #ef4444;color:#ef4444;border-radius:5px;padding:5px 8px;cursor:pointer;display:inline-flex;align-items:center">'
+    +'<img src="/cestino.svg" style="width:14px;height:14px;vertical-align:middle;filter:none" alt="elimina"></button>';
+  const selB = adminOpts !== undefined
+    ? '<select class="cal-admin-sel" data-uid="'+ev.uid+'" data-idx="'+ev.idx
+      +'" onchange="calAssignAdmin(this)" title="Assegna insegnante">'
+      +'<option value="">— Insegnante —</option>'+adminOpts+'</select>'
+    : '';
+  return icsB + moveB + delB + selB;
+}
+
 function calIcsBtn(ev, titleStr){
   const key     = ev.uid+'_'+ev.idx;
   const isSaved = _calIcsSaved.has(key);
