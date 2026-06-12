@@ -4878,10 +4878,10 @@ function renderAdmin501Panel(uid){
           + (()=>{
               const n=scores.length; let rem=501;
               return scores.map((v,i)=>{
-                const before=rem; rem-=v;
+                const before=rem; rem-=v; const after=rem;
                 const isLast=(i===n-1);
                 let bg,tc;
-                if(before<=50){
+                if(after<=50){
                   if(isLast&&won){ bg=v>100?'rgba(250,204,21,.25)':'rgba(34,197,94,.22)'; tc=v>100?'#facc15':'var(--green)'; }
                   else { bg='rgba(239,68,68,.22)'; tc=v===0?'rgba(248,113,113,.5)':'#f87171'; }
                 } else {
@@ -8351,9 +8351,10 @@ function render501SessPanel(){
         return scores.map((v, i) => {
           const before = rem;
           rem -= v;
+          const after = rem;
           const isLast = (i === n - 1);
           let bg, textColor;
-          if(before <= 50){
+          if(after <= 50){
             // Fase doppia: rimasto prima di questo turno <= 50
             if(isLast && won){
               bg = v > 100 ? 'rgba(250,204,21,.25)' : 'rgba(34,197,94,.22)';
