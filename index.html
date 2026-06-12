@@ -2106,13 +2106,10 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       </div>
       <button onclick="confirmResetUserPassword()" style="width:100%;margin-top:10px;padding:11px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;background:transparent;border:1.5px solid var(--green);color:var(--green);cursor:pointer;transition:all .2s" onmouseover="this.style.background='var(--gdim)'" onmouseout="this.style.background='transparent'">📧 INVIA RESET PASSWORD</button>
       <div class="amsg" id="aeMsg"></div>
-    </div>
-
-    <!-- 3b. DISPOSITIVI REGISTRATI -->
-    <div class="pc" id="adminDevicesSection" style="margin-top:8px">
-      <h3 id="adminDevicesTitle">DISPOSITIVI REGISTRATI</h3>
-      <div id="aeDevicesPanel" style="margin-top:10px">
-        <p style="font-size:13px;color:var(--muted)">Al momento pare che non ci siano dispositivi registrati.</p>
+      <!-- Dispositivi registrati -->
+      <div style="margin-top:14px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--mu2);letter-spacing:.08em;margin-bottom:8px">📱 DISPOSITIVI REGISTRATI</div>
+        <div id="aeDevicesPanel"></div>
       </div>
     </div>
 
@@ -2903,7 +2900,8 @@ function adminRemoveDevice(uid, fp){
       const devs = getDevices(uid);
       delete devs[fp];
       saveDevices(uid, devs);
-      const el = document.getElementById('aeDevicesPanel');
+      // Aggiorna la sezione dispositivi nel pannello admin
+      const el = document.getElementById('aeDevices_'+uid);
       if(el) el.innerHTML = renderDeviceList(uid);
     },
     {okLabel:'RIMUOVI', okBg:'#dc2626', okColor:'#fff'}
@@ -2917,7 +2915,7 @@ function adminResetDevices(uid){
     'Vuoi rimuovere tutti i dispositivi registrati? L\'utente potrà registrare nuovi dispositivi dal prossimo accesso.',
     ()=>{
       saveDevices(uid, {});
-      const el = document.getElementById('aeDevicesPanel');
+      const el = document.getElementById('aeDevices_'+uid);
       if(el) el.innerHTML = renderDeviceList(uid);
     },
     {okLabel:'RESET', okBg:'#dc2626', okColor:'#fff'}
@@ -4707,17 +4705,11 @@ function selAdmin(uid){
   const bb=document.getElementById('aeBlockBtn');
   if(selAU.id===CU.id){bb.style.display='none';}
   else { updateBlockBtn(bb, selAU.blocked); }
-  // Pannello DISPOSITIVI REGISTRATI — sempre visibile, ID fisso
-  const devTitle = document.getElementById('adminDevicesTitle');
+  // Mostra dispositivi registrati (non per se stessi)
   const devPanel = document.getElementById('aeDevicesPanel');
-  if(devPanel){
-    if(selAU.id !== CU.id){
-      if(devTitle) devTitle.textContent = 'DISPOSITIVI REGISTRATI — ' + (selAU.firstName||'').toUpperCase() + ' ' + (selAU.lastName||'').toUpperCase();
-      devPanel.innerHTML = renderDeviceList(selAU.id);
-    } else {
-      if(devTitle) devTitle.textContent = 'DISPOSITIVI REGISTRATI';
-      devPanel.innerHTML = '<p style="font-size:13px;color:var(--muted)">Al momento pare che non ci siano dispositivi registrati.</p>';
-    }
+  if(devPanel && selAU.id !== CU.id){
+    devPanel.id = 'aeDevices_'+selAU.id;
+    devPanel.innerHTML = renderDeviceList(selAU.id);
   }
 }
 
@@ -4863,23 +4855,21 @@ function renderAdmin501Panel(uid){
           + `</div>` : '';
       const toggleBtn = scores.length
         ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Punti per turno" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px;line-height:1;vertical-align:middle">🎯${isCrown?'👑':''}</button>` : '';
-      const admCol7 = isTourSess
-        ? (!won && l.remainingScore!=null
-            ? `<div><span style="color:var(--muted)">Rim.: </span><span style="color:#f87171;font-weight:600">${l.remainingScore}</span></div>`
-            : (won && l.checkoutScore > 0
-                ? `<div><span style="color:var(--muted)">Co.: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`
-                : '<div></div>'))
-        : '';
+      let legExtra = '';
+      if(isTourSess){
+        if(!won && l.remainingScore!=null) legExtra=`<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${l.remainingScore}</span></div>`;
+        else if(won && l.checkoutScore!=null) legExtra=`<div><span style="color:var(--muted)">Da: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`;
+      }
       const admRowClass = isTourSess ? (won ? 'tour-leg-row won' : 'tour-leg-row lost') : '';
       return `<div class="${admRowClass}" style="${admRowClass?'':'padding:5px 0;border-bottom:1px solid var(--d4)'}">
-        <div style="display:grid;grid-template-columns:${isTourSess?'1.8fr repeat(4,1fr) 0.8fr 1.2fr':'1.8fr repeat(4,1fr) 0.8fr'};gap:4px;font-size:11px;align-items:center">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:4px;font-size:11px${admRowClass?';margin-bottom:3px':''}">
           <div style="color:${legColor};font-weight:600">Leg ${i+1} ${toggleBtn}</div>
           <div><span style="color:var(--muted)">T: </span>${l.rounds||0}</div>
           <div><span style="color:var(--muted)">F: </span>${darts}</div>
           <div><span style="color:var(--muted)">M: </span>${l.avgPerRound||0}</div>
           <div><span style="color:var(--muted)">D: </span>${l.doublesThrown||0}/${l.doublesHit||0}</div>
           <div><span style="color:var(--muted)">%: </span>${(l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0}%</div>
-          ${admCol7}
+          ${legExtra}
         </div>
         ${scoresHtml}
       </div>`;
@@ -4901,6 +4891,7 @@ function renderAdmin501Panel(uid){
           <div><span style="color:var(--muted)">M avg: </span>${sum.avgPts}</div>
           <div><span style="color:var(--muted)">D avg: </span>${sum.avgDbl}</div>
           <div><span style="color:var(--muted)">% avg: </span>${sum.avgPct}%</div>
+          <div><span style="color:var(--muted)">100+: </span>${sum.tot100p||0}</div>
         </div>
       </div>
     </div>`;
@@ -8313,24 +8304,24 @@ function render501SessPanel(){
       const toggleBtn = scores.length
         ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Mostra punti per turno" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;vertical-align:middle">🎯${isCrown?'👑':''}</button>` : '';
 
-      // Colonna 7 torneo: rimasto (leg perso) o checkout (leg vinto)
-      const col7 = isTour
-        ? (!won && l.remainingScore!=null
-            ? `<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${l.remainingScore}</span></div>`
-            : (won && l.checkoutScore > 0
-                ? `<div><span style="color:var(--muted)">Checkout: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`
-                : '<div></div>'))
+      // Dati extra torneo: rimasto (leg perso) o checkout (leg vinto)
+      const remainCell = (isTour && !won && l.remainingScore!=null)
+        ? `<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${l.remainingScore}</span></div>`
+        : '';
+      const checkoutCell = (isTour && won && l.checkoutScore!=null)
+        ? `<div><span style="color:var(--muted)">Da: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`
         : '';
 
       return `<div class="${rowClass}" style="${rowClass?'':'padding:6px 0;border-bottom:1px solid var(--d4)'}">
-        <div style="display:grid;grid-template-columns:${isTour?'2fr repeat(4,1fr) 0.9fr 1.4fr':'2fr repeat(4,1fr) 0.9fr'};gap:4px;font-size:12px;align-items:center">
-          <div style="color:${legColor};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${legLabelBase} ${toggleBtn}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:5px;font-size:12px${rowClass?';margin-bottom:4px':''}">
+          <div style="color:${legColor};font-weight:600">${legLabelBase} ${toggleBtn}</div>
           <div><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
           <div><span style="color:var(--muted)">Frecce: </span>${darts}</div>
           <div><span style="color:var(--muted)">Media: </span>${avgVal}</div>
           <div><span style="color:var(--muted)">Doppie: </span>${dblStr}</div>
           <div><span style="color:var(--muted)">%: </span>${dblPct(l)}%</div>
-          ${col7}
+          ${remainCell}
+          ${checkoutCell}
         </div>
         ${scoresHtml}
       </div>`;
@@ -8412,6 +8403,7 @@ function render501SessPanel(){
         <div><span style="color:var(--muted)">Media avg: </span>${summary.avgPts}</div>
         <div><span style="color:var(--muted)">Doppie tot: </span>${summary.totDbl}</div>
         <div><span style="color:var(--muted)">% avg: </span>${summary.avgPct}%</div>
+        <div><span style="color:var(--muted)">100+: </span>${summary.tot100p}</div>
       </div>
     </div>`;
 
