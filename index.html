@@ -4707,13 +4707,30 @@ function selAdmin(uid){
   const bb=document.getElementById('aeBlockBtn');
   if(selAU.id===CU.id){bb.style.display='none';}
   else { updateBlockBtn(bb, selAU.blocked); }
-  // Pannello DISPOSITIVI REGISTRATI — ID fisso, sempre visibile
+  // Pannello DISPOSITIVI REGISTRATI — sincronizzato da Firebase in tempo reale
   const devTitle = document.getElementById('adminDevicesTitle');
   const devPanel = document.getElementById('aeDevicesPanel');
   if(devPanel){
     if(selAU.id !== CU.id){
       if(devTitle) devTitle.textContent = 'DISPOSITIVI REGISTRATI — ' + (selAU.firstName||'').toUpperCase() + ' ' + (selAU.lastName||'').toUpperCase();
-      devPanel.innerHTML = renderDeviceList(selAU.id);
+      devPanel.innerHTML = '<p style="font-size:13px;color:var(--muted)">Caricamento...</p>';
+      // Legge direttamente da Firebase per avere dati sempre aggiornati
+      if(_fbDB){
+        _fbDB.ref('db/userData/' + selAU.id + '/__devices').once('value').then(snap=>{
+          const devs = snap.val() || {};
+          // Aggiorna anche la cache locale
+          if(_dbCache && _dbCache.userData && _dbCache.userData[selAU.id]){
+            _dbCache.userData[selAU.id].__devices = devs;
+          }
+          if(document.getElementById('aeDevicesPanel')) // verifica che il panel esista ancora
+            document.getElementById('aeDevicesPanel').innerHTML = renderDeviceList(selAU.id);
+        }).catch(()=>{
+          if(document.getElementById('aeDevicesPanel'))
+            document.getElementById('aeDevicesPanel').innerHTML = renderDeviceList(selAU.id);
+        });
+      } else {
+        devPanel.innerHTML = renderDeviceList(selAU.id);
+      }
     } else {
       if(devTitle) devTitle.textContent = 'DISPOSITIVI REGISTRATI';
       devPanel.innerHTML = '<p style="font-size:13px;color:var(--muted)">Al momento pare che non ci siano dispositivi registrati.</p>';
@@ -4753,9 +4770,9 @@ function setAdmin501Mode(uid, mode){
     tBtn.style.borderColor= mode==='training' ? 'var(--green)' : 'var(--d5)';
   }
   if(rBtn){
-    rBtn.style.background = mode==='tournament' ? 'var(--green)' : 'var(--d3)';
-    rBtn.style.color      = mode==='tournament' ? '#000' : 'var(--mu2)';
-    rBtn.style.borderColor= mode==='tournament' ? 'var(--green)' : 'var(--d5)';
+    rBtn.style.background = mode==='tournament' ? 'var(--blue)' : 'var(--d3)';
+    rBtn.style.color      = mode==='tournament' ? '#fff' : 'var(--mu2)';
+    rBtn.style.borderColor= mode==='tournament' ? 'var(--blue)' : 'var(--d5)';
   }
   // Reset selezioni correnti per questa modalità
   if(!_adminSelected501[uid]) _adminSelected501[uid] = {training:[], tournament:[]};
@@ -4788,7 +4805,7 @@ function render501SessionsFor(uid, mode){
   if(!_adminSelected501[uid]) _adminSelected501[uid]={training:[], tournament:[]};
   const modeArr = _adminSelected501[uid][mode] || [];
 
-  const selColor = 'var(--green)';
+  const selColor = mode==='training' ? 'var(--green)' : 'var(--blue)';
   const selectOpts='<option value="">— Seleziona sessione —</option>'+
     sessions.map(([k,v])=>{
       const d = new Date(v.__meta.savedAt).toLocaleDateString('it-IT');
@@ -4853,47 +4870,44 @@ function renderAdmin501Panel(uid){
       const isCrown = won && (l.rounds||0)<=3 && darts<=9;
       const legColor = isCrown ? '#facc15' : (isTourSess ? (won?'var(--green)':'#f87171') : 'var(--green)');
       const scoresId = `adm_legscores_${uid}_${idx}_${i}`;
+      function admTurnBg(sc, idx, legWon){
+        let rem=501; for(let j=0;j<idx;j++) rem-=sc[j];
+        if(rem>50) return 'var(--d3)';
+        const isLast=(idx===sc.length-1);
+        if(legWon&&isLast) return sc[idx]>100?'rgba(250,204,21,.25)':'rgba(34,197,94,.25)';
+        return 'rgba(239,68,68,.25)';
+      }
+      function admTurnTc(v, bg){
+        if(bg.includes('250,204,21')) return '#facc15';
+        if(bg.includes('34,197,94')) return 'var(--green)';
+        if(bg.includes('239,68,68')) return '#f87171';
+        if(v===0) return 'var(--muted)';
+        if(v===180||v===177||v===174||v===171||v===170) return '#facc15';
+        if(v>=100) return 'var(--green)';
+        return 'var(--light)';
+      }
       const scoresHtml = scores.length
         ? `<div id="${scoresId}" style="display:none;margin-top:5px;padding:5px 8px;background:var(--d2);border-radius:4px;font-size:10px;white-space:nowrap;overflow-x:auto">
             <span style="color:var(--muted)">Turni: </span>`
-          + scores.map(v=>{
-              const vc=(v===180||v===177||v===174||v===171||v===170)?'#facc15':v===0?'var(--muted)':v>=100?'var(--green)':'var(--light)';
-              return `<span style="display:inline-block;min-width:22px;text-align:center;margin:0 1px;padding:1px 3px;border-radius:3px;background:var(--d3);color:${vc}">${v}</span>`;
-            }).join('')
+          + scores.map((v,idx)=>{ const bg=admTurnBg(scores,idx,won); const tc=admTurnTc(v,bg); return `<span style="display:inline-block;min-width:22px;text-align:center;margin:0 1px;padding:1px 3px;border-radius:3px;background:${bg};color:${tc}">${v}</span>`; }).join('')
           + `</div>` : '';
       const toggleBtn = scores.length
         ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Punti per turno" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px;line-height:1;vertical-align:middle">🎯${isCrown?'👑':''}</button>` : '';
-      // Colonna 7 admin: rimasto (calcolato se mancante) o checkout
-      function admCalcRimasto(leg){
-        if(leg.remainingScore!=null && leg.remainingScore > 0) return leg.remainingScore;
-        const sc = leg.legScores||[];
-        if(!sc.length) return null;
-        const r = 501 - sc.reduce((a,b)=>a+b,0);
-        return (r > 0 && r < 501) ? r : null;
-      }
-      function admCalcCheckout(leg){
-        if(leg.checkoutScore > 0) return leg.checkoutScore;
-        const sc = leg.legScores||[];
-        for(let i=sc.length-1;i>=0;i--){ if(sc[i]>0) return sc[i]; }
-        return null;
-      }
-      let admCol7 = '<div></div>';
+      let legExtra = '';
       if(isTourSess){
-        if(!won){ const r=admCalcRimasto(l); if(r!=null) admCol7=`<div><span style="color:var(--muted)">Rim.: </span><span style="color:#f87171;font-weight:600">${r}</span></div>`; }
-        else     { const c=admCalcCheckout(l); if(c!=null) admCol7=`<div><span style="color:var(--muted)">Co.: </span><span style="color:var(--green);font-weight:600">${c}</span></div>`; }
-      } else {
-        const c=admCalcCheckout(l); if(c!=null) admCol7=`<div><span style="color:var(--muted)">Co.: </span><span style="color:var(--green);font-weight:600">${c}</span></div>`;
+        if(!won && l.remainingScore!=null) legExtra=`<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${l.remainingScore}</span></div>`;
+        else if(won && l.checkoutScore!=null) legExtra=`<div><span style="color:var(--muted)">Da: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`;
       }
       const admRowClass = isTourSess ? (won ? 'tour-leg-row won' : 'tour-leg-row lost') : '';
       return `<div class="${admRowClass}" style="${admRowClass?'':'padding:5px 0;border-bottom:1px solid var(--d4)'}">
-        <div style="display:grid;grid-template-columns:1.8fr repeat(4,1fr) 0.8fr 1.2fr;gap:4px;font-size:11px;align-items:center">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:4px;font-size:11px${admRowClass?';margin-bottom:3px':''}">
           <div style="color:${legColor};font-weight:600">Leg ${i+1} ${toggleBtn}</div>
           <div><span style="color:var(--muted)">T: </span>${l.rounds||0}</div>
           <div><span style="color:var(--muted)">F: </span>${darts}</div>
           <div><span style="color:var(--muted)">M: </span>${l.avgPerRound||0}</div>
           <div><span style="color:var(--muted)">D: </span>${l.doublesThrown||0}/${l.doublesHit||0}</div>
           <div><span style="color:var(--muted)">%: </span>${(l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0}%</div>
-          ${admCol7}
+          ${legExtra}
         </div>
         ${scoresHtml}
       </div>`;
@@ -4915,7 +4929,6 @@ function renderAdmin501Panel(uid){
           <div><span style="color:var(--muted)">M avg: </span>${sum.avgPts}</div>
           <div><span style="color:var(--muted)">D avg: </span>${sum.avgDbl}</div>
           <div><span style="color:var(--muted)">% avg: </span>${sum.avgPct}%</div>
-          <div><span style="color:var(--muted)">100+: </span><span style="color:var(--green);font-weight:600">${sum.hundred||0}</span></div>
         </div>
       </div>
     </div>`;
@@ -8168,14 +8181,14 @@ function finishFreeLeg(){
     checkoutScore: G._checkoutFrom || null,
     won: true,
   };
+  G._checkoutFrom = null;
   G.legsResults.push(res);
+  // Tournament mode: save leg as won and let tourAdvance handle flow
   if(G.mode==='tournament' && GT.active){
     tourSaveCurrentLeg(true);
-    G._checkoutFrom = null;
     tourAdvance();
     return;
   }
-  G._checkoutFrom = null;
   G.currentLeg++;
   if(G.currentLeg<G.totalLegs){
     startLeg501();
@@ -8320,58 +8333,56 @@ function render501SessPanel(){
       // Punti per turno — pannello orizzontale su una riga
       const scores  = l.legScores || [];
       const scoresId = `legscores_${keyBase}_${li}`;
+      // Calcola sfondo riquadri turni con logica zona doppie
+      function turnBg(scores, idx, legWon){
+        // Calcola punteggio residuo PRIMA di questo turno
+        let rem = 501;
+        for(let j=0;j<idx;j++) rem -= scores[j];
+        const inDoubleZone = rem <= 50;
+        if(!inDoubleZone) return 'var(--d3)'; // grigio: ancora nella fase scoring
+        // Zona doppie: ultimo turno e leg vinto?
+        const isLast = (idx === scores.length - 1);
+        if(legWon && isLast){
+          return scores[idx] > 100 ? 'rgba(250,204,21,.25)' : 'rgba(34,197,94,.25)'; // giallo o verde
+        }
+        return 'rgba(239,68,68,.25)'; // rosso: doppia mancata (o leg perso)
+      }
+      function turnTextColor(v, bg){
+        if(bg.includes('250,204,21')) return '#facc15'; // giallo
+        if(bg.includes('34,197,94')) return 'var(--green)'; // verde
+        if(bg.includes('239,68,68')) return '#f87171'; // rosso
+        // Grigio: usa colori originali
+        if(v===0) return 'var(--muted)';
+        if(v===180||v===177||v===174||v===171||v===170) return '#facc15';
+        if(v>=100) return 'var(--green)';
+        return 'var(--light)';
+      }
       const scoresHtml = scores.length
         ? `<div id="${scoresId}" style="display:none;margin-top:6px;padding:5px 8px;background:var(--d2);border-radius:5px;font-size:11px;white-space:nowrap;overflow-x:auto">
             <span style="color:var(--muted);margin-right:4px">Turni:</span>`
-          + scores.map(v=>`<span style="display:inline-block;min-width:26px;text-align:center;margin:0 2px;padding:1px 4px;border-radius:4px;background:var(--d3);color:${scoreColor(v)}">${v}</span>`).join('')
+          + scores.map((v,idx)=>{ const bg=turnBg(scores,idx,won); const tc=turnTextColor(v,bg); return `<span style="display:inline-block;min-width:26px;text-align:center;margin:0 2px;padding:1px 4px;border-radius:4px;background:${bg};color:${tc}">${v}</span>`; }).join('')
           + `</div>` : '';
       const toggleBtn = scores.length
         ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Mostra punti per turno" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;vertical-align:middle">🎯${isCrown?'👑':''}</button>` : '';
 
-      // Colonna 7: rimasto/checkout torneo; checkout allenamento
-      function calcRimasto(leg){
-        // Per leg torneo persi: usa remainingScore salvato, o calcola da legScores
-        if(leg.remainingScore!=null && leg.remainingScore > 0) return leg.remainingScore;
-        const sc = leg.legScores||[];
-        if(!sc.length) return null;
-        const made = sc.reduce((a,b)=>a+b,0);
-        const r = 501 - made;
-        return (r > 0 && r < 501) ? r : null;
-      }
-      function calcCheckout(leg){
-        // Per leg vinti: usa checkoutScore salvato, o ultimo punteggio di legScores
-        if(leg.checkoutScore > 0) return leg.checkoutScore;
-        const sc = leg.legScores||[];
-        if(!sc.length) return null;
-        // Trova l'ultimo punteggio > 0 (l'ultimo turno reale)
-        for(let i=sc.length-1;i>=0;i--){ if(sc[i]>0) return sc[i]; }
-        return null;
-      }
-
-      let col7 = '<div></div>';
-      if(isTour){
-        if(!won){
-          const r = calcRimasto(l);
-          if(r!=null) col7 = `<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${r}</span></div>`;
-        } else {
-          const c = calcCheckout(l);
-          if(c!=null) col7 = `<div><span style="color:var(--muted)">Checkout: </span><span style="color:var(--green);font-weight:600">${c}</span></div>`;
-        }
-      } else {
-        // Allenamento: mostra checkout (ultimo turno)
-        const c = calcCheckout(l);
-        if(c!=null) col7 = `<div><span style="color:var(--muted)">Checkout: </span><span style="color:var(--green);font-weight:600">${c}</span></div>`;
-      }
+      // Dati extra torneo: rimasto (leg perso) o checkout (leg vinto)
+      const remainCell = (isTour && !won && l.remainingScore!=null)
+        ? `<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${l.remainingScore}</span></div>`
+        : '';
+      const checkoutCell = (isTour && won && l.checkoutScore!=null)
+        ? `<div><span style="color:var(--muted)">Da: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`
+        : '';
 
       return `<div class="${rowClass}" style="${rowClass?'':'padding:6px 0;border-bottom:1px solid var(--d4)'}">
-        <div style="display:grid;grid-template-columns:2fr repeat(4,1fr) 0.9fr 1.4fr;gap:4px;font-size:12px;align-items:center">
-          <div style="color:${legColor};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${legLabelBase} ${toggleBtn}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:5px;font-size:12px${rowClass?';margin-bottom:4px':''}">
+          <div style="color:${legColor};font-weight:600">${legLabelBase} ${toggleBtn}</div>
           <div><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
           <div><span style="color:var(--muted)">Frecce: </span>${darts}</div>
           <div><span style="color:var(--muted)">Media: </span>${avgVal}</div>
           <div><span style="color:var(--muted)">Doppie: </span>${dblStr}</div>
           <div><span style="color:var(--muted)">%: </span>${dblPct(l)}%</div>
-          ${col7}
+          ${remainCell}
+          ${checkoutCell}
         </div>
         ${scoresHtml}
       </div>`;
@@ -8386,7 +8397,6 @@ function render501SessPanel(){
         <span style="color:var(--muted)">Media avg:</span> ${sum.avgPts}
         <span style="color:var(--muted)">Doppie tot:</span> ${sum.totDbl}
         <span style="color:var(--muted)">%:</span> ${sum.avgPct}%
-        <span style="color:var(--muted)">100+:</span> <span style="color:var(--green);font-weight:600">${sum.hundred||0}</span>
       </div>`;
     }
 
@@ -8454,7 +8464,6 @@ function render501SessPanel(){
         <div><span style="color:var(--muted)">Media avg: </span>${summary.avgPts}</div>
         <div><span style="color:var(--muted)">Doppie tot: </span>${summary.totDbl}</div>
         <div><span style="color:var(--muted)">% avg: </span>${summary.avgPct}%</div>
-        <div><span style="color:var(--muted)">100+: </span><span style="color:var(--green);font-weight:600">${summary.hundred||0}</span></div>
       </div>
     </div>`;
 
@@ -8560,7 +8569,6 @@ function render501Compare(){
     {label:'Media avg',  key:'avgPts'},
     {label: 'Doppie tot', key: isTour?'totDbl':'totDbl'},
     {label:'% avg',      key:'avgPct'},
-    {label:'100+',       key:'hundred'},
   ].map(r=>`<tr>
     <td style="padding:5px 10px;font-size:12px;color:var(--muted)">${r.label}</td>
     ${summaries.map(s=>`<td style="padding:5px 10px;font-size:12px;text-align:center;color:var(--light)">${s[r.key]??'—'}</td>`).join('')}
@@ -8577,15 +8585,14 @@ function calc501SessSummary(legs){
   const avg=(arr,key)=>+(arr.reduce((s,l)=>s+(l[key]||0),0)/n).toFixed(1);
   const totHitT = legs.reduce((s,l)=>s+(l.doublesHit||0),0);
   const totThrownT = legs.reduce((s,l)=>s+(l.doublesThrown||0),0);
+  // % avg = colpite_tot / tirate_tot (non media delle singole %)
   const avgPct = totThrownT > 0 ? Math.round(totHitT / totThrownT * 100) : 0;
-  const hundred = legs.reduce((s,l)=>s+(l.legScores||[]).filter(v=>v>=100).length,0);
   return {
     avgRounds: avg(legs,'rounds'),
     avgDarts: avg(legs,'dartsThrown'),
     avgPts: avg(legs,'avgPerRound'),
     totDbl: totHitT+'/'+totThrownT,
-    avgPct,
-    hundred
+    avgPct
   };
 }
 
@@ -8617,8 +8624,7 @@ function calcTourSessSummary(legs, isTour){
   const totDbl = totHit + '/' + totThrown;
   // % avg = colpite_tot / tirate_tot (coerente con "Doppie tot:")
   const avgPct = totThrown > 0 ? Math.round(totHit / totThrown * 100) : 0;
-  const hundred = legs.reduce((s,l)=>s+(l.legScores||[]).filter(v=>v>=100).length,0);
-  return { avgRounds, avgDarts, avgPts, totDbl, avgPct, hundred };
+  return { avgRounds, avgDarts, avgPts, totDbl, avgPct };
 }
 
 // Reset on logout
