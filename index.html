@@ -2954,6 +2954,67 @@ function renderDeviceList(uid){
   return html;
 }
 
+
+// ── ONE-SHOT PATCH: aggiunge legDblTurns al torneo "DM Penultimo" (11/06/2026) ──
+// Eseguita una sola volta; dopo il primo run setta __dmPenultimoPatch=true nel DB
+async function patchDmPenultimo(){
+  if(!_fbDB || !CU?.id) return;
+  const userData = getUD(CU.id);
+  if(userData.__dmPenultimoPatch) return; // già eseguito
+
+  // Trova la chiave della sessione con tourName "DM Penultimo"
+  let targetKey = null;
+  for(const k of Object.keys(userData)){
+    if(k.startsWith('__')) continue;
+    const v = userData[k];
+    if(v?.__meta?.tourName && v.__meta.tourName.includes('DM Penultimo')){
+      targetKey = k; break;
+    }
+  }
+  if(!targetKey) return; // sessione non trovata, niente da fare
+
+  const sess = userData[targetKey];
+  if(!sess.sets || !Array.isArray(sess.sets)) return;
+
+  // Helper: imposta legDblTurns su un leg dato set_idx e leg_idx
+  function patchLeg(setIdx, legIdx, buildFn){
+    const set = sess.sets[setIdx];
+    if(!set || !set.legs || !set.legs[legIdx]) return;
+    const leg = set.legs[legIdx];
+    const n = (leg.legScores||[]).length;
+    if(!n) return;
+    leg.legDblTurns = buildFn(n);
+  }
+
+  // Sessione 1 Ciato (set 0) — Leg 1 (idx 0): ultimi 4 turni rossi
+  patchLeg(0, 0, n => { const d=[...Array(n)].map(()=>0); d[n-4]=1;d[n-3]=1;d[n-2]=1;d[n-1]=1; return d; });
+  // Sessione 1 Ciato (set 0) — Leg 3 (idx 2): ultimi 3 turni rossi
+  patchLeg(0, 2, n => { const d=[...Array(n)].map(()=>0); d[n-3]=1;d[n-2]=1;d[n-1]=1; return d; });
+
+  // Sessione 2 Loris (set 1) — Leg 1 (idx 0): penultimo rosso, ultimo verde (vinto)
+  patchLeg(1, 0, n => { const d=[...Array(n)].map(()=>0); d[n-2]=1; return d; });
+
+  // Sessione 3 Posa (set 2) — Leg 2 (idx 1): ultimi 2 rossi
+  patchLeg(2, 1, n => { const d=[...Array(n)].map(()=>0); d[n-2]=1;d[n-1]=1; return d; });
+  // Sessione 3 Posa (set 2) — Leg 3 (idx 2): terzultimo+penultimo rossi, ultimo verde
+  patchLeg(2, 2, n => { const d=[...Array(n)].map(()=>0); d[n-3]=1;d[n-2]=1; return d; });
+
+  // Sessione 4 Zampo (set 3) — Leg 1 (idx 0): 4 turni prima dell'ultimo rossi, ultimo verde
+  patchLeg(3, 0, n => { const d=[...Array(n)].map(()=>0); d[n-5]=1;d[n-4]=1;d[n-3]=1;d[n-2]=1; return d; });
+
+  // Sessione 5 Coca (set 4) — Leg 3 (idx 2): 3 turni prima dell'ultimo rossi, ultimo verde
+  patchLeg(4, 2, n => { const d=[...Array(n)].map(()=>0); d[n-4]=1;d[n-3]=1;d[n-2]=1; return d; });
+
+  // Sessione 6 Ciato (set 5) — Leg 1 (idx 0): 4 turni prima dell'ultimo rossi, ultimo verde
+  patchLeg(5, 0, n => { const d=[...Array(n)].map(()=>0); d[n-5]=1;d[n-4]=1;d[n-3]=1;d[n-2]=1; return d; });
+
+  // Segna come eseguito e salva
+  userData.__dmPenultimoPatch = true;
+  userData[targetKey] = sess;
+  setUD(CU.id, userData);
+  console.log('[patchDmPenultimo] patch applicato e salvato');
+}
+
 function enterApp(){
   document.getElementById('loadingOverlay').style.display='none';
   closeLogin();
@@ -2963,6 +3024,8 @@ function enterApp(){
   document.getElementById('adminTabBtn').style.display=isAdmin?'':'none';
   loadProfileForm();
   document.getElementById('appLayer').classList.add('visible');
+  // One-shot patch dati storici DM Penultimo
+  patchDmPenultimo().catch(e=>console.warn('[patchDmPenultimo]',e));
 
   if(isBlocked || isDeviceBlocked){
     ldBuildDockBlocked();
