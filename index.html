@@ -2108,7 +2108,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       <div class="amsg" id="aeMsg"></div>
     </div>
 
-    <!-- 3b. DISPOSITIVI REGISTRATI (pannello indipendente) -->
+    <!-- 3b. DISPOSITIVI REGISTRATI -->
     <div class="asw" id="adminDevicesSection" style="margin-top:8px;display:none">
       <h3 style="margin-bottom:12px">📱 DISPOSITIVI REGISTRATI</h3>
       <div id="aeDevicesPanel"></div>
@@ -4706,7 +4706,7 @@ function selAdmin(uid){
   const bb=document.getElementById('aeBlockBtn');
   if(selAU.id===CU.id){bb.style.display='none';}
   else { updateBlockBtn(bb, selAU.blocked); }
-  // Pannello DISPOSITIVI REGISTRATI indipendente (non per se stessi)
+  // Pannello DISPOSITIVI REGISTRATI indipendente
   const devSection = document.getElementById('adminDevicesSection');
   const devPanel   = document.getElementById('aeDevicesPanel');
   if(devSection && devPanel){
@@ -4752,9 +4752,9 @@ function setAdmin501Mode(uid, mode){
     tBtn.style.borderColor= mode==='training' ? 'var(--green)' : 'var(--d5)';
   }
   if(rBtn){
-    rBtn.style.background = mode==='tournament' ? 'var(--blue)' : 'var(--d3)';
-    rBtn.style.color      = mode==='tournament' ? '#fff' : 'var(--mu2)';
-    rBtn.style.borderColor= mode==='tournament' ? 'var(--blue)' : 'var(--d5)';
+    rBtn.style.background = mode==='tournament' ? 'var(--green)' : 'var(--d3)';
+    rBtn.style.color      = mode==='tournament' ? '#000' : 'var(--mu2)';
+    rBtn.style.borderColor= mode==='tournament' ? 'var(--green)' : 'var(--d5)';
   }
   // Reset selezioni correnti per questa modalità
   if(!_adminSelected501[uid]) _adminSelected501[uid] = {training:[], tournament:[]};
@@ -4862,14 +4862,15 @@ function renderAdmin501Panel(uid){
           + `</div>` : '';
       const toggleBtn = scores.length
         ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Punti per turno" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px;line-height:1;vertical-align:middle">🎯${isCrown?'👑':''}</button>` : '';
-      let legExtra = '';
+      let legRemain = '';
+      let legCheckout = '';
       if(isTourSess){
-        if(!won && l.remainingScore!=null) legExtra=`<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${l.remainingScore}</span></div>`;
-        else if(won && l.checkoutScore!=null) legExtra=`<div><span style="color:var(--muted)">Da: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`;
+        if(!won && l.remainingScore!=null) legRemain=`<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${l.remainingScore}</span></div>`;
+        else if(won && l.checkoutScore > 0) legCheckout=`<div><span style="color:var(--muted)">Checkout da: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`;
       }
       const admRowClass = isTourSess ? (won ? 'tour-leg-row won' : 'tour-leg-row lost') : '';
-      const admExtraLine = legExtra
-        ? `<div style="font-size:11px;margin-top:4px;padding-top:3px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:14px;flex-wrap:wrap">${legExtra}</div>`
+      const admExtraLine = (legRemain||legCheckout)
+        ? `<div style="font-size:11px;margin-top:4px;padding-top:3px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:14px;flex-wrap:wrap">${legRemain}${legCheckout}</div>`
         : '';
       return `<div class="${admRowClass}" style="${admRowClass?'':'padding:5px 0;border-bottom:1px solid var(--d4)'}">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:4px;font-size:11px${admRowClass?';margin-bottom:3px':''}">
@@ -8317,13 +8318,13 @@ function render501SessPanel(){
       const remainCell = (isTour && !won && l.remainingScore!=null)
         ? `<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${l.remainingScore}</span></div>`
         : '';
-      const checkoutCell = (isTour && won && l.checkoutScore!=null)
-        ? `<div><span style="color:var(--muted)">Da: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`
+      const checkoutCell = (isTour && won && l.checkoutScore > 0)
+        ? `<div><span style="color:var(--muted)">Checkout da: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`
+        : '';
+      const extraLine = (remainCell||checkoutCell)
+        ? `<div style="font-size:12px;margin-top:5px;padding-top:4px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:16px;flex-wrap:wrap">${remainCell}${checkoutCell}</div>`
         : '';
 
-      const extraLine = (remainCell||checkoutCell)
-        ? `<div style="font-size:12px;margin-top:5px;padding-top:4px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:16px;flex-wrap:wrap">${remainCell}${checkoutCell}</div>`
-        : '';
       return `<div class="${rowClass}" style="${rowClass?'':'padding:6px 0;border-bottom:1px solid var(--d4)'}">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:5px;font-size:12px${rowClass?';margin-bottom:4px':''}">
           <div style="color:${legColor};font-weight:600">${legLabelBase} ${toggleBtn}</div>
