@@ -2110,7 +2110,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 
     <!-- 3b. DISPOSITIVI REGISTRATI (pannello indipendente) -->
     <div class="asw" id="adminDevicesSection" style="margin-top:8px;display:none">
-      <h3 style="margin-bottom:10px">📱 DISPOSITIVI REGISTRATI</h3>
+      <h3 style="margin-bottom:12px">📱 DISPOSITIVI REGISTRATI</h3>
       <div id="aeDevicesPanel"></div>
     </div>
 
@@ -4706,7 +4706,7 @@ function selAdmin(uid){
   const bb=document.getElementById('aeBlockBtn');
   if(selAU.id===CU.id){bb.style.display='none';}
   else { updateBlockBtn(bb, selAU.blocked); }
-  // Mostra pannello dispositivi indipendente (non per se stessi)
+  // Pannello DISPOSITIVI REGISTRATI indipendente (non per se stessi)
   const devSection = document.getElementById('adminDevicesSection');
   const devPanel   = document.getElementById('aeDevicesPanel');
   if(devSection && devPanel){
@@ -4714,8 +4714,8 @@ function selAdmin(uid){
       devPanel.innerHTML = renderDeviceList(selAU.id);
       devSection.style.display = '';
     } else {
-      devSection.style.display = 'none';
       devPanel.innerHTML = '';
+      devSection.style.display = 'none';
     }
   }
 }
@@ -4868,7 +4868,9 @@ function renderAdmin501Panel(uid){
         else if(won && l.checkoutScore!=null) legExtra=`<div><span style="color:var(--muted)">Da: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`;
       }
       const admRowClass = isTourSess ? (won ? 'tour-leg-row won' : 'tour-leg-row lost') : '';
-      const admExtraRow = legExtra ? `<div style="font-size:11px;margin-top:3px;display:flex;gap:12px;flex-wrap:wrap">${legExtra}</div>` : '';
+      const admExtraLine = legExtra
+        ? `<div style="font-size:11px;margin-top:4px;padding-top:3px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:14px;flex-wrap:wrap">${legExtra}</div>`
+        : '';
       return `<div class="${admRowClass}" style="${admRowClass?'':'padding:5px 0;border-bottom:1px solid var(--d4)'}">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:4px;font-size:11px${admRowClass?';margin-bottom:3px':''}">
           <div style="color:${legColor};font-weight:600">Leg ${i+1} ${toggleBtn}</div>
@@ -4878,7 +4880,7 @@ function renderAdmin501Panel(uid){
           <div><span style="color:var(--muted)">D: </span>${l.doublesThrown||0}/${l.doublesHit||0}</div>
           <div><span style="color:var(--muted)">%: </span>${(l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0}%</div>
         </div>
-        ${admExtraRow}
+        ${admExtraLine}
         ${scoresHtml}
       </div>`;
     }).join('');
@@ -8319,8 +8321,8 @@ function render501SessPanel(){
         ? `<div><span style="color:var(--muted)">Da: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`
         : '';
 
-      const extraRow = (remainCell || checkoutCell)
-        ? `<div style="font-size:12px;margin-top:4px;display:flex;gap:14px;flex-wrap:wrap">${remainCell}${checkoutCell}</div>`
+      const extraLine = (remainCell||checkoutCell)
+        ? `<div style="font-size:12px;margin-top:5px;padding-top:4px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:16px;flex-wrap:wrap">${remainCell}${checkoutCell}</div>`
         : '';
       return `<div class="${rowClass}" style="${rowClass?'':'padding:6px 0;border-bottom:1px solid var(--d4)'}">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:5px;font-size:12px${rowClass?';margin-bottom:4px':''}">
@@ -8331,7 +8333,7 @@ function render501SessPanel(){
           <div><span style="color:var(--muted)">Doppie: </span>${dblStr}</div>
           <div><span style="color:var(--muted)">%: </span>${dblPct(l)}%</div>
         </div>
-        ${extraRow}
+        ${extraLine}
         ${scoresHtml}
       </div>`;
     }
