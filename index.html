@@ -4876,18 +4876,16 @@ function renderAdmin501Panel(uid){
         ? `<div id="${scoresId}" style="display:none;margin-top:5px;padding:5px 8px;background:var(--d2);border-radius:4px;font-size:10px;white-space:nowrap;overflow-x:auto">
             <span style="color:var(--muted)">Turni: </span>`
           + (()=>{
-              const n=scores.length; let rem=501;
+              const n=scores.length;
+              const dbt=l.legDblTurns||null;
+              const hasFuture=dbt&&dbt.length===n;
               return scores.map((v,i)=>{
-                const before=rem; rem-=v; const after=rem;
                 const isLast=(i===n-1);
+                const inDbl=hasFuture?(dbt[i]>0):(v===0);
                 let bg,tc;
-                if(after<=50){
-                  if(isLast&&won){ bg=v>100?'rgba(250,204,21,.25)':'rgba(34,197,94,.22)'; tc=v>100?'#facc15':'var(--green)'; }
-                  else { bg='rgba(239,68,68,.22)'; tc=v===0?'rgba(248,113,113,.5)':'#f87171'; }
-                } else {
-                  const sp=v===180||v===177||v===174||v===171||v===170;
-                  bg='var(--d3)'; tc=sp?'#facc15':v===0?'var(--muted)':v>=100?'var(--green)':'var(--light)';
-                }
+                if(isLast&&won){ bg=v>100?'rgba(250,204,21,.25)':'rgba(34,197,94,.22)'; tc=v>100?'#facc15':'var(--green)'; }
+                else if(inDbl){ bg='rgba(239,68,68,.22)'; tc=v===0?'rgba(248,113,113,.5)':'#f87171'; }
+                else { const sp=v===180||v===177||v===174||v===171||v===170; bg='var(--d3)'; tc=sp?'#facc15':v===0?'var(--muted)':v>=100?'var(--green)':'var(--light)'; }
                 return `<span style="display:inline-block;min-width:22px;text-align:center;margin:0 1px;padding:1px 3px;border-radius:3px;background:${bg};color:${tc}">${v}</span>`;
               }).join('');
             })()
@@ -7440,6 +7438,7 @@ let G={
   legDartsThrown:0,
   legDoublesThrown:0,
   legDoublesHit:0,
+  legDblTurns:[],     // doppie tirate per ogni turno (parallelo a legScores)
   // for training: checkpoint tracking
   nextCheckpoint:400
 };
@@ -7450,7 +7449,8 @@ function g501Snap(){
     score:G.score, round:G.round, totalDarts:G.totalDarts,
     closures:G.closures, legScores:[...G.legScores],
     legDartsThrown:G.legDartsThrown, legDoublesThrown:G.legDoublesThrown,
-    legDoublesHit:G.legDoublesHit, nextCheckpoint:G.nextCheckpoint
+    legDoublesHit:G.legDoublesHit, nextCheckpoint:G.nextCheckpoint,
+    legDblTurns:[...(G.legDblTurns||[])]
   };
 }
 function g501Restore(s){
@@ -7458,6 +7458,7 @@ function g501Restore(s){
   G.closures=s.closures; G.legScores=[...s.legScores];
   G.legDartsThrown=s.legDartsThrown; G.legDoublesThrown=s.legDoublesThrown;
   G.legDoublesHit=s.legDoublesHit; G.nextCheckpoint=s.nextCheckpoint;
+  G.legDblTurns=[...(s.legDblTurns||[])];
 }
 
 function g501UpdateDisplay(){
@@ -7625,6 +7626,7 @@ function tourSaveCurrentLeg(won){
     rounds: rounds,
     avg: avg,
     legScores: [...G.legScores],
+    legDblTurns: [...(G.legDblTurns||[])],
     doublesThrown: G.legDoublesThrown || 0,
     doublesHit: G.legDoublesHit || 0,
     won: won,
@@ -7888,7 +7890,7 @@ function startFree501(){
 }
 function startLeg501(){
   G.score=501; G.turns=[]; G.round=1; G.totalDarts=0; G.closures=0;
-  G.enteredStr=''; G.legScores=[]; G.legDartsThrown=0; G.legDoublesThrown=0; G.legDoublesHit=0;
+  G.enteredStr=''; G.legScores=[]; G.legDblTurns=[]; G.legDartsThrown=0; G.legDoublesThrown=0; G.legDoublesHit=0;
   G.nextCheckpoint=400;
   g501UpdateDisplay();
 }
@@ -7930,6 +7932,7 @@ function g501Prev(){
 function g501NoScoreLeft(){
   G.turns.push(g501Snap());
   G.legScores.push(0);
+  G.legDblTurns.push(-1); // placeholder: aggiornato da g501MissOK
   G.legDartsThrown+=3; G.totalDarts+=3; G.round++;
   G.enteredStr='';
   // free mode: ALWAYS ask about doubles when score <= 50
@@ -7950,6 +7953,7 @@ function g501OKBtn(){
   if(newScore<0||newScore===1){
     G.turns.push(g501Snap());
     G.legScores.push(0);
+    G.legDblTurns.push(-1); // placeholder: aggiornato da g501MissOK
     G.legDartsThrown+=3; G.totalDarts+=3; G.round++;
     G.enteredStr='';
     if(G.mode==='free'||G.mode==='tournament'){
@@ -8014,7 +8018,8 @@ function g501OKBtn(){
     G._preCheckoutSnap = g501Snap();
     G._checkoutFrom = G.score; // punteggio da cui si è fatto checkout
     G.turns.push(g501Snap());
-    G.score=0; G.legScores.push(pts); G.legDartsThrown+=3; G.totalDarts+=3; G.round++;
+    G.score=0; G.legScores.push(pts); G.legDblTurns.push(-1); // aggiornato da g501CoOK
+    G.legDartsThrown+=3; G.totalDarts+=3; G.round++;
     G.enteredStr='';
     G.legDartsThrown-=3; G.totalDarts-=3;
     g501UpdateDisplay();
@@ -8024,7 +8029,8 @@ function g501OKBtn(){
 
   // ── NORMAL SCORE (free mode only — training handled above) ──
   G.turns.push(g501Snap());
-  G.score=newScore; G.legScores.push(pts); G.legDartsThrown+=3; G.totalDarts+=3; G.round++;
+  G.score=newScore; G.legScores.push(pts); G.legDblTurns.push(0); // 0 doppie: aggiornato da MissOK se needed
+  G.legDartsThrown+=3; G.totalDarts+=3; G.round++;
   G.enteredStr='';
   g501UpdateDisplay();
   // free mode: ask doubles when the new score is <=50 (player will aim at double next turn too)
@@ -8167,6 +8173,10 @@ function g501CoOK(){
   // Add the actual darts used in checkout turn (user selected 1, 2 or 3)
   G.legDoublesThrown+=dbl; G.legDoublesHit+=1;
   G.legDartsThrown+=ck; G.totalDarts+=ck;
+  // Aggiorna il contatore doppie per l'ultimo turno (il checkout)
+  if(G.legDblTurns.length > 0){
+    G.legDblTurns[G.legDblTurns.length-1] = dbl;
+  }
   document.getElementById('g501coScreen').classList.remove('open');
   finishFreeLeg();
 }
@@ -8176,6 +8186,10 @@ function g501MissCancel(){ document.getElementById('g501missScreen').classList.r
 function g501MissOK(){
   const dbl=parseInt(document.querySelector('[name="missD"]:checked')?.value||'0');
   G.legDoublesThrown+=dbl;
+  // Aggiorna il contatore doppie per l'ultimo turno registrato
+  if(G.legDblTurns.length > 0){
+    G.legDblTurns[G.legDblTurns.length-1] = dbl;
+  }
   document.getElementById('g501missScreen').classList.remove('open');
   g501UpdateDisplay();
 }
@@ -8193,6 +8207,7 @@ function finishFreeLeg(){
     doublesHit: G.legDoublesHit,
     avgPerRound: avg,
     legScores: [...G.legScores],
+    legDblTurns: [...(G.legDblTurns||[])],
     checkoutScore: G._checkoutFrom || null,
     won: true,
   };
@@ -8342,29 +8357,25 @@ function render501SessPanel(){
       const scores  = l.legScores || [];
       const scoresId = `legscores_${keyBase}_${li}`;
       // Calcola colori riquadri: grigio prima delle doppie, colorati da quando inizia la fase doppia
-      // Colora i riquadri: grigio se rimasto>50, colorati se rimasto<=50
-      // Logica: la fase doppia inizia quando il puntatore PRIMA del turno è <=50
-      function scoreSpans(scores, won){
+      // Colora i riquadri punteggi:
+      // FUTURI (legDblTurns presente): rosso se doppie tirate > 0 in quel turno
+      // STORICI (fallback): rosso solo se punteggio = 0 (doppie mancate certe)
+      // Ultimo turno leg vinto: verde (o giallo se >100)
+      function scoreSpans(scores, won, dblTurns){
         const n = scores.length;
         if(!n) return '';
-        let rem = 501;
+        const hasFuture = dblTurns && dblTurns.length === n;
         return scores.map((v, i) => {
-          const before = rem;
-          rem -= v;
-          const after = rem;
           const isLast = (i === n - 1);
+          const inDbl = hasFuture ? (dblTurns[i] > 0) : (v === 0);
           let bg, textColor;
-          if(after <= 50){
-            // Fase doppia: rimasto prima di questo turno <= 50
-            if(isLast && won){
-              bg = v > 100 ? 'rgba(250,204,21,.25)' : 'rgba(34,197,94,.22)';
-              textColor = v > 100 ? '#facc15' : 'var(--green)';
-            } else {
-              bg = 'rgba(239,68,68,.22)';
-              textColor = v===0 ? 'rgba(248,113,113,.5)' : '#f87171';
-            }
+          if(isLast && won){
+            bg = v > 100 ? 'rgba(250,204,21,.25)' : 'rgba(34,197,94,.22)';
+            textColor = v > 100 ? '#facc15' : 'var(--green)';
+          } else if(inDbl){
+            bg = 'rgba(239,68,68,.22)';
+            textColor = v===0 ? 'rgba(248,113,113,.5)' : '#f87171';
           } else {
-            // Fase scalatura: grigio
             const isSpecial = v===180||v===177||v===174||v===171||v===170;
             bg = 'var(--d3)';
             textColor = isSpecial ? '#facc15' : v===0 ? 'var(--muted)' : v>=100 ? 'var(--green)' : 'var(--light)';
@@ -8375,7 +8386,7 @@ function render501SessPanel(){
       const scoresHtml = scores.length
         ? `<div id="${scoresId}" style="display:none;margin-top:6px;padding:5px 8px;background:var(--d2);border-radius:5px;font-size:11px;white-space:nowrap;overflow-x:auto">
             <span style="color:var(--muted);margin-right:4px">Turni:</span>`
-          + scoreSpans(scores, won)
+          + scoreSpans(scores, won, l.legDblTurns||null)
           + `</div>` : '';
       const toggleBtn = scores.length
         ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Mostra punti per turno" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;vertical-align:middle">🎯${isCrown?'👑':''}</button>` : '';
