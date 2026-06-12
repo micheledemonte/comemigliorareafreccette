@@ -2108,11 +2108,11 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       <div class="amsg" id="aeMsg"></div>
     </div>
 
-    <!-- 3b. DISPOSITIVI REGISTRATI (sempre visibile) -->
+    <!-- 3b. DISPOSITIVI REGISTRATI -->
     <div class="pc" id="adminDevicesSection" style="margin-top:8px">
       <h3 id="adminDevicesTitle">DISPOSITIVI REGISTRATI</h3>
       <div id="aeDevicesPanel" style="margin-top:10px">
-        <p style="font-size:13px;color:var(--muted)">Seleziona un utente dalla lista per vedere i suoi dispositivi.</p>
+        <p style="font-size:13px;color:var(--muted)">Al momento pare che non ci siano dispositivi registrati.</p>
       </div>
     </div>
 
@@ -4716,7 +4716,7 @@ function selAdmin(uid){
       devPanel.innerHTML = renderDeviceList(selAU.id);
     } else {
       if(devTitle) devTitle.textContent = 'DISPOSITIVI REGISTRATI';
-      devPanel.innerHTML = '<p style="font-size:13px;color:var(--muted)">Non puoi vedere i tuoi dispositivi da admin.</p>';
+      devPanel.innerHTML = '<p style="font-size:13px;color:var(--muted)">Al momento pare che non ci siano dispositivi registrati.</p>';
     }
   }
 }
@@ -4872,7 +4872,7 @@ function renderAdmin501Panel(uid){
         : '';
       const admRowClass = isTourSess ? (won ? 'tour-leg-row won' : 'tour-leg-row lost') : '';
       return `<div class="${admRowClass}" style="${admRowClass?'':'padding:5px 0;border-bottom:1px solid var(--d4)'}">
-        <div style="display:grid;grid-template-columns:${isTourSess?'1.8fr repeat(5,1fr) 1.2fr':'1.8fr repeat(5,1fr)'};gap:4px;font-size:11px;align-items:center">
+        <div style="display:grid;grid-template-columns:${isTourSess?'1.8fr repeat(4,1fr) 0.8fr 1.2fr':'1.8fr repeat(4,1fr) 0.8fr'};gap:4px;font-size:11px;align-items:center">
           <div style="color:${legColor};font-weight:600">Leg ${i+1} ${toggleBtn}</div>
           <div><span style="color:var(--muted)">T: </span>${l.rounds||0}</div>
           <div><span style="color:var(--muted)">F: </span>${darts}</div>
@@ -8155,7 +8155,7 @@ function finishFreeLeg(){
   };
   G.legsResults.push(res);
   if(G.mode==='tournament' && GT.active){
-    tourSaveCurrentLeg(true);  // legge G._checkoutFrom prima di azzerarlo
+    tourSaveCurrentLeg(true);
     G._checkoutFrom = null;
     tourAdvance();
     return;
@@ -8313,22 +8313,22 @@ function render501SessPanel(){
       const toggleBtn = scores.length
         ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Mostra punti per turno" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;vertical-align:middle">🎯${isCrown?'👑':''}</button>` : '';
 
-      // Colonna 7: rimasto (leg perso) o checkout (leg vinto)
+      // Colonna 7 torneo: rimasto (leg perso) o checkout (leg vinto)
       const col7 = isTour
         ? (!won && l.remainingScore!=null
-            ? `<div><span style="color:var(--muted)">Rim.: </span><span style="color:#f87171;font-weight:600">${l.remainingScore}</span></div>`
+            ? `<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${l.remainingScore}</span></div>`
             : (won && l.checkoutScore > 0
-                ? `<div><span style="color:var(--muted)">Co.: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`
+                ? `<div><span style="color:var(--muted)">Checkout: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`
                 : '<div></div>'))
         : '';
 
       return `<div class="${rowClass}" style="${rowClass?'':'padding:6px 0;border-bottom:1px solid var(--d4)'}">
-        <div style="display:grid;grid-template-columns:${isTour?'1.8fr repeat(5,1fr) 1.2fr':'1.8fr repeat(5,1fr)'};gap:4px;font-size:12px;align-items:center">
-          <div style="color:${legColor};font-weight:600">${legLabelBase} ${toggleBtn}</div>
-          <div><span style="color:var(--muted)">T: </span>${l.rounds||0}</div>
-          <div><span style="color:var(--muted)">F: </span>${darts}</div>
-          <div><span style="color:var(--muted)">M: </span>${avgVal}</div>
-          <div><span style="color:var(--muted)">D: </span>${dblStr}</div>
+        <div style="display:grid;grid-template-columns:${isTour?'2fr repeat(4,1fr) 0.9fr 1.4fr':'2fr repeat(4,1fr) 0.9fr'};gap:4px;font-size:12px;align-items:center">
+          <div style="color:${legColor};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${legLabelBase} ${toggleBtn}</div>
+          <div><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
+          <div><span style="color:var(--muted)">Frecce: </span>${darts}</div>
+          <div><span style="color:var(--muted)">Media: </span>${avgVal}</div>
+          <div><span style="color:var(--muted)">Doppie: </span>${dblStr}</div>
           <div><span style="color:var(--muted)">%: </span>${dblPct(l)}%</div>
           ${col7}
         </div>
