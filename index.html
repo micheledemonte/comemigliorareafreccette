@@ -2106,11 +2106,12 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       </div>
       <button onclick="confirmResetUserPassword()" style="width:100%;margin-top:10px;padding:11px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;background:transparent;border:1.5px solid var(--green);color:var(--green);cursor:pointer;transition:all .2s" onmouseover="this.style.background='var(--gdim)'" onmouseout="this.style.background='transparent'">📧 INVIA RESET PASSWORD</button>
       <div class="amsg" id="aeMsg"></div>
-      <!-- Dispositivi registrati -->
-      <div style="margin-top:14px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--mu2);letter-spacing:.08em;margin-bottom:8px">📱 DISPOSITIVI REGISTRATI</div>
-        <div id="aeDevicesPanel"></div>
-      </div>
+    </div>
+
+    <!-- 3b. DISPOSITIVI REGISTRATI -->
+    <div class="pc" id="adminDevicesSection" style="display:none;margin-top:8px">
+      <h3 id="adminDevicesTitle">DISPOSITIVI REGISTRATI</h3>
+      <div id="aeDevicesPanel" style="margin-top:10px"></div>
     </div>
 
     <!-- 4. STATISTICHE UTENTE -->
@@ -2900,8 +2901,7 @@ function adminRemoveDevice(uid, fp){
       const devs = getDevices(uid);
       delete devs[fp];
       saveDevices(uid, devs);
-      // Aggiorna la sezione dispositivi nel pannello admin
-      const el = document.getElementById('aeDevices_'+uid);
+      const el = document.getElementById('aeDevicesPanel');
       if(el) el.innerHTML = renderDeviceList(uid);
     },
     {okLabel:'RIMUOVI', okBg:'#dc2626', okColor:'#fff'}
@@ -2915,7 +2915,7 @@ function adminResetDevices(uid){
     'Vuoi rimuovere tutti i dispositivi registrati? L\'utente potrà registrare nuovi dispositivi dal prossimo accesso.',
     ()=>{
       saveDevices(uid, {});
-      const el = document.getElementById('aeDevices_'+uid);
+      const el = document.getElementById('aeDevicesPanel');
       if(el) el.innerHTML = renderDeviceList(uid);
     },
     {okLabel:'RESET', okBg:'#dc2626', okColor:'#fff'}
@@ -4705,11 +4705,19 @@ function selAdmin(uid){
   const bb=document.getElementById('aeBlockBtn');
   if(selAU.id===CU.id){bb.style.display='none';}
   else { updateBlockBtn(bb, selAU.blocked); }
-  // Mostra dispositivi registrati (non per se stessi)
-  const devPanel = document.getElementById('aeDevicesPanel');
-  if(devPanel && selAU.id !== CU.id){
-    devPanel.id = 'aeDevices_'+selAU.id;
-    devPanel.innerHTML = renderDeviceList(selAU.id);
+  // Pannello DISPOSITIVI REGISTRATI — sezione separata, ID fisso
+  const devSection = document.getElementById('adminDevicesSection');
+  const devPanel   = document.getElementById('aeDevicesPanel');
+  const devTitle   = document.getElementById('adminDevicesTitle');
+  if(devSection && devPanel){
+    if(selAU.id !== CU.id){
+      if(devTitle) devTitle.textContent = 'DISPOSITIVI REGISTRATI — ' + (selAU.firstName||'').toUpperCase() + ' ' + (selAU.lastName||'').toUpperCase();
+      devPanel.innerHTML = renderDeviceList(selAU.id);
+      devSection.style.display = '';
+    } else {
+      devPanel.innerHTML = '';
+      devSection.style.display = 'none';
+    }
   }
 }
 
@@ -4745,9 +4753,9 @@ function setAdmin501Mode(uid, mode){
     tBtn.style.borderColor= mode==='training' ? 'var(--green)' : 'var(--d5)';
   }
   if(rBtn){
-    rBtn.style.background = mode==='tournament' ? 'var(--blue)' : 'var(--d3)';
-    rBtn.style.color      = mode==='tournament' ? '#fff' : 'var(--mu2)';
-    rBtn.style.borderColor= mode==='tournament' ? 'var(--blue)' : 'var(--d5)';
+    rBtn.style.background = mode==='tournament' ? 'var(--green)' : 'var(--d3)';
+    rBtn.style.color      = mode==='tournament' ? '#000' : 'var(--mu2)';
+    rBtn.style.borderColor= mode==='tournament' ? 'var(--green)' : 'var(--d5)';
   }
   // Reset selezioni correnti per questa modalità
   if(!_adminSelected501[uid]) _adminSelected501[uid] = {training:[], tournament:[]};
@@ -4855,12 +4863,16 @@ function renderAdmin501Panel(uid){
           + `</div>` : '';
       const toggleBtn = scores.length
         ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Punti per turno" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px;line-height:1;vertical-align:middle">🎯${isCrown?'👑':''}</button>` : '';
-      let legExtra = '';
+      let legRemain = '';
+      let legCheckout = '';
       if(isTourSess){
-        if(!won && l.remainingScore!=null) legExtra=`<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${l.remainingScore}</span></div>`;
-        else if(won && l.checkoutScore!=null) legExtra=`<div><span style="color:var(--muted)">Da: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`;
+        if(!won && l.remainingScore!=null) legRemain=`<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${l.remainingScore}</span></div>`;
+        else if(won && l.checkoutScore > 0) legCheckout=`<div><span style="color:var(--muted)">Checkout: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`;
       }
       const admRowClass = isTourSess ? (won ? 'tour-leg-row won' : 'tour-leg-row lost') : '';
+      const admExtraLine = (legRemain||legCheckout)
+        ? `<div style="font-size:11px;margin-top:4px;padding-top:3px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:14px;flex-wrap:wrap">${legRemain}${legCheckout}</div>`
+        : '';
       return `<div class="${admRowClass}" style="${admRowClass?'':'padding:5px 0;border-bottom:1px solid var(--d4)'}">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:4px;font-size:11px${admRowClass?';margin-bottom:3px':''}">
           <div style="color:${legColor};font-weight:600">Leg ${i+1} ${toggleBtn}</div>
@@ -4869,8 +4881,8 @@ function renderAdmin501Panel(uid){
           <div><span style="color:var(--muted)">M: </span>${l.avgPerRound||0}</div>
           <div><span style="color:var(--muted)">D: </span>${l.doublesThrown||0}/${l.doublesHit||0}</div>
           <div><span style="color:var(--muted)">%: </span>${(l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0}%</div>
-          ${legExtra}
         </div>
+        ${admExtraLine}
         ${scoresHtml}
       </div>`;
     }).join('');
@@ -7271,7 +7283,7 @@ function delUser(uid){
       saveUsers(getUsers().filter(u=>u.id!==uid));
       if(_dbCache?.userData) delete _dbCache.userData[uid];
       saveDBToCloud();
-      if(selAU?.id===uid){selAU=null;document.getElementById('adminEditUser').style.display='none';}
+      if(selAU?.id===uid){selAU=null;document.getElementById('adminEditUser').style.display='none';const ds=document.getElementById('adminDevicesSection');if(ds)ds.style.display='none';}
       renderAdmin();
       // 2. Remove from Firebase Auth via serverless function
       if(_fbAuth&&_fbAuth.currentUser){
@@ -8143,14 +8155,15 @@ function finishFreeLeg(){
     checkoutScore: G._checkoutFrom || null,
     won: true,
   };
-  G._checkoutFrom = null;
   G.legsResults.push(res);
   // Tournament mode: save leg as won and let tourAdvance handle flow
   if(G.mode==='tournament' && GT.active){
-    tourSaveCurrentLeg(true);
+    tourSaveCurrentLeg(true);  // legge G._checkoutFrom prima di azzerarlo
+    G._checkoutFrom = null;
     tourAdvance();
     return;
   }
+  G._checkoutFrom = null;
   G.currentLeg++;
   if(G.currentLeg<G.totalLegs){
     startLeg501();
@@ -8307,8 +8320,11 @@ function render501SessPanel(){
       const remainCell = (isTour && !won && l.remainingScore!=null)
         ? `<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${l.remainingScore}</span></div>`
         : '';
-      const checkoutCell = (isTour && won && l.checkoutScore!=null)
-        ? `<div><span style="color:var(--muted)">Da: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`
+      const checkoutCell = (isTour && won && l.checkoutScore > 0)
+        ? `<div><span style="color:var(--muted)">Checkout: </span><span style="color:var(--green);font-weight:600">${l.checkoutScore}</span></div>`
+        : '';
+      const extraLine = (remainCell||checkoutCell)
+        ? `<div style="font-size:12px;margin-top:5px;padding-top:4px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:16px;flex-wrap:wrap">${remainCell}${checkoutCell}</div>`
         : '';
 
       return `<div class="${rowClass}" style="${rowClass?'':'padding:6px 0;border-bottom:1px solid var(--d4)'}">
@@ -8319,9 +8335,8 @@ function render501SessPanel(){
           <div><span style="color:var(--muted)">Media: </span>${avgVal}</div>
           <div><span style="color:var(--muted)">Doppie: </span>${dblStr}</div>
           <div><span style="color:var(--muted)">%: </span>${dblPct(l)}%</div>
-          ${remainCell}
-          ${checkoutCell}
         </div>
+        ${extraLine}
         ${scoresHtml}
       </div>`;
     }
