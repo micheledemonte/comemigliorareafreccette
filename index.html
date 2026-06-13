@@ -2152,7 +2152,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <!-- 3b. DISPOSITIVI REGISTRATI (sempre visibile) -->
     <div class="pc" id="adminDevicesSection" style="margin-top:8px">
       <h3 id="adminDevicesTitle">DISPOSITIVI REGISTRATI</h3>
-      <div id="aeDevicesPanel" style="margin-top:10px"></div>
+      <div id="aeDevicesPanel" style="margin-top:10px"><p style="font-size:11px;color:#f87171">PANEL VISIBILE - in attesa di selezione utente</p></div>
     </div>
 
     <!-- 4. STATISTICHE UTENTE -->
@@ -3024,6 +3024,8 @@ function adminRemoveDeviceFB(uid, fp){
 // Carica e mostra i dispositivi di un utente nel pannello Admin
 // Legge direttamente dal path Firebase dedicato ai __devices
 function adminLoadDevices(uid){
+  // Usa setTimeout per eseguire DOPO tutto il codice sincrono di selAdmin
+  setTimeout(function(){
   const panel = document.getElementById('aeDevicesPanel');
   if(!panel) return;
   // Mostra uid nel pannello per debug
@@ -3046,6 +3048,7 @@ function adminLoadDevices(uid){
     const p = document.getElementById('aeDevicesPanel');
     if(p) p.innerHTML = '<p style="font-size:11px;color:#f87171;font-family:monospace">Errore: '+err.message+'</p>';
   });
+  }, 300); // setTimeout 300ms
 }
 
 // Rende l'HTML della lista dispositivi per un utente (usato nell'Admin panel)
