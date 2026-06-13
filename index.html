@@ -5111,7 +5111,7 @@ function renderAdmin501Panel(uid){
           <div class="leg-col-extra">${col7}</div>
           <div class="leg-row1" style="display:none;color:${legColor};font-weight:600">${legLabelBase} ${toggleBtn}</div>
           <div class="leg-row2" style="display:none;font-size:11px"><span style="color:var(--muted)">Turni:</span> ${l.rounds||0} &nbsp;<span style="color:var(--muted)">Frecce:</span> ${darts} &nbsp;<span style="color:var(--muted)">Media:</span> ${avgVal}</div>
-          <div class="leg-row3" style="display:none;font-size:11px"><span style="color:var(--muted)">Doppie:</span> ${dblStr} &nbsp;<span style="color:var(--muted)">%:</span> ${dblPct(l)}%</div>
+          <div class="leg-row3" style="display:none;font-size:11px"><span style="color:var(--muted)">Doppie:</span> ${dblStr} &nbsp;<span style="color:var(--muted)">%:</span> ${dblPct(l)}% &nbsp;${col7.replace(/<div>/g,'').replace(/<\/div>/g,'')}</div>
         </div>
         ${scoresHtml}
       </div>`;
