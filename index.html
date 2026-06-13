@@ -742,17 +742,18 @@ select:hover{border-color:var(--green)}
 @media(max-width:768px){
   .g501-inner{
     gap:4px;
-    /* padding simmetrico sinistra=destra per evitare asimmetria */
-    padding:6px 0 3px;
+    padding:6px 8px 3px;   /* 8px laterale = spazio visivo tra bordo e pad */
     flex:1 1 0;
     min-height:0;
-    align-items:center; /* centra il pad orizzontalmente */
+    align-items:stretch;   /* tutti gli elementi a 100% larghezza */
   }
   .g501-pad{
     flex:0 0 auto !important;
-    /* Chiavi cerchio perfetto: dimensione = (100vw - 2*gap) / 3 */
+    align-self:center;     /* solo il pad si centra orizzontalmente */
+    /* Cerchio perfetto: key = (100vw - 2*padding_inner - 2*gap) / 3 */
+    --pad: 8px;
     --gap: clamp(8px, 2.2vw, 14px);
-    --key: calc((100vw - 2 * var(--gap)) / 3);
+    --key: calc((100vw - 2 * var(--pad) - 2 * var(--gap)) / 3);
     grid-template-columns: repeat(3, var(--key));
     grid-auto-rows: var(--key);
     gap: var(--gap);
@@ -763,7 +764,7 @@ select:hover{border-color:var(--green)}
     height: var(--key) !important;
     aspect-ratio: unset !important;
   }
-  /* Score area prende tutto il resto dell'altezza disponibile */
+  /* Score area prende il resto dell'altezza: si adatta a schermo pieno e Safari */
   .g501-score-area{ flex:1 1 0; min-height:0; overflow:hidden; }
   .g501-pts{ font-size:clamp(28px,7dvh,72px); }
 }
@@ -10263,13 +10264,40 @@ if(document.readyState==='loading'){
     return 'pressing';
   }
 
+  // Mappa delle azioni per ogni tasto (eseguite su pointerdown per zero delay)
+  function dispatchKeyAction(el){
+    if(!el) return;
+    // g501-key: legge il data-action o deduce dall'onclick
+    var oc = el.getAttribute('onclick');
+    if(!oc) return;
+    // Esegui l'onclick direttamente (già una stringa JS valida)
+    try{ (new Function(oc))(); }catch(err){}
+  }
+
   function addPressAnim(container){
     if(!container) return;
     container.addEventListener('pointerdown', function(e){
       var key = e.target.closest('.g501-key');
-      if(key){ playAnim(key, getKeyClass(key)); return; }
-      var btn = e.target.closest('.g501-prev-btn') || e.target.closest('.g501-clr-btn');
-      if(btn) playAnim(btn, 'pressing-gray');
+      if(key){
+        playAnim(key, getKeyClass(key));
+        dispatchKeyAction(key);
+        // Previeni il successivo click event per evitare doppia esecuzione
+        key.addEventListener('click', function stop(ev){ ev.stopImmediatePropagation(); ev.preventDefault(); }, {once:true, capture:true});
+        return;
+      }
+      var btn = e.target.closest('.g501-prev-btn');
+      if(btn){
+        playAnim(btn, 'pressing-gray');
+        dispatchKeyAction(btn);
+        btn.addEventListener('click', function stop(ev){ ev.stopImmediatePropagation(); ev.preventDefault(); }, {once:true, capture:true});
+        return;
+      }
+      var clr = e.target.closest('.g501-clr-btn');
+      if(clr){
+        playAnim(clr, 'pressing-gray');
+        dispatchKeyAction(clr);
+        clr.addEventListener('click', function stop(ev){ ev.stopImmediatePropagation(); ev.preventDefault(); }, {once:true, capture:true});
+      }
     }, {passive: true});
   }
 
