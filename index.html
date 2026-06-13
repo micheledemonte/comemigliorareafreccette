@@ -4549,8 +4549,9 @@ function renderStats(uid){
     },
     sess=>{
       const legs=sess.legs||[];
-      const pcts=legs.map(l=>{const t=l.doublesThrown||0,h=l.doublesHit||0;return t>0?Math.round(h/t*100):null;}).filter(n=>n!==null);
-      return pcts.length?+(pcts.reduce((a,b)=>a+b,0)/pcts.length).toFixed(1):null;
+      const totT=legs.reduce((s,l)=>s+(l.doublesThrown||0),0);
+      const totH=legs.reduce((s,l)=>s+(l.doublesHit||0),0);
+      return totT>0?Math.round(totH/totT*100):null;
     }
   );
   if(trainDays.length){
@@ -4581,8 +4582,9 @@ function renderStats(uid){
     },
     sess=>{
       const allLegs=(sess.sets||[]).flatMap(s=>s.legs||[]);
-      const pcts=allLegs.map(l=>{const t=l.doublesThrown||0,h=l.doublesHit||0;return t>0?Math.round(h/t*100):null;}).filter(n=>n!==null);
-      return pcts.length?+(pcts.reduce((a,b)=>a+b,0)/pcts.length).toFixed(1):null;
+      const totT=allLegs.reduce((s,l)=>s+(l.doublesThrown||0),0);
+      const totH=allLegs.reduce((s,l)=>s+(l.doublesHit||0),0);
+      return totT>0?Math.round(totH/totT*100):null;
     }
   );
   if(tourDays.length){
@@ -5691,14 +5693,14 @@ function renderApptUser(){
       +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--light);letter-spacing:.06em;line-height:1.1">LEZIONE '+(l.idx+1)+'</div>'
       // Riga 2: data e orario — font più grande del nome lezione, colore utente
       +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;color:'+col.color+';letter-spacing:.04em;line-height:1.15">'+dateLabel+'</div>'
-      // Riga 3: insegnante in piccolo con emoji (sempre)
+      // Riga 3: insegnante (solo nome, senza 'Fissato il')
       +(teacher
-        ? '<div style="font-size:12px;color:var(--mu2);margin-top:2px">👨‍🏫 '+teacher+(l.note?' · <span style="color:var(--muted)">'+l.note+'</span>':'')+(setAtStr?' · <span style="color:var(--muted)">📌 Fissato il '+setAtStr+'</span>':'')+'</div>'
-        : '<div style="font-size:12px;color:var(--muted);margin-top:2px">Insegnante non assegnato'+(l.note?' · '+l.note:'')+(setAtStr?' · <span style="color:var(--muted)">📌 Fissato il '+setAtStr+'</span>':'')+'</div>'
+        ? '<div style="font-size:12px;color:var(--mu2);margin-top:2px">👨‍🏫 '+teacher+(l.note?' · <span style="color:var(--muted)">'+l.note+'</span>':'')+'</div>'
+        : (l.note?'<div style="font-size:12px;color:var(--muted);margin-top:2px">'+l.note+'</div>':'')
       )
-      // Riga 4: pillole su 2 righe: Riga1=ICS+insegnante, Riga2=SPOSTA+stato
+      // Riga 4: pillole: ICS + (SPOSTA + stato pagamento)
       +'<div style="display:flex;flex-direction:column;gap:5px;margin-top:6px">'
-      +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+icsB+teacherB+'</div>'
+      +(icsB?'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+icsB+'</div>':'')
       +((spostaB||pagBadge)?'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+spostaB+pagBadge+'</div>':'')
       +'</div>'
       // Form spostamento collassabile
