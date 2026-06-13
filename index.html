@@ -2578,13 +2578,21 @@ function saveDBToCloud(){
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(async ()=>{
     try{
-      await _fbDB.ref('db').set(deepClean(_dbCache));
-      _lastSaveTime = Date.now(); // mark completion time
+      // Costruisci una copia del DB senza __devices in userData
+      // I dispositivi vengono scritti separatamente con saveDevicesDirect
+      const dbToSave = deepClean(_dbCache);
+      if(dbToSave.userData){
+        Object.keys(dbToSave.userData).forEach(uid=>{
+          if(dbToSave.userData[uid]) delete dbToSave.userData[uid].__devices;
+        });
+      }
+      await _fbDB.ref('db').set(dbToSave);
+      _lastSaveTime = Date.now();
       console.log('✓ Firebase DB saved');
     } catch(e){
       console.warn('Firebase save error:', e.message);
     } finally {
-      _saveInFlight = false; // save done (success or error)
+      _saveInFlight = false;
     }
   }, 1500);
 }
@@ -2879,11 +2887,18 @@ function getDevices(uid){
   return data.__devices || {};
 }
 
-// Salva __devices in userData[uid]
+// Salva __devices direttamente su Firebase (path separato, mai sovrascritto da saveDBToCloud)
 function saveDevices(uid, devices){
-  const data = getUD(uid);
-  data.__devices = devices;
-  setUD(uid, data);
+  // Aggiorna cache locale
+  if(_dbCache && _dbCache.userData){
+    if(!_dbCache.userData[uid]) _dbCache.userData[uid] = {};
+    _dbCache.userData[uid].__devices = devices;
+  }
+  // Scrivi direttamente su Firebase al path dedicato
+  if(_fbDB){
+    _fbDB.ref('db/userData/'+uid+'/__devices').set(devices && Object.keys(devices).length ? devices : null)
+      .catch(e=>console.warn('saveDevices error:', e.message));
+  }
 }
 
 // Controlla e registra il dispositivo corrente.
@@ -2974,53 +2989,42 @@ function adminRemoveDeviceFB(uid, fp){
       if(_dbCache && _dbCache.userData && _dbCache.userData[uid] && _dbCache.userData[uid].__devices){
         delete _dbCache.userData[uid].__devices[fp];
       }
-      // Salva tutto il DB su Firebase (include la rimozione)
-      saveDBToCloud();
-      // Ricarica il pannello con i dati aggiornati
-      adminLoadDevices(uid);
+      // Scrivi direttamente al path Firebase
+      _fbDB.ref('db/userData/'+uid+'/__devices/'+fp).remove().then(function(){
+        adminLoadDevices(uid);
+      }).catch(function(err){
+        console.warn('[DEVICES] Errore rimozione:', err);
+        adminLoadDevices(uid);
+      });
     },
     {okLabel:'RIMUOVI', okBg:'#dc2626', okColor:'#fff'}
   );
 }
 
 // Carica e mostra i dispositivi di un utente nel pannello Admin
-// Legge prima dalla cache in memoria, poi aggiorna da Firebase
+// Legge direttamente dal path Firebase dedicato ai __devices
 function adminLoadDevices(uid){
   const panel = document.getElementById('aeDevicesPanel');
   if(!panel) return;
   panel.innerHTML = '<p style="font-size:12px;color:var(--muted)">Caricamento...</p>';
-
-  // Leggi dalla cache in memoria (_dbCache già caricato al login)
-  const cacheUD = (_dbCache && _dbCache.userData) ? _dbCache.userData[uid] : null;
-  const cacheDevs = (cacheUD && cacheUD.__devices) ? cacheUD.__devices : null;
-  if(cacheDevs && Object.keys(cacheDevs).length > 0){
-    panel.innerHTML = renderDeviceList(uid, cacheDevs);
-  }
-
-  // Leggi anche da Firebase per dati freschi e retroattivi
-  // Usa _fbDB.ref('db') intero e naviga manualmente per evitare problemi con chiavi __
   if(!_fbDB){
-    panel.innerHTML = renderDeviceList(uid, cacheDevs || {});
+    panel.innerHTML = renderDeviceList(uid, {});
     return;
   }
-  _fbDB.ref('db').once('value').then(function(snap){
-    const db = snap.val();
-    const devs = (db && db.userData && db.userData[uid] && db.userData[uid].__devices)
-      ? db.userData[uid].__devices
-      : {};
-    // Aggiorna cache
+  // Leggi direttamente il path __devices (scritto separatamente da saveDevices)
+  _fbDB.ref('db/userData/'+uid+'/__devices').once('value').then(function(snap){
+    const devs = snap.val() || {};
+    // Aggiorna cache locale
     if(_dbCache && _dbCache.userData){
       if(!_dbCache.userData[uid]) _dbCache.userData[uid] = {};
       _dbCache.userData[uid].__devices = devs;
     }
-    if(document.getElementById('aeDevicesPanel')){
-      document.getElementById('aeDevicesPanel').innerHTML = renderDeviceList(uid, devs);
-    }
+    const p = document.getElementById('aeDevicesPanel');
+    if(p) p.innerHTML = renderDeviceList(uid, devs);
   }).catch(function(err){
-    console.warn('[DEVICES] Errore lettura Firebase:', err);
-    if(document.getElementById('aeDevicesPanel')){
-      document.getElementById('aeDevicesPanel').innerHTML = renderDeviceList(uid, cacheDevs || {});
-    }
+    console.warn('[DEVICES] Errore:', err);
+    const p = document.getElementById('aeDevicesPanel');
+    if(p) p.innerHTML = renderDeviceList(uid, {});
   });
 }
 
