@@ -695,7 +695,7 @@ select:hover{border-color:var(--green)}
 .pw-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0;line-height:1;transition:color .2s}
 .pw-eye:hover{color:var(--light)}
 /* ═══ GAME OVERLAY LAYOUT ═══ */
-#g501overlay{position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden}
+#g501overlay{position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden;height:100dvh}
 #g501overlay.open{display:flex}
 #g201overlay.open{display:flex}
 
@@ -740,24 +740,32 @@ select:hover{border-color:var(--green)}
 
 /* Mobile compact */
 @media(max-width:768px){
-  .g501-inner{ gap:4px; padding:6px 5px 3px; flex:1 1 0; min-height:0; }
+  .g501-inner{
+    gap:4px;
+    /* padding simmetrico sinistra=destra per evitare asimmetria */
+    padding:6px 0 3px;
+    flex:1 1 0;
+    min-height:0;
+    align-items:center; /* centra il pad orizzontalmente */
+  }
   .g501-pad{
     flex:0 0 auto !important;
-    /* Chiavi: cerchio perfetto = larghezza colonna */
-    --key: calc((100vw - 10px - 2 * clamp(8px, 2.2vw, 14px)) / 3);
+    /* Chiavi cerchio perfetto: dimensione = (100vw - 2*gap) / 3 */
+    --gap: clamp(8px, 2.2vw, 14px);
+    --key: calc((100vw - 2 * var(--gap)) / 3);
     grid-template-columns: repeat(3, var(--key));
     grid-auto-rows: var(--key);
-    gap: clamp(8px, 2.2vw, 14px);
-    width: calc(3 * var(--key) + 2 * clamp(8px, 2.2vw, 14px));
+    gap: var(--gap);
+    width: calc(3 * var(--key) + 2 * var(--gap));
   }
   .g501-key{
-    width: var(--key, calc((100vw - 10px - 2 * clamp(8px,2.2vw,14px)) / 3)) !important;
-    height: var(--key, calc((100vw - 10px - 2 * clamp(8px,2.2vw,14px)) / 3)) !important;
+    width: var(--key) !important;
+    height: var(--key) !important;
     aspect-ratio: unset !important;
   }
-  /* Score area prende il resto dell'altezza disponibile */
+  /* Score area prende tutto il resto dell'altezza disponibile */
   .g501-score-area{ flex:1 1 0; min-height:0; overflow:hidden; }
-  .g501-pts{ font-size:clamp(32px,8vh,72px); }
+  .g501-pts{ font-size:clamp(28px,7dvh,72px); }
 }
 
 /* Block 1: Score — green bg rounded, shrink if needed */
@@ -963,7 +971,7 @@ select:hover{border-color:var(--green)}
   .g501-clr-btn:hover{background:#2a2a2a;box-shadow:0 4px 14px rgba(255,255,255,0.10),inset 0 1px 0 rgba(255,255,255,0.14)}
 }
 
-/* Prevent double-tap zoom on all game overlay buttons */
+/* Tasti: touch-action:none elimina delay doppio tocco senza zoom */
 #g501overlay button,#g201overlay button,#pgOverlay button,
 #g501overlay .g501-key,#g201overlay .g501-key,#pgOverlay .g501-key,
 #g501overlay .g501-prev-btn,#g501overlay .g501-clr-btn,
@@ -971,7 +979,7 @@ select:hover{border-color:var(--green)}
 #pgOverlay .g501-prev-btn,#pgOverlay .g501-clr-btn,
 .g501-miss-screen button,.g501-co-screen button,.g501-2btn button,
 #g501cpAsk button{
-  touch-action:manipulation;
+  touch-action:none;
   -webkit-user-select:none;
   user-select:none;
 }
@@ -4966,7 +4974,7 @@ function renderAdmin501Panel(uid){
               const hasFuture=dbt&&dbt.length===n;
               return scores.map((v,i)=>{
                 const isLast=(i===n-1);
-                const inDbl=hasFuture?(dbt[i]>0):(v===0);
+                const inDbl=hasFuture?(dbt[i]!==0):(v===0);
                 let bg,tc;
                 if(isLast&&won){ bg=v>100?'rgba(250,204,21,.25)':'rgba(34,197,94,.22)'; tc=v>100?'#facc15':'var(--green)'; }
                 else if(inDbl){ bg='rgba(239,68,68,.22)'; tc=v===0?'rgba(248,113,113,.5)':'#f87171'; }
@@ -8475,7 +8483,8 @@ function render501SessPanel(){
         const hasFuture = dblTurns && dblTurns.length === n;
         return scores.map((v, i) => {
           const isLast = (i === n - 1);
-          const inDbl = hasFuture ? (dblTurns[i] > 0) : (v === 0);
+          // inDbl: true se doppie tirate (>0) o bust (-1); false se normale (0) o dati storici non-zero
+          const inDbl = hasFuture ? (dblTurns[i] !== 0) : (v === 0);
           let bg, textColor;
           if(isLast && won){
             bg = v > 100 ? 'rgba(250,204,21,.25)' : 'rgba(34,197,94,.22)';
