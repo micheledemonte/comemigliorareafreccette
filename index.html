@@ -681,11 +681,11 @@ select:hover{border-color:var(--green)}
 @media(max-width:600px){.cal-event-item .cei-actions{width:100%;margin-top:6px;padding-top:6px;border-top:1px solid var(--d4);display:flex;flex-direction:column;gap:6px}.cal-btns-row1{display:grid!important;grid-template-columns:1fr auto;align-items:center;gap:6px}.cal-btns-row1 .cal-ics-btn{width:100%}.cal-btns-row2{display:flex!important;align-items:center;gap:6px}.appt-btns-wrap{display:flex;flex-direction:column;gap:5px}.appt-btns-row1{display:grid!important;grid-template-columns:1fr auto;align-items:center;gap:6px}.appt-btns-row1 .cal-ics-btn{width:100%}.appt-btns-row2{display:flex!important;align-items:center;gap:6px}}
 .cal-event-item select{background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:5px 8px;border-radius:5px;font-size:12px;cursor:pointer;max-width:160px}
 .cal-event-item select:focus{outline:none;border-color:var(--green)}
-.cal-ics-btn{height:32px;border-radius:999px;background:var(--gdim);border:1px solid var(--green);color:var(--green);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;transition:all .2s;padding:0 12px;line-height:1;letter-spacing:.02em}
+.cal-ics-btn{height:26px;border-radius:999px;background:var(--gdim);border:1px solid var(--green);color:var(--green);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;transition:all .2s;padding:0 10px;line-height:1;letter-spacing:.02em}
 .cal-ics-btn:hover{background:#052e16;border-color:var(--green)}
 .cal-ics-btn.ics-saved{background:var(--d3);border-color:var(--d5);color:var(--mu2);cursor:default}
 .cal-ics-btn.ics-saved:hover{background:var(--d3);border-color:var(--d5)}
-.cal-move-btn{height:32px;border-radius:999px;background:transparent;border:1px solid var(--amber);color:var(--amber);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;padding:0 12px;line-height:1;letter-spacing:.02em}
+.cal-move-btn{height:26px;border-radius:999px;background:transparent;border:1px solid var(--amber);color:var(--amber);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;padding:0 10px;line-height:1;letter-spacing:.02em}
 .cal-move-btn:hover{background:rgba(245,158,11,.12)}
 .cal-myfilter-btn{background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:6px;padding:7px 14px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
 .cal-myfilter-btn.active{background:var(--gdim);border-color:var(--green);color:var(--green)}
@@ -740,10 +740,24 @@ select:hover{border-color:var(--green)}
 
 /* Mobile compact */
 @media(max-width:768px){
-  .g501-inner{ gap:4px; padding:6px 5px 3px; }
-  .g501-pad{ flex:1 1 0; }
-  .g501-key{ aspect-ratio:1 !important; }
-  .g501-score-area{ flex:0 0 auto; min-height:0; }
+  .g501-inner{ gap:4px; padding:6px 5px 3px; flex:1 1 0; min-height:0; }
+  .g501-pad{
+    flex:0 0 auto !important;
+    /* Chiavi: cerchio perfetto = larghezza colonna */
+    --key: calc((100vw - 10px - 2 * clamp(8px, 2.2vw, 14px)) / 3);
+    grid-template-columns: repeat(3, var(--key));
+    grid-auto-rows: var(--key);
+    gap: clamp(8px, 2.2vw, 14px);
+    width: calc(3 * var(--key) + 2 * clamp(8px, 2.2vw, 14px));
+  }
+  .g501-key{
+    width: var(--key, calc((100vw - 10px - 2 * clamp(8px,2.2vw,14px)) / 3)) !important;
+    height: var(--key, calc((100vw - 10px - 2 * clamp(8px,2.2vw,14px)) / 3)) !important;
+    aspect-ratio: unset !important;
+  }
+  /* Score area prende il resto dell'altezza disponibile */
+  .g501-score-area{ flex:1 1 0; min-height:0; overflow:hidden; }
+  .g501-pts{ font-size:clamp(32px,8vh,72px); }
 }
 
 /* Block 1: Score — green bg rounded, shrink if needed */
@@ -6662,7 +6676,7 @@ function calAdminBtns(ev, titleStr, adminOpts){
   const teacherName = teacher ? teacher.firstName+' '+teacher.lastName : null;
 
   const teacherB = (locked && teacherName)
-    ? '<span style="display:inline-flex;align-items:center;height:32px;padding:0 12px;border-radius:999px;background:var(--d3);border:1px solid var(--d5);color:var(--mu2);font-size:11px;font-weight:700;white-space:nowrap">'+teacherName+'</span>'
+    ? '<span style="display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:var(--d3);border:1px solid var(--d5);color:var(--mu2);font-size:11px;font-weight:700;white-space:nowrap">'+teacherName+'</span>'
     : '';
 
   const selB = (!locked && adminOpts !== undefined)
@@ -6676,7 +6690,7 @@ function calAdminBtns(ev, titleStr, adminOpts){
   // Bottone ELIMINA con testo (desktop e mobile)
   const delB = locked ? '' : '<button data-uid="'+ev.uid+'" data-idx="'+ev.idx
     +'" onclick="calDeleteAppt(this.dataset.uid,parseInt(this.dataset.idx))" title="Elimina appuntamento"'
-    +' style="background:transparent;border:1px solid #ef4444;color:#ef4444;border-radius:999px;padding:0 12px;height:32px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;letter-spacing:.04em">'
+    +' style="background:transparent;border:1px solid #ef4444;color:#ef4444;border-radius:999px;padding:0 10px;height:26px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;letter-spacing:.04em">'
     +'<img src="/cestino.svg" style="width:13px;height:13px;vertical-align:middle;filter:none" alt=""> ELIMINA</button>';
 
   // Layout 2 righe:
