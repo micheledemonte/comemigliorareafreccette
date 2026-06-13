@@ -241,7 +241,7 @@ button{cursor:pointer}
 /* Mobile/tablet: fixed window, track scrolls */
 @media(max-width:768px){
   .ld-pill{
-    width:min(430px, calc(100vw - 36px));
+    width:min(max-content, calc(100vw - 36px));
     height:58px;
     cursor:grab;
   }
@@ -924,15 +924,25 @@ select:hover{border-color:var(--green)}
 /* Leg row: griglia mobile 2 righe */
 @media(max-width:600px){
   .leg-data-grid{
-    grid-template-columns:auto auto auto auto !important;
+    grid-template-columns:1fr auto auto !important;
     grid-template-rows:auto auto;
     gap:3px 8px !important;
     font-size:11px !important;
   }
   .leg-data-grid > div{ white-space:nowrap; }
-  .leg-data-grid .leg-col-doppie{ grid-row:2; grid-column:1; }
-  .leg-data-grid .leg-col-pct   { grid-row:2; grid-column:2; }
-  .leg-data-grid .leg-col-extra { grid-row:2; grid-column:3 / span 2; }
+  /* Riga 1: col1=titolo(span1), col2=Turni, col3=Frecce */
+  .leg-data-grid .leg-col-title  { grid-row:1; grid-column:1; overflow:hidden; text-overflow:ellipsis; }
+  .leg-data-grid .leg-col-turni  { grid-row:1; grid-column:2; }
+  .leg-data-grid .leg-col-frecce { grid-row:1; grid-column:3; }
+  /* Riga 2: 4 colonne auto */
+  .leg-data-grid .leg-col-media  { grid-row:2; grid-column:1; }
+  .leg-data-grid .leg-col-doppie { grid-row:2; grid-column:2; }
+  .leg-data-grid .leg-col-pct    { grid-row:2; grid-column:3; }
+  .leg-data-grid .leg-col-extra  { grid-row:2; grid-column:4; }
+  /* Forzare 4 colonne in riga2 */
+  .leg-data-grid{
+    grid-template-columns:1fr auto auto auto !important;
+  }
 }
 /* Prev501 mode filter */
 #prev501ModeTraining.active,#prev501ModeTournament.active{background:var(--green);color:#000}
@@ -1657,7 +1667,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     </div>
   </div>
 </div>
-<button id="ldLogout" title="Logout" onclick="confirmLogout()" aria-label="Logout">⏻ LOGOUT</button>
+<button id="ldLogout" title="Logout" onclick="confirmLogout()" aria-label="Logout"><span style="color:#ef4444">⌽</span> LOGOUT</button>
 
 <!-- legacy nav (kept for DOM compatibility, hidden) -->
 <div class="nav-tabs" id="mainNav" aria-hidden="true">
@@ -3069,8 +3079,8 @@ function enterApp(){
     const blockedDesc = document.getElementById('blockedDesc');
     const blockedForm = document.getElementById('blockedForm');
     if(isDeviceBlocked && !isBlocked){
-      if(blockedTitle) blockedTitle.textContent = 'ACCESSO DA NUOVO DISPOSITIVO';
-      if(blockedDesc)  blockedDesc.textContent  = 'Hai raggiunto il limite di '+MAX_DEVICES+' dispositivi registrati. Invia una richiesta all\'amministratore per sbloccare questo dispositivo oppure rimuoverne uno precedente.';
+      if(blockedTitle) blockedTitle.textContent = 'ACCESSO DA TROPPI DISPOSITIVI';
+      if(blockedDesc)  blockedDesc.textContent  = 'Hai raggiunto il limite di '+MAX_DEVICES+' dispositivi diversi registrati. Invia una richiesta all\'amministratore per sbloccare il tuo profilo.';
       if(blockedForm)  blockedForm.dataset.type = 'device';
     }
     if(blockedSec) blockedSec.style.display='block';
@@ -3245,7 +3255,7 @@ const LD = {
   gestTab:         {id:'gestionale',  icon:'📋', label:'Gestionale'}, // admin-only
   calTab:          {id:'calendario',  icon:'📅', label:'Calendario'}, // admin-only
   analysisTab:     {id:'shotanalysis',icon:'📹', label:'Analisi'}, // admin-only
-  logoutTab:    {id:'__logout',    icon:'⏻',  label:'Logout', isLogout:true},
+  logoutTab:    {id:'__logout',    icon:'<span style="color:#ef4444">⌽</span>',  label:'Logout', isLogout:true},
   showAdmin:  false,
   current:    'training',
   currentIdx: 0,
@@ -3288,7 +3298,7 @@ function ldBuildDockBlocked(){
   LD.currentIdx = 0;
   const track = document.getElementById('ldTrack');
   track.innerHTML = `<div class="ld-item active" data-tab="__logout" style="color:rgba(239,68,68,0.75)">
-    <span class="ld-icon">🔒</span>
+    <span class="ld-icon" style="color:#ef4444">⌽</span>
     <span class="ld-label" style="color:rgba(239,68,68,0.6)">Bloccato</span>
   </div>`;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
@@ -5677,7 +5687,7 @@ function renderApptUser(){
 
     // Pillola insegnante (sempre visibile)
     const teacherB = teacher
-      ? '<span style="display:inline-flex;align-items:center;height:32px;padding:0 10px;border-radius:6px;background:var(--d3);border:1px solid var(--d5);color:var(--mu2);font-size:11px;font-weight:700;white-space:nowrap">👨‍🏫 '+teacher+'</span>'
+      ? '<span style="display:inline-flex;align-items:center;height:32px;padding:0 10px;border-radius:6px;background:var(--d3);border:1px solid var(--d5);color:var(--mu2);font-size:11px;font-weight:700;white-space:nowrap;max-width:min(150px,35vw);overflow:hidden;text-overflow:ellipsis;flex-shrink:1">👨‍🏫 '+teacher+'</span>'
       : '';
 
     // Pillola stato pagamento (sempre visibile)
@@ -5717,7 +5727,7 @@ function renderApptUser(){
         : (l.note?'<div style="font-size:12px;color:var(--muted);margin-top:2px">'+l.note+'</div>':'')
       )
       // Riga 4: pillole su una riga
-      +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px">'
+      +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;min-width:0">'
       +icsB+spostaB+pagBadge
       +'</div>'
       // Form spostamento collassabile
@@ -6687,12 +6697,12 @@ function calAdminBtns(ev, titleStr, adminOpts){
   const teacherName = teacher ? teacher.firstName+' '+teacher.lastName : null;
 
   const teacherB = (locked && teacherName)
-    ? '<span style="display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:999px;background:var(--d3);border:1px solid var(--d5);color:var(--mu2);font-size:11px;font-weight:700;white-space:nowrap">'+teacherName+'</span>'
+    ? '<span style="display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:999px;background:var(--d3);border:1px solid var(--d5);color:var(--mu2);font-size:11px;font-weight:700;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;flex-shrink:1">'+teacherName+'</span>'
     : '';
 
   const selB = (!locked && adminOpts !== undefined)
     ? '<select class="cal-admin-sel" data-uid="'+ev.uid+'" data-idx="'+ev.idx
-      +'" onchange="calAssignAdmin(this)" title="Assegna insegnante">'
+      +'" onchange="calAssignAdmin(this)" title="Assegna insegnante" style="max-width:min(160px,40vw);flex-shrink:1">'
       +'<option value="">— Insegnante —</option>'+adminOpts+'</select>'
     : '';
 
@@ -6708,7 +6718,7 @@ function calAdminBtns(ev, titleStr, adminOpts){
   // Riga 1: ICS/SALVATO + Insegnante (badge o select)
   // Riga 2: SPOSTA + ELIMINA
   // Su mobile il CSS cal-btns-row1 (grid 1fr auto) e cal-btns-row2 (flex) gestiscono il layout
-  return '<div class="cal-btns-row1" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+  return '<div class="cal-btns-row1" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0">'
     + icsB + teacherB + selB
     + '</div>'
     + (!locked
@@ -6724,7 +6734,7 @@ function calIcsBtn(ev, titleStr){
   const cls     = 'cal-ics-btn' + (isSaved ? ' ics-saved' : '');
   const label   = isSaved ? '&#x2713; SALVATO' : '&#x1F4C5; AGGIUNGI AL CALENDARIO';
   const safeTitle = titleStr.replace(/"/g,'&quot;');
-  return '<button class="'+cls+'" data-dt="'+ev.dt+'" data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" data-title="'+safeTitle+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo">'+label+'</button>';
+  return '<button class="'+cls+'" data-dt="'+ev.dt+'" data-uid="'+ev.uid+'" data-idx="'+ev.idx+'" data-title="'+safeTitle+'" onclick="calExportICS(this)" title="Aggiungi al calendario del dispositivo" style="max-width:min(220px,55vw);flex-shrink:1">'+label+'</button>';
 }
 
 // ── Filtro "I miei appuntamenti" ─────────────────────────────────────────────
@@ -8565,10 +8575,10 @@ function render501SessPanel(){
 
       return `<div class="${rowClass}" style="${rowClass?'':'padding:6px 0;border-bottom:1px solid var(--d4)'}">
         <div class="leg-data-grid" style="display:grid;grid-template-columns:2fr repeat(4,1fr) 0.9fr 1.4fr;gap:4px;font-size:12px;align-items:center">
-          <div style="color:${legColor};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${legLabelBase} ${toggleBtn}</div>
-          <div><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
-          <div><span style="color:var(--muted)">Frecce: </span>${darts}</div>
-          <div><span style="color:var(--muted)">Media: </span>${avgVal}</div>
+          <div class="leg-col-title" style="color:${legColor};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${legLabelBase} ${toggleBtn}</div>
+          <div class="leg-col-turni"><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
+          <div class="leg-col-frecce"><span style="color:var(--muted)">Frecce: </span>${darts}</div>
+          <div class="leg-col-media"><span style="color:var(--muted)">Media: </span>${avgVal}</div>
           <div class="leg-col-doppie"><span style="color:var(--muted)">Doppie: </span>${dblStr}</div>
           <div class="leg-col-pct"><span style="color:var(--muted)">%: </span>${dblPct(l)}%</div>
           <div class="leg-col-extra">${col7}</div>
