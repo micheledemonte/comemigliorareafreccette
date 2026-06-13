@@ -2963,37 +2963,23 @@ function adminResetDevices(uid){
   );
 }
 
-// Admin: rimuove un singolo dispositivo direttamente da Firebase
+// Admin: rimuove un singolo dispositivo direttamente da Firebase (solo Firebase, nessuna cache)
 function adminRemoveDeviceFB(uid, fp){
   showConfirmPopup(
     'Rimuovi dispositivo',
     'Vuoi rimuovere questo dispositivo? Al prossimo accesso da quel dispositivo conterà come nuovo.',
     ()=>{
-      const el = document.getElementById('aeDevicesPanel');
-      if(_fbDB){
-        _fbDB.ref('db/userData/'+uid+'/__devices/'+fp).remove().then(()=>{
-          // Rileggi tutti i dispositivi aggiornati da Firebase
-          _fbDB.ref('db/userData/'+uid+'/__devices').once('value').then(snap=>{
-            const devs = snap.val() || {};
-            if(_dbCache && _dbCache.userData){
-              if(!_dbCache.userData[uid]) _dbCache.userData[uid] = {};
-              _dbCache.userData[uid].__devices = devs;
-            }
-            if(document.getElementById('aeDevicesPanel')){
-              document.getElementById('aeDevicesPanel').innerHTML = renderDeviceList(uid, devs);
-            }
-          });
-        }).catch(err=>{
-          console.error('Errore rimozione dispositivo Firebase:', err);
-          if(el) el.innerHTML = renderDeviceList(uid);
+      if(!_fbDB){ console.warn('[DEVICES] Firebase non disponibile'); return; }
+      _fbDB.ref('db/userData/'+uid+'/__devices/'+fp).remove().then(()=>{
+        // Rileggi da Firebase dopo la rimozione
+        _fbDB.ref('db/userData/'+uid+'/__devices').once('value').then(snap=>{
+          const devs = snap.val() || {};
+          const panel = document.getElementById('aeDevicesPanel');
+          if(panel) panel.innerHTML = renderDeviceList(uid, devs);
         });
-      } else {
-        // Fallback: rimozione dalla cache locale
-        const devs = getDevices(uid);
-        delete devs[fp];
-        saveDevices(uid, devs);
-        if(el) el.innerHTML = renderDeviceList(uid);
-      }
+      }).catch(err=>{
+        console.error('[DEVICES] Errore rimozione:', err);
+      });
     },
     {okLabel:'RIMUOVI', okBg:'#dc2626', okColor:'#fff'}
   );
@@ -4853,29 +4839,39 @@ function selAdmin(uid){
   const devTitle = document.getElementById('adminDevicesTitle');
   const devPanel = document.getElementById('aeDevicesPanel');
   if(devPanel){
+    const _devUid = selAU.id; // cattura locale per evitare race condition
     if(devTitle) devTitle.textContent = 'DISPOSITIVI REGISTRATI — ' + (selAU.firstName||'').toUpperCase() + ' ' + (selAU.lastName||'').toUpperCase();
     devPanel.innerHTML = '<p style="font-size:12px;color:var(--muted)">Caricamento...</p>';
-    // Lettura diretta da Firebase per avere dati sempre aggiornati
-    if(_fbDB){
-      _fbDB.ref('db/userData/'+selAU.id+'/__devices').once('value').then(snap=>{
-        const devs = snap.val() || {};
-        // Aggiorna anche la cache locale se disponibile
-        if(_dbCache && _dbCache.userData){
-          if(!_dbCache.userData[selAU.id]) _dbCache.userData[selAU.id] = {};
-          _dbCache.userData[selAU.id].__devices = devs;
-        }
-        if(document.getElementById('aeDevicesPanel')){
-          // Passa devs direttamente per evitare problemi di cache
-          document.getElementById('aeDevicesPanel').innerHTML = renderDeviceList(selAU.id, devs);
-        }
-      }).catch(()=>{
-        if(document.getElementById('aeDevicesPanel')){
-          document.getElementById('aeDevicesPanel').innerHTML = renderDeviceList(selAU.id);
-        }
-      });
-    } else {
-      devPanel.innerHTML = renderDeviceList(selAU.id);
-    }
+    // Lettura esclusiva da Firebase — nessun fallback su cache
+    if(!_fbDB){ devPanel.innerHTML = ''; return; }
+    // Prova prima il path specifico; se vuoto, legge l'intero userData[uid] come fallback
+    _fbDB.ref('db/userData/'+_devUid+'/__devices').once('value').then(snap=>{
+      let devs = snap.val();
+      console.log('[DEVICES] Firebase snap uid='+_devUid+' val=', devs);
+      if(devs && typeof devs === 'object' && Object.keys(devs).length > 0){
+        // Dati trovati nel path specifico
+        const panel = document.getElementById('aeDevicesPanel');
+        if(panel) panel.innerHTML = renderDeviceList(_devUid, devs);
+      } else {
+        // Path specifico vuoto — leggi l'intero nodo userData[uid] come fallback retroattivo
+        console.log('[DEVICES] Path specifico vuoto, leggo intero nodo userData/'+_devUid);
+        _fbDB.ref('db/userData/'+_devUid).once('value').then(snap2=>{
+          const userData = snap2.val();
+          console.log('[DEVICES] userData completo:', userData);
+          const devs2 = (userData && userData.__devices) ? userData.__devices : {};
+          const panel = document.getElementById('aeDevicesPanel');
+          if(panel) panel.innerHTML = renderDeviceList(_devUid, devs2);
+        }).catch(err=>{
+          console.warn('[DEVICES] Errore lettura userData:', err);
+          const panel = document.getElementById('aeDevicesPanel');
+          if(panel) panel.innerHTML = '';
+        });
+      }
+    }).catch(err=>{
+      console.warn('[DEVICES] Errore lettura __devices:', err);
+      const panel = document.getElementById('aeDevicesPanel');
+      if(panel) panel.innerHTML = '';
+    });
   }
 }
 
