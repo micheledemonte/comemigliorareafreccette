@@ -8967,7 +8967,10 @@ function g201CoCancel(){
 }
 
 function _g201RecordLeg(won, checkoutDarts){
-  const darts=won?G201.legDarts:0;
+  // G201.legDarts conta sempre +3 per l'ultimo turno (checkout)
+  // ma checkoutDarts dice quante frecce reali sono state usate (1,2,3)
+  // quindi: darts reali = (legDarts - 3) + checkoutDarts
+  const darts=won?(G201.legDarts-3+checkoutDarts):0;
   if(won) G201.winsCount++;
   G201.legsResults.push({leg:G201.currentLeg+1,darts,won,checkoutDarts:won?checkoutDarts:0});
   G201.currentLeg++;
