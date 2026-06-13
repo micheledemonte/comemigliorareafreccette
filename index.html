@@ -695,7 +695,7 @@ select:hover{border-color:var(--green)}
 .pw-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0;line-height:1;transition:color .2s}
 .pw-eye:hover{color:var(--light)}
 /* ═══ GAME OVERLAY LAYOUT ═══ */
-#g501overlay{position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden;height:100svh}
+#g501overlay{position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden}
 #g501overlay.open{display:flex}
 #g201overlay.open{display:flex}
 
@@ -10275,53 +10275,81 @@ if(document.readyState==='loading'){
 })();
 
 // ══════════════════════════════════════════════════
-// GAME KEYPAD — adatta dimensione cerchi a visualViewport (Safari barra)
+// GAME KEYPAD — adatta layout a visualViewport (risolve barra Safari/browser)
 // ══════════════════════════════════════════════════
 (function(){
-  // Altezza fissa approssimativa dei 3 blocchi top + gaps (px)
-  // score-area ~90px, stats ~52px, display-row ~52px, gaps ~20px = ~214px
-  var TOP_H = 214;
-  var PAD_GAP = Math.max(8, Math.round(window.innerWidth * 0.022));
+  var OVERLAY_IDS = ['g501overlay','g201overlay','pgOverlay'];
+  var PAD_IDS     = ['g501pad'];
 
-  function updateKeySize(){
-    var vp = window.visualViewport;
-    var avail = vp ? vp.height : window.innerHeight;
-    var padH = Math.max(avail - TOP_H, 200); // altezza disponibile per il pad
-    // 4 righe + 3 gap verticali = key = (padH - 3*gap) / 4
-    var keyByH = Math.floor((padH - 3 * PAD_GAP) / 4);
-    // 3 colonne + 2 gap + 2*8px laterali = key = (vw - 16 - 2*gap) / 3
-    var vw = window.innerWidth;
-    var keyByW = Math.floor((vw - 16 - 2 * PAD_GAP) / 3);
-    // Prende il minore dei due per garantire cerchio perfetto entro entrambi i limiti
-    var key = Math.min(keyByH, keyByW);
-    // Applica come CSS custom property all'overlay
-    var overlays = ['g501overlay','g201overlay','pgOverlay'];
-    overlays.forEach(function(id){
-      var el = document.getElementById(id);
-      if(el) el.style.setProperty('--key-dyn', key + 'px');
+  function getOverlays(){ return OVERLAY_IDS.map(function(id){ return document.getElementById(id); }).filter(Boolean); }
+
+  function updateLayout(){
+    var vp  = window.visualViewport;
+    var vh  = vp ? vp.height  : window.innerHeight;
+    var vw  = vp ? vp.width   : window.innerWidth;
+    var top = vp ? vp.offsetTop : 0;
+
+    // ── Step 1: imposta altezza overlay = area VISIBILE esatta ─────────
+    getOverlays().forEach(function(el){
+      el.style.height = vh + 'px';
+      // Sposta l'overlay al top della viewport visibile (quando la barra appare,
+      // visualViewport.offsetTop può essere > 0 su alcuni browser)
+      el.style.top = top + 'px';
+    });
+
+    // ── Step 2: misura l'altezza REALE dei 3 blocchi top nel g501overlay ─
+    var ov = document.getElementById('g501overlay');
+    if(!ov || !ov.classList.contains('open')) return;
+
+    var scoreEl   = ov.querySelector('.g501-score-area');
+    var statsEl   = ov.querySelector('.g501-stats');
+    var displayEl = ov.querySelector('.g501-display-row');
+    var innerEl   = ov.querySelector('.g501-inner');
+    if(!scoreEl || !statsEl || !displayEl || !innerEl) return;
+
+    // Leggi le dimensioni reali renderizzate
+    var topH = scoreEl.offsetHeight + statsEl.offsetHeight + displayEl.offsetHeight;
+    var gapPx = parseInt(getComputedStyle(innerEl).gap) || 4;
+    var padTop = 6; // padding-top di g501-inner
+    var padBot = 3; // padding-bottom
+    var available = vh - topH - (3 * gapPx) - padTop - padBot;
+
+    // ── Step 3: calcola dimensione cerchio ottimale ───────────────────────
+    var gap = Math.max(8, Math.round(vw * 0.022));
+    gap = Math.min(gap, 14);
+    var pad = 8; // padding laterale dell'inner
+    var keyByW = Math.floor((vw - 2 * pad - 2 * gap) / 3);
+    var keyByH = Math.floor((Math.max(available, 100) - 3 * gap) / 4);
+    var key = Math.min(keyByW, keyByH);
+
+    // ── Step 4: applica --key-dyn a tutti gli overlay ─────────────────────
+    getOverlays().forEach(function(el){
+      el.style.setProperty('--key-dyn', key + 'px');
     });
   }
 
-  // Esegui subito e su ogni resize / scroll della viewport (Safari barra)
+  // Listener su visualViewport (Safari aggiorna questo quando la barra appare/scompare)
   if(window.visualViewport){
-    window.visualViewport.addEventListener('resize', updateKeySize);
-    window.visualViewport.addEventListener('scroll', updateKeySize);
+    window.visualViewport.addEventListener('resize', updateLayout);
+    window.visualViewport.addEventListener('scroll', updateLayout);
   }
-  window.addEventListener('resize', updateKeySize);
-  // Aggiorna anche quando si apre/chiude l'overlay
+  window.addEventListener('resize', updateLayout);
+
+  // Aggiorna quando un overlay diventa visibile
   document.addEventListener('DOMContentLoaded', function(){
-    updateKeySize();
-    var obs = new MutationObserver(function(muts){
-      muts.forEach(function(m){
-        if(m.type==='attributes' && m.attributeName==='style') updateKeySize();
-      });
+    // Osserva quando g501overlay viene aperto (classe 'open' aggiunta)
+    var obs = new MutationObserver(function(){
+      // Aspetta un frame per permettere al DOM di renderizzare le dimensioni
+      requestAnimationFrame(updateLayout);
     });
-    ['g501overlay','g201overlay','pgOverlay'].forEach(function(id){
+    OVERLAY_IDS.forEach(function(id){
       var el = document.getElementById(id);
-      if(el) obs.observe(el, {attributes:true});
+      if(el) obs.observe(el, {attributes:true, attributeFilter:['class','style']});
     });
+    updateLayout();
   });
-  updateKeySize();
+  // Primo aggiornamento immediato
+  setTimeout(updateLayout, 0);
 })();
 
 // ══════════════════════════════════════════════════
