@@ -2152,7 +2152,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <!-- 3b. DISPOSITIVI REGISTRATI (sempre visibile) -->
     <div class="pc" id="adminDevicesSection" style="margin-top:8px">
       <h3 id="adminDevicesTitle">DISPOSITIVI REGISTRATI</h3>
-      <div id="aeDevicesPanel" style="margin-top:10px"><p style="font-size:11px;color:#f87171">PANEL VISIBILE - in attesa di selezione utente</p></div>
+      <div id="aeDevicesPanel" style="margin-top:10px"></div>
     </div>
 
     <!-- 4. STATISTICHE UTENTE -->
@@ -3024,31 +3024,24 @@ function adminRemoveDeviceFB(uid, fp){
 // Carica e mostra i dispositivi di un utente nel pannello Admin
 // Legge direttamente dal path Firebase dedicato ai __devices
 function adminLoadDevices(uid){
-  // Usa setTimeout per eseguire DOPO tutto il codice sincrono di selAdmin
   setTimeout(function(){
-  const panel = document.getElementById('aeDevicesPanel');
-  if(!panel) return;
-  // Mostra uid nel pannello per debug
-  panel.innerHTML = '<p style="font-size:11px;color:var(--muted);font-family:monospace">Caricamento uid: '+uid+'...</p>';
-  if(!_fbDB){
-    panel.innerHTML = '<p style="font-size:11px;color:#f87171">Firebase non disponibile</p>';
-    return;
-  }
-  _fbDB.ref('db/userData/'+uid+'/__devices').once('value').then(function(snap){
-    const devs = snap.val();
-    // Mostra risultato raw nel pannello per debug
-    const debugInfo = '<p style="font-size:10px;color:var(--muted);font-family:monospace;margin-bottom:6px">uid: '+uid+' | snap.val(): '+(devs?JSON.stringify(Object.keys(devs)):'null')+'</p>';
-    if(_dbCache && _dbCache.userData){
-      if(!_dbCache.userData[uid]) _dbCache.userData[uid] = {};
-      _dbCache.userData[uid].__devices = devs || {};
-    }
-    const p = document.getElementById('aeDevicesPanel');
-    if(p) p.innerHTML = debugInfo + renderDeviceList(uid, devs || {});
-  }).catch(function(err){
-    const p = document.getElementById('aeDevicesPanel');
-    if(p) p.innerHTML = '<p style="font-size:11px;color:#f87171;font-family:monospace">Errore: '+err.message+'</p>';
-  });
-  }, 300); // setTimeout 300ms
+    const panel = document.getElementById('aeDevicesPanel');
+    if(!panel) return;
+    panel.innerHTML = '<p style="font-size:12px;color:var(--muted)">Caricamento...</p>';
+    if(!_fbDB){ panel.innerHTML = ''; return; }
+    _fbDB.ref('db/userData/'+uid+'/__devices').once('value').then(function(snap){
+      const devs = snap.val() || {};
+      if(_dbCache && _dbCache.userData){
+        if(!_dbCache.userData[uid]) _dbCache.userData[uid] = {};
+        _dbCache.userData[uid].__devices = devs;
+      }
+      const p = document.getElementById('aeDevicesPanel');
+      if(p) p.innerHTML = renderDeviceList(uid, devs);
+    }).catch(function(err){
+      const p = document.getElementById('aeDevicesPanel');
+      if(p) p.innerHTML = '';
+    });
+  }, 300);
 }
 
 // Rende l'HTML della lista dispositivi per un utente (usato nell'Admin panel)
@@ -3069,7 +3062,8 @@ function renderDeviceList(uid, devsOverride){
   html += keys.map(fp=>{
     const d = devs[fp];
     const isThis = fp === myFp;
-    const lastSeen = d.lastSeen ? new Date(d.lastSeen).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+    const _lsDate = d.lastSeen ? new Date(d.lastSeen) : null;
+    const lastSeen = (_lsDate && !isNaN(_lsDate)) ? _lsDate.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
     const devName = d.name || 'Dispositivo sconosciuto';
     return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--d4)">
       <div style="width:36px;height:36px;border-radius:50%;background:var(--d4);border:1.5px solid var(--d5);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px">📱</div>
