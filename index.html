@@ -2574,19 +2574,30 @@ let _lastSaveTime = 0;   // ms timestamp of last completed save
 let _saveInFlight = false; // true while a save is pending or running
 function saveDBToCloud(){
   if(!_firebaseOK || !_fbDB) return;
-  _saveInFlight = true;   // mark: save pending
+  _saveInFlight = true;
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(async ()=>{
     try{
-      // Costruisci una copia del DB senza __devices in userData
-      // I dispositivi vengono scritti separatamente con saveDevicesDirect
-      const dbToSave = deepClean(_dbCache);
-      if(dbToSave.userData){
-        Object.keys(dbToSave.userData).forEach(uid=>{
-          if(dbToSave.userData[uid]) delete dbToSave.userData[uid].__devices;
+      const cache = deepClean(_dbCache);
+      // Salva users separatamente
+      await _fbDB.ref('db/users').set(cache.users || []);
+      // Salva ogni userData[uid] separatamente SENZA __devices
+      // (i __devices hanno il loro path dedicato e non vanno mai sovrascritti)
+      if(cache.userData){
+        const updates = {};
+        Object.keys(cache.userData).forEach(uid=>{
+          const ud = Object.assign({}, cache.userData[uid]);
+          delete ud.__devices; // non toccare mai __devices
+          updates['db/userData/'+uid] = ud;
         });
+        if(Object.keys(updates).length > 0){
+          await _fbDB.ref('/').update(updates);
+        }
       }
-      await _fbDB.ref('db').set(dbToSave);
+      // Salva requests se presenti
+      if(cache.requests !== undefined){
+        await _fbDB.ref('db/requests').set(cache.requests || null);
+      }
       _lastSaveTime = Date.now();
       console.log('✓ Firebase DB saved');
     } catch(e){
