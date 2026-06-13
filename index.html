@@ -678,7 +678,20 @@ select:hover{border-color:var(--green)}
 .cal-event-item .cei-name{font-weight:600;font-size:14px;color:var(--light)}
 .cal-event-item .cei-meta{font-size:12px;color:var(--mu2);margin-top:2px}
 .cal-event-item .cei-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0}
-@media(max-width:600px){.cal-event-item .cei-actions{width:100%;margin-top:6px;padding-top:6px;border-top:1px solid var(--d4);display:flex;flex-direction:column;gap:6px}.cal-btns-row1{display:grid!important;grid-template-columns:1fr auto;align-items:center;gap:6px}.cal-btns-row1 .cal-ics-btn{width:100%}.cal-btns-row2{display:flex!important;align-items:center;gap:6px}.appt-btns-wrap{display:flex;flex-direction:column;gap:5px}.appt-btns-row1{display:grid!important;grid-template-columns:1fr auto;align-items:center;gap:6px}.appt-btns-row1 .cal-ics-btn{width:100%}.appt-btns-row2{display:flex!important;align-items:center;gap:6px}}
+@media(max-width:600px){
+  .cal-event-item .cei-actions{width:100%;margin-top:6px;padding-top:6px;border-top:1px solid var(--d4);display:flex;flex-direction:column;gap:6px}
+  /* Admin calendar: ICS su riga 1, teacher badge su riga 2, SPOSTA+ELIMINA su riga 3 */
+  .cal-btns-row1{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:5px!important}
+  .cal-btns-row1 .cal-ics-btn{width:100%!important;box-sizing:border-box}
+  .cal-btns-row1 select,.cal-btns-row1 span{width:100%!important;max-width:100%!important;box-sizing:border-box}
+  .cal-btns-row2{display:flex!important;align-items:center;gap:6px}
+  /* User appointments: stesso layout verticale */
+  .appt-btns-wrap{display:flex;flex-direction:column;gap:5px}
+  .appt-btns-row1{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:5px!important}
+  .appt-btns-row1 .cal-ics-btn{width:100%!important;box-sizing:border-box}
+  .appt-btns-row1 span{width:100%!important;max-width:100%!important;box-sizing:border-box;text-align:center}
+  .appt-btns-row2{display:flex!important;align-items:center;gap:6px}
+}
 .cal-event-item select{background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:0 8px;height:28px;border-radius:5px;font-size:12px;cursor:pointer;max-width:160px}
 .cal-event-item select:focus{outline:none;border-color:var(--green)}
 .cal-ics-btn{height:28px;border-radius:999px;background:var(--gdim);border:1px solid var(--green);color:var(--green);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;transition:all .2s;padding:0 10px;line-height:1;letter-spacing:.02em}
@@ -923,26 +936,29 @@ select:hover{border-color:var(--green)}
 .tour-leg-row.lost{background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.2)}
 /* Leg row: griglia mobile 2 righe */
 @media(max-width:600px){
+  /* Layout 3 righe:
+     Riga 1: titolo (larghezza piena)
+     Riga 2: Turni · Frecce · Media
+     Riga 3: Doppie · % · Checkout/Rimasto
+  */
   .leg-data-grid{
-    grid-template-columns:1fr auto auto !important;
-    grid-template-rows:auto auto;
-    gap:3px 8px !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:2px !important;
     font-size:11px !important;
   }
-  .leg-data-grid > div{ white-space:nowrap; }
-  /* Riga 1: col1=titolo(span1), col2=Turni, col3=Frecce */
-  .leg-data-grid .leg-col-title  { grid-row:1; grid-column:1; overflow:hidden; text-overflow:ellipsis; }
-  .leg-data-grid .leg-col-turni  { grid-row:1; grid-column:2; }
-  .leg-data-grid .leg-col-frecce { grid-row:1; grid-column:3; }
-  /* Riga 2: 4 colonne auto */
-  .leg-data-grid .leg-col-media  { grid-row:2; grid-column:1; }
-  .leg-data-grid .leg-col-doppie { grid-row:2; grid-column:2; }
-  .leg-data-grid .leg-col-pct    { grid-row:2; grid-column:3; }
-  .leg-data-grid .leg-col-extra  { grid-row:2; grid-column:4; }
-  /* Forzare 4 colonne in riga2 */
-  .leg-data-grid{
-    grid-template-columns:1fr auto auto auto !important;
-  }
+  /* Nascondi tutti i div originali su mobile, li sostituiamo con le righe */
+  .leg-data-grid .leg-col-title,
+  .leg-data-grid .leg-col-turni,
+  .leg-data-grid .leg-col-frecce,
+  .leg-data-grid .leg-col-media,
+  .leg-data-grid .leg-col-doppie,
+  .leg-data-grid .leg-col-pct,
+  .leg-data-grid .leg-col-extra{ display:none !important; }
+  /* Mostra solo i wrapper riga */
+  .leg-data-grid .leg-row1{ display:flex !important; align-items:center; gap:4px; min-width:0; overflow:hidden; }
+  .leg-data-grid .leg-row2{ display:flex !important; align-items:center; gap:6px; flex-wrap:nowrap; white-space:nowrap; }
+  .leg-data-grid .leg-row3{ display:flex !important; align-items:center; gap:6px; flex-wrap:nowrap; white-space:nowrap; }
 }
 /* Prev501 mode filter */
 #prev501ModeTraining.active,#prev501ModeTournament.active{background:var(--green);color:#000}
@@ -8639,6 +8655,10 @@ function render501SessPanel(){
           <div class="leg-col-doppie"><span style="color:var(--muted)">Doppie: </span>${dblStr}</div>
           <div class="leg-col-pct"><span style="color:var(--muted)">%: </span>${dblPct(l)}%</div>
           <div class="leg-col-extra">${col7}</div>
+          <!-- Righe mobile (visibili solo su <600px via CSS) -->
+          <div class="leg-row1" style="display:none;color:${legColor};font-weight:600">${legLabelBase} ${toggleBtn}</div>
+          <div class="leg-row2" style="display:none;font-size:11px"><span style="color:var(--muted)">T:</span> ${l.rounds||0} &nbsp;<span style="color:var(--muted)">F:</span> ${darts} &nbsp;<span style="color:var(--muted)">M:</span> ${avgVal}</div>
+          <div class="leg-row3" style="display:none;font-size:11px"><span style="color:var(--muted)">D:</span> ${dblStr} &nbsp;<span style="color:var(--muted)">%:</span> ${dblPct(l)}% &nbsp;${col7.replace(/<div>/g,'').replace(/<\/div>/g,'')}</div>
         </div>
         ${scoresHtml}
       </div>`;
