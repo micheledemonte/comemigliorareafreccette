@@ -695,7 +695,7 @@ select:hover{border-color:var(--green)}
 .pw-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0;line-height:1;transition:color .2s}
 .pw-eye:hover{color:var(--light)}
 /* ═══ GAME OVERLAY LAYOUT ═══ */
-#g501overlay{position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden;height:100dvh}
+#g501overlay{position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden;height:100svh}
 #g501overlay.open{display:flex}
 #g201overlay.open{display:flex}
 
@@ -764,9 +764,11 @@ select:hover{border-color:var(--green)}
     height: var(--key) !important;
     aspect-ratio: unset !important;
   }
-  /* Score area prende il resto dell'altezza: si adatta a schermo pieno e Safari */
+  /* Score area: NON si espande — tiene dimensione naturale (i 3 blocchi top sono fissi) */
   .g501-score-area{ flex:1 1 0; min-height:0; overflow:hidden; }
-  .g501-pts{ font-size:clamp(28px,7dvh,72px); }
+  .g501-pts{ font-size:clamp(28px,6svh,72px); }
+  /* Il pad usa --key-dyn calcolata da JS visualViewport (aggiornata on resize) */
+  .g501-pad{ --key: var(--key-dyn, calc((100vw - 16px - 2 * clamp(8px, 2.2vw, 14px)) / 3)); }
 }
 
 /* Block 1: Score — green bg rounded, shrink if needed */
@@ -2206,7 +2208,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <div class="g501-stat"><div class="gsl" id="g501third_lbl">Chiusure</div><div class="gsv" id="g501closures">0</div></div>
   </div>
   <div class="g501-display-row">
-    <button class="g501-prev-btn" onclick="g501Prev()">TURNO PREC.</button>
+    <button class="g501-prev-btn" id="g501prevBtn" onclick="g501PrevOrRimasti()">TURNO PREC.</button>
     <div class="g501-display" id="g501display">—</div>
     <button class="g501-clr-btn" onclick="g501Clear()">CANCELLA</button>
   </div>
@@ -7594,6 +7596,14 @@ function g501UpdateDisplay(){
     }
   }
 
+  // TURNO PREC. / RIMASTI: diventa RIMASTI quando score<170 e c'è testo inserito
+  const prevBtn = document.getElementById('g501prevBtn');
+  if(prevBtn && (G.mode==='free' || G.mode==='tournament')){
+    const showRimasti = G.score < 170 && G.enteredStr.length > 0;
+    prevBtn.textContent = showRimasti ? 'RIMASTI' : 'TURNO PREC.';
+    prevBtn.dataset.rimasti = showRimasti ? '1' : '0';
+  }
+
   // OK button state — preview what pressing it will do
   const btn=document.getElementById('g501okBtn');
   if(!G.enteredStr){
@@ -8035,6 +8045,30 @@ function g501Digit(d){
   g501UpdateDisplay();
 }
 function g501Clear(){ G.enteredStr=''; g501UpdateDisplay(); }
+function g501PrevOrRimasti(){
+  const pb = document.getElementById('g501prevBtn');
+  if(pb && pb.dataset.rimasti === '1'){
+    g501Rimasti();
+  } else {
+    g501Prev();
+  }
+}
+
+// RIMASTI: interpreta il valore inserito come punteggio RIMANENTE
+// Il punteggio fatto = score_attuale - valore_inserito
+function g501Rimasti(){
+  if(!G.enteredStr) return;
+  const rimasti = parseInt(G.enteredStr);
+  if(isNaN(rimasti) || rimasti < 0 || rimasti >= G.score) { G.enteredStr=''; g501UpdateDisplay(); return; }
+  // punteggio fatto in questo turno
+  const pts = G.score - rimasti;
+  if(pts <= 0 || pts > 180) { G.enteredStr=''; g501UpdateDisplay(); return; }
+  // Simula l'inserimento del punteggio fatto e chiama g501OKBtn
+  G.enteredStr = String(pts);
+  g501UpdateDisplay();
+  g501OKBtn();
+}
+
 function g501Prev(){
   if(!G.turns.length) return;
   g501Restore(G.turns.pop());
@@ -10238,6 +10272,56 @@ if(document.readyState==='loading'){
     }
     _lastTouch = now;
   }, {passive:false});
+})();
+
+// ══════════════════════════════════════════════════
+// GAME KEYPAD — adatta dimensione cerchi a visualViewport (Safari barra)
+// ══════════════════════════════════════════════════
+(function(){
+  // Altezza fissa approssimativa dei 3 blocchi top + gaps (px)
+  // score-area ~90px, stats ~52px, display-row ~52px, gaps ~20px = ~214px
+  var TOP_H = 214;
+  var PAD_GAP = Math.max(8, Math.round(window.innerWidth * 0.022));
+
+  function updateKeySize(){
+    var vp = window.visualViewport;
+    var avail = vp ? vp.height : window.innerHeight;
+    var padH = Math.max(avail - TOP_H, 200); // altezza disponibile per il pad
+    // 4 righe + 3 gap verticali = key = (padH - 3*gap) / 4
+    var keyByH = Math.floor((padH - 3 * PAD_GAP) / 4);
+    // 3 colonne + 2 gap + 2*8px laterali = key = (vw - 16 - 2*gap) / 3
+    var vw = window.innerWidth;
+    var keyByW = Math.floor((vw - 16 - 2 * PAD_GAP) / 3);
+    // Prende il minore dei due per garantire cerchio perfetto entro entrambi i limiti
+    var key = Math.min(keyByH, keyByW);
+    // Applica come CSS custom property all'overlay
+    var overlays = ['g501overlay','g201overlay','pgOverlay'];
+    overlays.forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.style.setProperty('--key-dyn', key + 'px');
+    });
+  }
+
+  // Esegui subito e su ogni resize / scroll della viewport (Safari barra)
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', updateKeySize);
+    window.visualViewport.addEventListener('scroll', updateKeySize);
+  }
+  window.addEventListener('resize', updateKeySize);
+  // Aggiorna anche quando si apre/chiude l'overlay
+  document.addEventListener('DOMContentLoaded', function(){
+    updateKeySize();
+    var obs = new MutationObserver(function(muts){
+      muts.forEach(function(m){
+        if(m.type==='attributes' && m.attributeName==='style') updateKeySize();
+      });
+    });
+    ['g501overlay','g201overlay','pgOverlay'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) obs.observe(el, {attributes:true});
+    });
+  });
+  updateKeySize();
 })();
 
 // ══════════════════════════════════════════════════
