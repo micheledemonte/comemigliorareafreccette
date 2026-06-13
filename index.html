@@ -5016,10 +5016,10 @@ function addAdmin501Sess(uid){
   const date=new Date(sess.__meta.savedAt).toLocaleDateString('it-IT');
   if(mode==='training'){
     if(!sess.legs) return;
-    arr.push({key,date,legs:sess.legs});
+    arr.push({key,date,legs:sess.legs,isTournament:false});
   } else {
     const allLegs=(sess.sets||[]).flatMap(s=>s.legs||[]);
-    arr.push({key,date,legs:allLegs,sets:sess.sets||[]});
+    arr.push({key,date,legs:allLegs,sets:sess.sets||[],isTournament:true,tourName:sess.__meta?.tourName||''});
   }
   renderAdmin501Panel(uid);
 }
@@ -5031,8 +5031,156 @@ function renderAdmin501Panel(uid){
   const mode = (_admin501Mode && _admin501Mode[uid]) || 'training';
   const selected=_adminSelected501[uid][mode]||[];
   if(!selected.length){panel.innerHTML='';return;}
+
+  // Costruisce il card di una sessione usando lo stesso stile dell'utente
+  function adminSessCard(s, idx){
+    const legs = s.legs;
+    const isTour = mode === 'tournament';
+
+    function dblPct(l){ return (l.doublesThrown||0)>0 ? Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100) : 0; }
+    function tourAvg(l){
+      if(!l.won) return l.avgPerRound||l.avg||0;
+      const d = l.darts||l.dartsThrown||0;
+      return d>0 ? +((501/d)*3).toFixed(1) : 0;
+    }
+
+    function scoreSpans(scores, won, dblTurns){
+      const n = scores.length;
+      if(!n) return '';
+      const hasFuture = dblTurns && dblTurns.length === n;
+      return scores.map((v, i) => {
+        const isLast = (i === n - 1);
+        const inDbl = hasFuture ? (dblTurns[i] !== 0) : (v === 0);
+        let bg, textColor;
+        if(isLast && won){
+          bg = v > 100 ? 'rgba(250,204,21,.25)' : 'rgba(34,197,94,.22)';
+          textColor = v > 100 ? '#facc15' : 'var(--green)';
+        } else if(inDbl){
+          bg = 'rgba(239,68,68,.22)';
+          textColor = v===0 ? 'rgba(248,113,113,.5)' : '#f87171';
+        } else {
+          const isSpecial = v===180||v===177||v===174||v===171||v===170;
+          bg = 'var(--d3)';
+          textColor = isSpecial ? '#facc15' : v===0 ? 'var(--muted)' : v>=100 ? 'var(--green)' : 'var(--light)';
+        }
+        return `<span style="display:inline-block;min-width:26px;text-align:center;margin:0 2px;padding:1px 4px;border-radius:4px;background:${bg};color:${textColor}">${v}</span>`;
+      }).join('');
+    }
+
+    function renderLegRowAdm(l, li, keyBase){
+      const won   = isTour ? l.won : true;
+      const darts = l.dartsThrown||l.darts||0;
+      const avgVal = isTour ? tourAvg(l) : (l.avgPerRound||l.avg||0);
+      const dblStr = `${l.doublesHit||0}/${l.doublesThrown||0}`;
+      const legLabelBase = isTour ? `Set ${l.setNum||1} · Leg ${l.legNum||li+1}` : `Leg ${li+1}`;
+      const isCrown = won && (l.rounds||0)<=3 && darts<=9;
+      const legColor = isCrown ? '#facc15' : (isTour ? (won ? 'var(--green)' : '#f87171') : 'var(--green)');
+      const rowClass = isTour ? (won ? 'tour-leg-row won' : 'tour-leg-row lost') : '';
+      const scores = l.legScores || [];
+      const scoresId = `admlegscores_${uid}_${keyBase}_${li}`;
+      const scoresHtml = scores.length
+        ? `<div id="${scoresId}" style="display:none;margin-top:6px;padding:5px 8px;background:var(--d2);border-radius:5px;font-size:11px;white-space:nowrap;overflow-x:auto"><span style="color:var(--muted);margin-right:4px">Turni:</span>${scoreSpans(scores,won,l.legDblTurns||null)}</div>` : '';
+      const toggleBtn = scores.length
+        ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Mostra punti per turno" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;vertical-align:middle">🎯${isCrown?'👑':''}</button>` : '';
+      function calcRimasto(leg){
+        if(leg.remainingScore!=null&&leg.remainingScore>0) return leg.remainingScore;
+        const sc=leg.legScores||[]; if(!sc.length) return null;
+        const r=501-sc.reduce((a,b)=>a+b,0); return (r>0&&r<501)?r:null;
+      }
+      function calcCheckout(leg){
+        if(leg.checkoutScore>0) return leg.checkoutScore;
+        const sc=leg.legScores||[];
+        for(let i=sc.length-1;i>=0;i--){ if(sc[i]>0) return sc[i]; }
+        return null;
+      }
+      let col7='<div></div>';
+      if(isTour){
+        if(!won){ const r=calcRimasto(l); if(r!=null) col7=`<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${r}</span></div>`; }
+        else    { const c=calcCheckout(l); if(c!=null) col7=`<div><span style="color:var(--muted)">Checkout: </span><span style="color:var(--green);font-weight:600">${c}</span></div>`; }
+      } else {
+        const c=calcCheckout(l); if(c!=null) col7=`<div><span style="color:var(--muted)">Checkout: </span><span style="color:var(--green);font-weight:600">${c}</span></div>`;
+      }
+      return `<div class="${rowClass}" style="${rowClass?'':'padding:6px 0;border-bottom:1px solid var(--d4)'}">
+        <div class="leg-data-grid" style="display:grid;grid-template-columns:2fr repeat(4,1fr) 0.9fr 1.4fr;gap:4px;font-size:12px;align-items:center">
+          <div class="leg-col-title" style="color:${legColor};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${legLabelBase} ${toggleBtn}</div>
+          <div class="leg-col-turni"><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
+          <div class="leg-col-frecce"><span style="color:var(--muted)">Frecce: </span>${darts}</div>
+          <div class="leg-col-media"><span style="color:var(--muted)">Media: </span>${avgVal}</div>
+          <div class="leg-col-doppie"><span style="color:var(--muted)">Doppie: </span>${dblStr}</div>
+          <div class="leg-col-pct"><span style="color:var(--muted)">%: </span>${dblPct(l)}%</div>
+          <div class="leg-col-extra">${col7}</div>
+          <div class="leg-row1" style="display:none;color:${legColor};font-weight:600">${legLabelBase} ${toggleBtn}</div>
+          <div class="leg-row2" style="display:none;font-size:11px"><span style="color:var(--muted)">Turni:</span> ${l.rounds||0} &nbsp;<span style="color:var(--muted)">Frecce:</span> ${darts} &nbsp;<span style="color:var(--muted)">Media:</span> ${avgVal}</div>
+          <div class="leg-row3" style="display:none;font-size:11px"><span style="color:var(--muted)">Doppie:</span> ${dblStr} &nbsp;<span style="color:var(--muted)">%:</span> ${dblPct(l)}%</div>
+        </div>
+        ${scoresHtml}
+      </div>`;
+    }
+
+    function renderGroupSummaryAdm(groupLegs){
+      const sum = calcTourSessSummary(groupLegs, isTour);
+      return `<div style="padding:6px 10px;background:rgba(255,255,255,.04);border-radius:5px;font-size:11px;display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;margin-bottom:8px">
+        <span style="color:var(--muted)">Turni avg:</span> ${sum.avgRounds}
+        <span style="color:var(--muted)">Frecce avg:</span> ${sum.avgDarts}
+        <span style="color:var(--muted)">Media avg:</span> ${sum.avgPts}
+        <span style="color:var(--muted)">Doppie tot:</span> ${sum.totDbl}
+        <span style="color:var(--muted)">%:</span> ${sum.avgPct}%
+        <span style="color:var(--muted)">100+:</span> <span style="color:var(--green);font-weight:600">${sum.hundred||0}</span>
+      </div>`;
+    }
+
+    let bodyHtml = '';
+    if(isTour && s.sets && s.sets.length > 1){
+      // Sessione unita: raggruppa per sessionName (sola lettura per admin)
+      const groups = [];
+      s.sets.forEach((set, si)=>{
+        const sname = set.sessionName||`Sessione ${si+1}`;
+        const last  = groups[groups.length-1];
+        if(last && last.name === sname){ last.sets.push({...set, si}); }
+        else { groups.push({name: sname, si, sets:[{...set, si}]}); }
+      });
+      groups.forEach((grp, gi)=>{
+        const grpLegs = grp.sets.flatMap(set=>(set.legs||[]));
+        const globalOffset = grp.sets[0].si * 100 + gi * 200;
+        bodyHtml += `<div style="margin-bottom:10px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:6px 0;border-bottom:2px solid var(--d5)">
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--mu2);letter-spacing:.06em">SESSIONE ${gi+1}</span>
+            <span style="font-size:13px;color:var(--light);font-weight:600">${grp.name}</span>
+          </div>
+          ${grpLegs.map((l,li)=>renderLegRowAdm(l, globalOffset+li, s.key+'_g'+gi)).join('')}
+          ${grpLegs.length ? renderGroupSummaryAdm(grpLegs) : ''}
+        </div>`;
+      });
+    } else {
+      bodyHtml = legs.map((l,li)=>renderLegRowAdm(l,li,s.key)).join('');
+    }
+
+    const summary = calcTourSessSummary(legs, isTour);
+    const tourName = s.tourName || (s.sets && s.sets[0] && s.sets[0].sessionName) || '';
+    return `<div style="background:var(--d3);border-radius:8px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--light)">📅 ${s.date}${tourName?' — '+tourName:''} — ${legs.length} legs</div>
+        <div style="display:flex;gap:5px;flex-shrink:0">
+          <button onclick="_adminSelected501['${uid}']['${mode}'].splice(${idx},1);renderAdmin501Panel('${uid}')" style="background:transparent;border:1px solid var(--d5);color:var(--muted);border-radius:4px;padding:4px 10px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:12px;cursor:pointer">✕ NASCONDI</button>
+          <button onclick="deleteAdmin501Sess('${uid}','${s.key}')" style="background:#3d0505;border:1px solid #ef4444;color:#f87171;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px"><img src="/cestino.svg" style="width:13px;height:13px;vertical-align:middle" alt=""> ELIMINA</button>
+        </div>
+      </div>
+      ${bodyHtml}
+      <div style="margin-top:8px;padding:8px;background:var(--d4);border-radius:6px;font-size:12px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--green);margin-bottom:6px">RIEPILOGO SESSIONE</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:5px">
+          <div><span style="color:var(--muted)">Turni avg: </span>${summary.avgRounds}</div>
+          <div><span style="color:var(--muted)">Frecce avg: </span>${summary.avgDarts}</div>
+          <div><span style="color:var(--muted)">Media avg: </span>${summary.avgPts}</div>
+          <div><span style="color:var(--muted)">Doppie tot: </span>${summary.totDbl}</div>
+          <div><span style="color:var(--muted)">% avg: </span>${summary.avgPct}%</div>
+          <div><span style="color:var(--muted)">100+: </span><span style="color:var(--green);font-weight:600">${summary.hundred||0}</span></div>
+        </div>
+      </div>
+    </div>`;
+  }
+
   let html='';
-  // Compare toggle button inline
   if(selected.length>=2){
     html+=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">
       <button id="adminCmpBtn_${uid}" onclick="toggleAdmin501Compare('${uid}')" style="background:var(--green);color:#000;border:none;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;padding:6px 14px;border-radius:5px;cursor:pointer">CONFRONTA</button>
@@ -5041,93 +5189,9 @@ function renderAdmin501Panel(uid){
       ${renderAdmin501Compare(uid)}
     </div>`;
   }
-  selected.forEach((s,idx)=>{
-    const sum=calc501SessSummary(s.legs);
-    const isTourSess = mode === 'tournament';
-    const legRows=s.legs.map((l,i)=>{
-      const scores = l.legScores || [];
-      const won    = l.won !== false;
-      const darts  = l.dartsThrown||l.darts||0;
-      const isCrown = won && (l.rounds||0)<=3 && darts<=9;
-      const legColor = isCrown ? '#facc15' : (isTourSess ? (won?'var(--green)':'#f87171') : 'var(--green)');
-      const scoresId = `adm_legscores_${uid}_${idx}_${i}`;
-      const scoresHtml = scores.length
-        ? `<div id="${scoresId}" style="display:none;margin-top:5px;padding:5px 8px;background:var(--d2);border-radius:4px;font-size:10px;white-space:nowrap;overflow-x:auto">
-            <span style="color:var(--muted)">Turni: </span>`
-          + (()=>{
-              const n=scores.length;
-              const dbt=l.legDblTurns||null;
-              const hasFuture=dbt&&dbt.length===n;
-              return scores.map((v,i)=>{
-                const isLast=(i===n-1);
-                const inDbl=hasFuture?(dbt[i]!==0):(v===0);
-                let bg,tc;
-                if(isLast&&won){ bg=v>100?'rgba(250,204,21,.25)':'rgba(34,197,94,.22)'; tc=v>100?'#facc15':'var(--green)'; }
-                else if(inDbl){ bg='rgba(239,68,68,.22)'; tc=v===0?'rgba(248,113,113,.5)':'#f87171'; }
-                else { const sp=v===180||v===177||v===174||v===171||v===170; bg='var(--d3)'; tc=sp?'#facc15':v===0?'var(--muted)':v>=100?'var(--green)':'var(--light)'; }
-                return `<span style="display:inline-block;min-width:22px;text-align:center;margin:0 1px;padding:1px 3px;border-radius:3px;background:${bg};color:${tc}">${v}</span>`;
-              }).join('');
-            })()
-          + `</div>` : '';
-      const toggleBtn = scores.length
-        ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Punti per turno" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px;line-height:1;vertical-align:middle">🎯${isCrown?'👑':''}</button>` : '';
-      function admCalcRimasto(leg){
-        if(leg.remainingScore!=null&&leg.remainingScore>0) return leg.remainingScore;
-        const sc=leg.legScores||[]; if(!sc.length) return null;
-        const r=501-sc.reduce((a,b)=>a+b,0); return (r>0&&r<501)?r:null;
-      }
-      function admCalcCheckout(leg){
-        if(leg.checkoutScore>0) return leg.checkoutScore;
-        const sc=leg.legScores||[];
-        for(let i=sc.length-1;i>=0;i--){ if(sc[i]>0) return sc[i]; }
-        return null;
-      }
-      let admCol7='<div></div>';
-      if(isTourSess){
-        if(!won){ const r=admCalcRimasto(l); if(r!=null) admCol7=`<div><span style="color:var(--muted)">Rim.: </span><span style="color:#f87171;font-weight:600">${r}</span></div>`; }
-        else    { const c=admCalcCheckout(l); if(c!=null) admCol7=`<div><span style="color:var(--muted)">Co.: </span><span style="color:var(--green);font-weight:600">${c}</span></div>`; }
-      } else {
-        const c=admCalcCheckout(l); if(c!=null) admCol7=`<div><span style="color:var(--muted)">Co.: </span><span style="color:var(--green);font-weight:600">${c}</span></div>`;
-      }
-      const admRowClass = isTourSess ? (won ? 'tour-leg-row won' : 'tour-leg-row lost') : '';
-      return `<div class="${admRowClass}" style="${admRowClass?'':'padding:5px 0;border-bottom:1px solid var(--d4)'}">
-        <div style="display:grid;grid-template-columns:1.8fr repeat(4,1fr) 0.8fr 1.2fr;gap:4px;font-size:11px;align-items:center">
-          <div style="color:${legColor};font-weight:600">Leg ${i+1} ${toggleBtn}</div>
-          <div><span style="color:var(--muted)">T: </span>${l.rounds||0}</div>
-          <div><span style="color:var(--muted)">F: </span>${darts}</div>
-          <div><span style="color:var(--muted)">M: </span>${l.avgPerRound||0}</div>
-          <div><span style="color:var(--muted)">D: </span>${l.doublesThrown||0}/${l.doublesHit||0}</div>
-          <div><span style="color:var(--muted)">%: </span>${(l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0}%</div>
-          ${admCol7}
-        </div>
-        ${scoresHtml}
-      </div>`;
-    }).join('');
-    html+=`<div style="background:var(--d3);border-radius:8px;padding:12px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--light)">📅 ${s.date} — ${s.legs.length} legs</div>
-        <div style="display:flex;gap:5px">
-          <button onclick="_adminSelected501['${uid}']['${mode}'].splice(${idx},1);renderAdmin501Panel('${uid}')" style="background:transparent;border:1px solid var(--d5);color:var(--muted);border-radius:4px;padding:4px 10px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:12px;cursor:pointer">✕ NASCONDI</button>
-          <button onclick="deleteAdmin501Sess('${uid}','${s.key}')" style="background:#3d0505;border:1px solid #ef4444;color:#f87171;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px"><img src="/cestino.svg" style="width:13px;height:13px;vertical-align:middle" alt=""> ELIMINA</button>
-        </div>
-      </div>
-      ${legRows}
-      <div style="margin-top:6px;padding:6px 8px;background:var(--d4);border-radius:5px;font-size:11px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:12px;color:var(--green);margin-bottom:4px">RIEPILOGO</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:4px">
-          <div><span style="color:var(--muted)">T avg: </span>${sum.avgRounds}</div>
-          <div><span style="color:var(--muted)">F avg: </span>${sum.avgDarts}</div>
-          <div><span style="color:var(--muted)">M avg: </span>${sum.avgPts}</div>
-          <div><span style="color:var(--muted)">D avg: </span>${sum.avgDbl}</div>
-          <div><span style="color:var(--muted)">% avg: </span>${sum.avgPct}%</div>
-          <div><span style="color:var(--muted)">100+: </span><span style="color:var(--green);font-weight:600">${sum.hundred||0}</span></div>
-        </div>
-      </div>
-    </div>`;
-  });
+  selected.forEach((s,idx)=>{ html+=adminSessCard(s,idx); });
   panel.innerHTML=html;
 }
-
 function toggleAdmin501Compare(uid){
   const p=document.getElementById('adminCompare501_'+uid);
   const btn=document.getElementById('adminCmpBtn_'+uid);
