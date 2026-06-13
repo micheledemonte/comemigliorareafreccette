@@ -2152,9 +2152,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <!-- 3b. DISPOSITIVI REGISTRATI (sempre visibile) -->
     <div class="pc" id="adminDevicesSection" style="margin-top:8px">
       <h3 id="adminDevicesTitle">DISPOSITIVI REGISTRATI</h3>
-      <div id="aeDevicesPanel" style="margin-top:10px">
-        <p style="font-size:13px;color:var(--muted)">Al momento pare che non ci siano dispositivi registrati.</p>
-      </div>
+      <div id="aeDevicesPanel" style="margin-top:10px"></div>
     </div>
 
     <!-- 4. STATISTICHE UTENTE -->
@@ -2965,6 +2963,42 @@ function adminResetDevices(uid){
   );
 }
 
+// Admin: rimuove un singolo dispositivo direttamente da Firebase
+function adminRemoveDeviceFB(uid, fp){
+  showConfirmPopup(
+    'Rimuovi dispositivo',
+    'Vuoi rimuovere questo dispositivo? Al prossimo accesso da quel dispositivo conterà come nuovo.',
+    ()=>{
+      const el = document.getElementById('aeDevicesPanel');
+      if(_fbDB){
+        _fbDB.ref('db/userData/'+uid+'/__devices/'+fp).remove().then(()=>{
+          // Rileggi tutti i dispositivi aggiornati da Firebase
+          _fbDB.ref('db/userData/'+uid+'/__devices').once('value').then(snap=>{
+            const devs = snap.val() || {};
+            if(_dbCache && _dbCache.userData){
+              if(!_dbCache.userData[uid]) _dbCache.userData[uid] = {};
+              _dbCache.userData[uid].__devices = devs;
+            }
+            if(document.getElementById('aeDevicesPanel')){
+              document.getElementById('aeDevicesPanel').innerHTML = renderDeviceList(uid, devs);
+            }
+          });
+        }).catch(err=>{
+          console.error('Errore rimozione dispositivo Firebase:', err);
+          if(el) el.innerHTML = renderDeviceList(uid);
+        });
+      } else {
+        // Fallback: rimozione dalla cache locale
+        const devs = getDevices(uid);
+        delete devs[fp];
+        saveDevices(uid, devs);
+        if(el) el.innerHTML = renderDeviceList(uid);
+      }
+    },
+    {okLabel:'RIMUOVI', okBg:'#dc2626', okColor:'#fff'}
+  );
+}
+
 // Rende l'HTML della lista dispositivi per un utente (usato nell'Admin panel)
 // devsOverride: oggetto dispositivi già caricato da Firebase (evita re-lettura dalla cache)
 function renderDeviceList(uid, devsOverride){
@@ -2973,27 +3007,25 @@ function renderDeviceList(uid, devsOverride){
   const myFp   = getDeviceFingerprint();
   const count  = keys.length;
   const color  = count >= MAX_DEVICES ? '#f87171' : count >= 2 ? '#facc15' : 'var(--green)';
-  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+  // Header con contatore e reset tutti (solo se ci sono dispositivi)
+  let html = count > 0 ? `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
     <span style="font-size:12px;color:${color};font-weight:700">${count}/${MAX_DEVICES} dispositivi registrati</span>
-    ${count>0?`<button onclick="adminResetDevices('${uid}')" style="background:transparent;border:1px solid #ef4444;color:#f87171;border-radius:5px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">RESET TUTTI</button>`:''}
-  </div>`;
-  if(!keys.length){
-    return html + '<div style="font-size:12px;color:var(--muted)">Nessun dispositivo registrato.</div>';
-  }
+    <button onclick="adminResetDevices('${uid}')" style="background:transparent;border:1px solid #ef4444;color:#f87171;border-radius:5px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">RESET TUTTI</button>
+  </div>` : '';
+  // Se nessun dispositivo: pannello vuoto (nessun testo)
+  if(!keys.length) return html;
   html += keys.map(fp=>{
     const d = devs[fp];
     const isThis = fp === myFp;
     const lastSeen = d.lastSeen ? new Date(d.lastSeen).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
-    // Avatar con iniziale del nome dispositivo
     const devName = d.name || 'Dispositivo sconosciuto';
-    const initial = devName.charAt(0).toUpperCase();
     return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--d4)">
       <div style="width:36px;height:36px;border-radius:50%;background:var(--d4);border:1.5px solid var(--d5);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px">📱</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;color:var(--light);font-weight:600">${devName}${isThis?' <span style="font-size:10px;color:var(--green)">(questo)</span>':''}</div>
         <div style="font-size:10px;color:var(--muted);font-family:monospace;margin-top:1px">Codice: ${fp} · Ultimo accesso: ${lastSeen}</div>
       </div>
-      <button onclick="adminRemoveDevice('${uid}','${fp}')" style="background:transparent;border:1px solid #ef4444;color:#f87171;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;flex-shrink:0">✕</button>
+      <button onclick="adminRemoveDeviceFB('${uid}','${fp}')" style="background:#3d0505;border:1px solid #ef4444;color:#f87171;border-radius:999px;padding:0 10px;height:26px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;letter-spacing:.04em">RIMUOVI</button>
     </div>`;
   }).join('');
   return html;
@@ -4821,33 +4853,28 @@ function selAdmin(uid){
   const devTitle = document.getElementById('adminDevicesTitle');
   const devPanel = document.getElementById('aeDevicesPanel');
   if(devPanel){
-    if(selAU.id !== CU.id){
-      if(devTitle) devTitle.textContent = 'DISPOSITIVI REGISTRATI — ' + (selAU.firstName||'').toUpperCase() + ' ' + (selAU.lastName||'').toUpperCase();
-      devPanel.innerHTML = '<p style="font-size:12px;color:var(--muted)">Caricamento...</p>';
-      // Lettura diretta da Firebase per avere dati aggiornati
-      if(_fbDB){
-        _fbDB.ref('db/userData/'+selAU.id+'/__devices').once('value').then(snap=>{
-          const devs = snap.val() || {};
-          // Aggiorna anche la cache locale se disponibile
-          if(_dbCache && _dbCache.userData){
-            if(!_dbCache.userData[selAU.id]) _dbCache.userData[selAU.id] = {};
-            _dbCache.userData[selAU.id].__devices = devs;
-          }
-          if(document.getElementById('aeDevicesPanel')){
-            // Passa devs direttamente per evitare problemi di cache
-            document.getElementById('aeDevicesPanel').innerHTML = renderDeviceList(selAU.id, devs);
-          }
-        }).catch(()=>{
-          if(document.getElementById('aeDevicesPanel')){
-            document.getElementById('aeDevicesPanel').innerHTML = renderDeviceList(selAU.id);
-          }
-        });
-      } else {
-        devPanel.innerHTML = renderDeviceList(selAU.id);
-      }
+    if(devTitle) devTitle.textContent = 'DISPOSITIVI REGISTRATI — ' + (selAU.firstName||'').toUpperCase() + ' ' + (selAU.lastName||'').toUpperCase();
+    devPanel.innerHTML = '<p style="font-size:12px;color:var(--muted)">Caricamento...</p>';
+    // Lettura diretta da Firebase per avere dati sempre aggiornati
+    if(_fbDB){
+      _fbDB.ref('db/userData/'+selAU.id+'/__devices').once('value').then(snap=>{
+        const devs = snap.val() || {};
+        // Aggiorna anche la cache locale se disponibile
+        if(_dbCache && _dbCache.userData){
+          if(!_dbCache.userData[selAU.id]) _dbCache.userData[selAU.id] = {};
+          _dbCache.userData[selAU.id].__devices = devs;
+        }
+        if(document.getElementById('aeDevicesPanel')){
+          // Passa devs direttamente per evitare problemi di cache
+          document.getElementById('aeDevicesPanel').innerHTML = renderDeviceList(selAU.id, devs);
+        }
+      }).catch(()=>{
+        if(document.getElementById('aeDevicesPanel')){
+          document.getElementById('aeDevicesPanel').innerHTML = renderDeviceList(selAU.id);
+        }
+      });
     } else {
-      if(devTitle) devTitle.textContent = 'DISPOSITIVI REGISTRATI';
-      devPanel.innerHTML = '<p style="font-size:13px;color:var(--muted)">Al momento pare che non ci siano dispositivi registrati.</p>';
+      devPanel.innerHTML = renderDeviceList(selAU.id);
     }
   }
 }
