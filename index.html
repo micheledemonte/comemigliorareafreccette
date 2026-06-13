@@ -6679,13 +6679,24 @@ function calAdminBtns(ev, titleStr, adminOpts){
 
   const moveB = locked ? '' : '<button class="cal-move-btn" data-uid="'+ev.uid+'" data-idx="'+ev.idx
     +'" onclick="calMoveAppt(this.dataset.uid,parseInt(this.dataset.idx))" title="Sposta data appuntamento">📆 SPOSTA</button>';
+  // Bottone ELIMINA con testo (desktop e mobile)
   const delB = locked ? '' : '<button data-uid="'+ev.uid+'" data-idx="'+ev.idx
     +'" onclick="calDeleteAppt(this.dataset.uid,parseInt(this.dataset.idx))" title="Elimina appuntamento"'
-    +' style="background:transparent;border:1px solid #ef4444;color:#ef4444;border-radius:5px;padding:5px 8px;cursor:pointer;display:inline-flex;align-items:center">'
-    +'<img src="/cestino.svg" style="width:14px;height:14px;vertical-align:middle;filter:none" alt="elimina"></button>';
+    +' style="background:transparent;border:1px solid #ef4444;color:#ef4444;border-radius:999px;padding:5px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;letter-spacing:.04em">'
+    +'<img src="/cestino.svg" style="width:13px;height:13px;vertical-align:middle;filter:none" alt=""> ELIMINA</button>';
 
-  // Ordine: ICS → teacher badge (se locked) / select (se non locked) → Sposta → Cestino
-  return icsB + teacherB + selB + moveB + delB;
+  // Layout 2 righe:
+  // Riga 1: ICS/SALVATO + Insegnante (badge o select)
+  // Riga 2: SPOSTA + ELIMINA
+  // Su mobile il CSS cal-btns-row1 (grid 1fr auto) e cal-btns-row2 (flex) gestiscono il layout
+  return '<div class="cal-btns-row1" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+    + icsB + teacherB + selB
+    + '</div>'
+    + (!locked
+      ? '<div class="cal-btns-row2" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+        + moveB + delB
+        + '</div>'
+      : '');
 }
 
 function calIcsBtn(ev, titleStr){
