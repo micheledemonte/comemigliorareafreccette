@@ -4893,9 +4893,7 @@ function selAdmin(uid){
   document.getElementById('aeEm').value=selAU.email||'';
   document.getElementById('aePh').value=selAU.phone||'';
   // If editing self: disable password field (use PROFILO section instead)
-  const pwWrap = document.getElementById('aePwNew').closest('.pw-wrap') || document.getElementById('aePwNew').parentElement;
   const isSelf = selAU.id === CU.id;
-  // password field removed
 
   document.getElementById('aeMsg').textContent='';
   const bb=document.getElementById('aeBlockBtn');
