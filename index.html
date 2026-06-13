@@ -4842,35 +4842,33 @@ function selAdmin(uid){
     const _devUid = selAU.id; // cattura locale per evitare race condition
     if(devTitle) devTitle.textContent = 'DISPOSITIVI REGISTRATI — ' + (selAU.firstName||'').toUpperCase() + ' ' + (selAU.lastName||'').toUpperCase();
     devPanel.innerHTML = '<p style="font-size:12px;color:var(--muted)">Caricamento...</p>';
-    // Lettura esclusiva da Firebase — nessun fallback su cache
-    if(!_fbDB){ devPanel.innerHTML = ''; return; }
-    // Prova prima il path specifico; se vuoto, legge l'intero userData[uid] come fallback
-    _fbDB.ref('db/userData/'+_devUid+'/__devices').once('value').then(snap=>{
-      let devs = snap.val();
-      console.log('[DEVICES] Firebase snap uid='+_devUid+' val=', devs);
-      if(devs && typeof devs === 'object' && Object.keys(devs).length > 0){
-        // Dati trovati nel path specifico
-        const panel = document.getElementById('aeDevicesPanel');
-        if(panel) panel.innerHTML = renderDeviceList(_devUid, devs);
-      } else {
-        // Path specifico vuoto — leggi l'intero nodo userData[uid] come fallback retroattivo
-        console.log('[DEVICES] Path specifico vuoto, leggo intero nodo userData/'+_devUid);
-        _fbDB.ref('db/userData/'+_devUid).once('value').then(snap2=>{
-          const userData = snap2.val();
-          console.log('[DEVICES] userData completo:', userData);
-          const devs2 = (userData && userData.__devices) ? userData.__devices : {};
-          const panel = document.getElementById('aeDevicesPanel');
-          if(panel) panel.innerHTML = renderDeviceList(_devUid, devs2);
-        }).catch(err=>{
-          console.warn('[DEVICES] Errore lettura userData:', err);
-          const panel = document.getElementById('aeDevicesPanel');
-          if(panel) panel.innerHTML = '';
-        });
-      }
-    }).catch(err=>{
-      console.warn('[DEVICES] Errore lettura __devices:', err);
+
+    function _showDevices(devs){
       const panel = document.getElementById('aeDevicesPanel');
-      if(panel) panel.innerHTML = '';
+      if(panel) panel.innerHTML = renderDeviceList(_devUid, devs || {});
+    }
+
+    // STEP 1: mostra subito quello che c'è già in cache (risposta immediata)
+    const cacheDevs = (_dbCache && _dbCache.userData && _dbCache.userData[_devUid])
+      ? (_dbCache.userData[_devUid].__devices || null)
+      : null;
+    console.log('[DEVICES] Cache uid='+_devUid+':', cacheDevs, '| userData keys:', _dbCache&&_dbCache.userData?Object.keys(_dbCache.userData):[]);
+    if(cacheDevs && Object.keys(cacheDevs).length > 0){
+      _showDevices(cacheDevs);
+    }
+
+    // STEP 2: leggi sempre anche da Firebase l'intero nodo userData/uid (non il subpath __devices)
+    // per avere dati freschi e per coprire dispositivi registrati retroattivamente
+    if(!_fbDB){ if(!cacheDevs) _showDevices({}); return; }
+    _fbDB.ref('db/userData/'+_devUid).once('value').then(snap=>{
+      const raw = snap.val();
+      console.log('[DEVICES] Firebase db/userData/'+_devUid+':', raw);
+      const devs = (raw && raw.__devices) ? raw.__devices : {};
+      console.log('[DEVICES] __devices estratti:', devs, '| count:', Object.keys(devs).length);
+      _showDevices(devs);
+    }).catch(err=>{
+      console.warn('[DEVICES] Errore lettura Firebase:', err);
+      if(!cacheDevs) _showDevices({});
     });
   }
 }
