@@ -741,6 +741,9 @@ select:hover{border-color:var(--green)}
 /* Mobile compact */
 @media(max-width:768px){
   .g501-inner{ gap:4px; padding:6px 5px 3px; }
+  .g501-pad{ flex:1 1 0; }
+  .g501-key{ aspect-ratio:1 !important; }
+  .g501-score-area{ flex:0 0 auto; min-height:0; }
 }
 
 /* Block 1: Score — green bg rounded, shrink if needed */
@@ -838,7 +841,7 @@ select:hover{border-color:var(--green)}
   min-width:0;min-height:0;
 }
 .g501-key:hover{background:#2a2a2a}
-.g501-key:active{background:#3d3d3d;box-shadow:0 4px 40px rgba(255,255,255,0.36),inset 0 1px 0 rgba(255,255,255,0.36)}
+.g501-key:active{background:#3d3d3d}
 
 /* TURNO PREC. and CANCELLA */
 .g501-prev-btn{
@@ -849,7 +852,7 @@ select:hover{border-color:var(--green)}
   border-radius:999px!important;transition:background .1s,transform .08s;cursor:pointer;
   box-shadow:0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12);
 }
-.g501-prev-btn:active{background:#333;box-shadow:0 4px 32px rgba(255,255,255,0.32),inset 0 1px 0 rgba(255,255,255,0.36)}
+.g501-prev-btn:active{background:#333}
 .g501-clr-btn{
   background:#1c1c1c;border:1px solid #3a3a3a;color:#e5e5e5;
   padding:clamp(8px,1.5vh,12px) 6px;
@@ -858,23 +861,23 @@ select:hover{border-color:var(--green)}
   border-radius:999px!important;transition:background .1s,transform .08s;cursor:pointer;
   box-shadow:0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12);
 }
-.g501-clr-btn:active{background:#333;box-shadow:0 4px 32px rgba(255,255,255,0.32),inset 0 1px 0 rgba(255,255,255,0.36)}
+.g501-clr-btn:active{background:#333}
 
 /* NO SCORE */
 .g501-key.noscore-left{background:#3d0c0c;color:#ff7070;font-size:clamp(15px,3.2vh,22px)!important;border-color:#7f1d1d;box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,100,100,0.22)}
-.g501-key.noscore-left:active{background:#7a1515;color:#ffaaaa;box-shadow:0 4px 52px rgba(239,68,68,0.90),inset 0 1px 0 rgba(255,120,120,0.60)}
+.g501-key.noscore-left:active{background:#7a1515;color:#ffaaaa}
 
 /* OK */
 .g501-key.ok-btn{background:#0d2e1c;color:#4ade80;font-size:clamp(15px,3.5vh,26px)!important;border-color:#166534;box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(74,222,128,0.22)}
-.g501-key.ok-btn:active{background:#175c35;color:#86efac;box-shadow:0 4px 52px rgba(74,222,128,1.0),inset 0 1px 0 rgba(74,222,128,0.60)}
+.g501-key.ok-btn:active{background:#175c35;color:#86efac}
 
 /* CHECKOUT */
 .g501-key.checkout-btn{background:var(--green);color:#000;font-size:clamp(12px,2.8vh,18px)!important;border-color:#4ade80;box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(134,239,172,0.35)}
-.g501-key.checkout-btn:active{background:#4ade80;box-shadow:0 4px 52px rgba(74,222,128,1.0),inset 0 1px 0 rgba(134,239,172,0.80)}
+.g501-key.checkout-btn:active{background:#4ade80}
 
 /* BUST */
 .g501-key.bust-btn{background:#3d0c0c;color:#ff7070;font-size:clamp(15px,3.5vh,26px)!important;border-color:#7f1d1d;box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,100,100,0.22)}
-.g501-key.bust-btn:active{background:#7a1515;color:#ffaaaa;box-shadow:0 4px 52px rgba(239,68,68,0.90),inset 0 1px 0 rgba(255,120,120,0.60)}
+.g501-key.bust-btn:active{background:#7a1515;color:#ffaaaa}
 
 /* Close button */
 .g501-close{
@@ -912,38 +915,28 @@ select:hover{border-color:var(--green)}
 .tour-compare-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 
 /* Key press animation via JS class */
-@keyframes keyPressGlow{
-  0%  {box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.12)}
-  30% {box-shadow:0 8px 48px rgba(255,255,255,0.56),inset 0 1px 0 rgba(255,255,255,0.44)}
-  100%{box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.12)}
+@keyframes keyFlash{
+  0%  {background:#d1d5db;color:#374151}
+  100%{background:#1c1c1c;color:#fff}
 }
-@keyframes keyPressGlowRed{
-  0%  {box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,100,100,0.22)}
-  35% {box-shadow:0 8px 56px rgba(239,68,68,1.0),inset 0 1px 0 rgba(255,120,120,0.70)}
-  100%{box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,100,100,0.22)}
+@keyframes keyFlashRed{
+  0%  {background:#fca5a5;color:#7f1d1d}
+  100%{background:#1c1c1c;color:#f87171}
 }
-@keyframes keyPressGlowGreen{
-  0%  {box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(74,222,128,0.22)}
-  30% {box-shadow:0 8px 56px rgba(74,222,128,1.0),inset 0 1px 0 rgba(74,222,128,0.70)}
-  100%{box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(74,222,128,0.22)}
+@keyframes keyFlashGreen{
+  0%  {background:#86efac;color:#052e16}
+  100%{background:#1c1c1c;color:#4ade80}
 }
-@keyframes keyPressGlowGray{
-  0%  {box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.12)}
-  30% {box-shadow:0 6px 36px rgba(255,255,255,0.36),inset 0 1px 0 rgba(255,255,255,0.36)}
-  100%{box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.12)}
+@keyframes keyFlashGray{
+  0%  {background:#d1d5db;color:#374151}
+  100%{background:#1c1c1c;color:#e5e5e5}
 }
-/* normal digit/ok-empty */
-.g501-key.pressing        {animation:keyPressGlow      .55s cubic-bezier(.4,0,.2,1) forwards}
-/* bust/noscore — slower */
-.g501-key.pressing-red    {animation:keyPressGlowRed   .75s cubic-bezier(.4,0,.2,1) forwards}
-/* checkout/ok-with-score */
-.g501-key.pressing-green  {animation:keyPressGlowGreen .55s cubic-bezier(.4,0,.2,1) forwards}
-/* bust specifically — even slower for training */
-.g501-key.pressing-red-slow{animation:keyPressGlowRed  .85s cubic-bezier(.4,0,.2,1) forwards}
-/* checkout in training — slower */
-.g501-key.pressing-green-slow{animation:keyPressGlowGreen .75s cubic-bezier(.4,0,.2,1) forwards}
-/* prev/clr buttons */
-.g501-prev-btn.pressing-gray,.g501-clr-btn.pressing-gray{animation:keyPressGlowGray .45s cubic-bezier(.4,0,.2,1) forwards}
+.g501-key.pressing         {animation:keyFlash      .5s ease-out forwards}
+.g501-key.pressing-red     {animation:keyFlashRed   .5s ease-out forwards}
+.g501-key.pressing-green   {animation:keyFlashGreen .5s ease-out forwards}
+.g501-key.pressing-red-slow{animation:keyFlashRed   .5s ease-out forwards}
+.g501-key.pressing-green-slow{animation:keyFlashGreen .5s ease-out forwards}
+.g501-prev-btn.pressing-gray,.g501-clr-btn.pressing-gray{animation:keyFlashGray .5s ease-out forwards}
 
 /* Desktop hover for all game keys */
 @media(min-width:769px){
@@ -5698,10 +5691,9 @@ function renderApptUser(){
         ? '<div style="font-size:12px;color:var(--mu2);margin-top:2px">👨‍🏫 '+teacher+(l.note?' · <span style="color:var(--muted)">'+l.note+'</span>':'')+'</div>'
         : (l.note?'<div style="font-size:12px;color:var(--muted);margin-top:2px">'+l.note+'</div>':'')
       )
-      // Riga 4: pillole: ICS + (SPOSTA + stato pagamento)
-      +'<div style="display:flex;flex-direction:column;gap:5px;margin-top:6px">'
-      +(icsB?'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+icsB+'</div>':'')
-      +((spostaB||pagBadge)?'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+spostaB+pagBadge+'</div>':'')
+      // Riga 4: pillole su una riga
+      +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px">'
+      +icsB+spostaB+pagBadge
       +'</div>'
       // Form spostamento collassabile
       +'<div id="rescheduleForm_'+l.idx+'" style="display:none;margin-top:6px;padding-top:10px;border-top:1px solid var(--d4)">'
@@ -6684,7 +6676,7 @@ function calAdminBtns(ev, titleStr, adminOpts){
   // Bottone ELIMINA con testo (desktop e mobile)
   const delB = locked ? '' : '<button data-uid="'+ev.uid+'" data-idx="'+ev.idx
     +'" onclick="calDeleteAppt(this.dataset.uid,parseInt(this.dataset.idx))" title="Elimina appuntamento"'
-    +' style="background:transparent;border:1px solid #ef4444;color:#ef4444;border-radius:999px;padding:5px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;letter-spacing:.04em">'
+    +' style="background:transparent;border:1px solid #ef4444;color:#ef4444;border-radius:999px;padding:0 12px;height:32px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap;letter-spacing:.04em">'
     +'<img src="/cestino.svg" style="width:13px;height:13px;vertical-align:middle;filter:none" alt=""> ELIMINA</button>';
 
   // Layout 2 righe:
@@ -7798,7 +7790,16 @@ function tourFinalize(){
     .sort().reverse();
   tourKeys.slice(10).forEach(k=>delete data[k]);
   setUD(CU.id, data);
+  _prev501Mode = 'tournament';
+  var tmBtn=document.getElementById('prev501ModeTournament');
+  var trBtn=document.getElementById('prev501ModeTraining');
+  if(tmBtn) tmBtn.classList.add('active');
+  if(trBtn) trBtn.classList.remove('active');
   loadPrev501Sessions();
+  setTimeout(function(){
+    var sel=document.getElementById('prevSessSelect');
+    if(sel&&sel.options.length>1){ sel.selectedIndex=1; sel.dispatchEvent(new Event('change')); }
+  }, 200);
 }
 
 // ══ TOUR SESSION NAME ══
@@ -8342,8 +8343,11 @@ function finalizeFree501(){
     allKeys.slice(10).forEach(([k])=>delete data[k]);
   }
   setUD(CU.id,data);
-  show501Results(G.legsResults);
   loadPrev501Sessions();
+  setTimeout(function(){
+    var sel=document.getElementById('prevSessSelect');
+    if(sel&&sel.options.length>1){ sel.selectedIndex=1; sel.dispatchEvent(new Event('change')); }
+  }, 200);
 }
 
 function show501Results(legs){
