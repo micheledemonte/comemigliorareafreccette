@@ -2533,6 +2533,7 @@ function _restoreLoginView(){
 }
 
 let _dbCache = null;
+let _dbLoaded = false; // blocca saveDBToCloud finché loadDBFromCloud non completa
 
 function emptyDB(){
   return {
@@ -2555,6 +2556,7 @@ function deepClean(obj){
 // ── Load from Firebase ──
 async function loadDBFromCloud(){
   if(!_firebaseOK || !_fbDB) throw new Error('Firebase not available');
+  _dbLoaded = false; // blocca save durante il caricamento
   const snap = await _fbDB.ref('db').once('value');
   const raw = snap.val();
   if(raw && typeof raw === 'object'){
@@ -2563,8 +2565,10 @@ async function loadDBFromCloud(){
     if(!_dbCache.userData) _dbCache.userData = {};
   } else {
     _dbCache = emptyDB();
-    await _fbDB.ref('db').set(deepClean(_dbCache));
+    // DB vuoto: inizializza solo users, non sovrascrivere userData
+    await _fbDB.ref('db/users').set(_dbCache.users);
   }
+  _dbLoaded = true; // sblocca save
   console.log('✓ Firebase DB loaded, users:', _dbCache.users?.length || 0);
 }
 
@@ -2574,6 +2578,7 @@ let _lastSaveTime = 0;   // ms timestamp of last completed save
 let _saveInFlight = false; // true while a save is pending or running
 function saveDBToCloud(){
   if(!_firebaseOK || !_fbDB) return;
+  if(!_dbLoaded) return; // non salvare finché il DB non è completamente caricato
   _saveInFlight = true;
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(async ()=>{
@@ -2633,7 +2638,10 @@ function setUD(uid,d){
       delete cleaned[k];
     }
   });
-  _dbCache.userData[uid]=cleaned;
+  // Preserva sempre __devices esistenti — non vanno mai persi sovrascrivendo userData
+  const existingDevices = _dbCache.userData[uid] && _dbCache.userData[uid].__devices;
+  _dbCache.userData[uid] = cleaned;
+  if(existingDevices) _dbCache.userData[uid].__devices = existingDevices;
   saveDBToCloud();
 }
 
