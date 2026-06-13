@@ -2963,26 +2963,65 @@ function adminResetDevices(uid){
   );
 }
 
-// Admin: rimuove un singolo dispositivo direttamente da Firebase (solo Firebase, nessuna cache)
+// Admin: rimuove un singolo dispositivo direttamente da Firebase
 function adminRemoveDeviceFB(uid, fp){
   showConfirmPopup(
     'Rimuovi dispositivo',
     'Vuoi rimuovere questo dispositivo? Al prossimo accesso da quel dispositivo conterà come nuovo.',
-    ()=>{
+    function(){
       if(!_fbDB){ console.warn('[DEVICES] Firebase non disponibile'); return; }
-      _fbDB.ref('db/userData/'+uid+'/__devices/'+fp).remove().then(()=>{
-        // Rileggi da Firebase dopo la rimozione
-        _fbDB.ref('db/userData/'+uid+'/__devices').once('value').then(snap=>{
-          const devs = snap.val() || {};
-          const panel = document.getElementById('aeDevicesPanel');
-          if(panel) panel.innerHTML = renderDeviceList(uid, devs);
-        });
-      }).catch(err=>{
-        console.error('[DEVICES] Errore rimozione:', err);
-      });
+      // Rimuovi dalla cache locale
+      if(_dbCache && _dbCache.userData && _dbCache.userData[uid] && _dbCache.userData[uid].__devices){
+        delete _dbCache.userData[uid].__devices[fp];
+      }
+      // Salva tutto il DB su Firebase (include la rimozione)
+      saveDBToCloud();
+      // Ricarica il pannello con i dati aggiornati
+      adminLoadDevices(uid);
     },
     {okLabel:'RIMUOVI', okBg:'#dc2626', okColor:'#fff'}
   );
+}
+
+// Carica e mostra i dispositivi di un utente nel pannello Admin
+// Legge prima dalla cache in memoria, poi aggiorna da Firebase
+function adminLoadDevices(uid){
+  const panel = document.getElementById('aeDevicesPanel');
+  if(!panel) return;
+  panel.innerHTML = '<p style="font-size:12px;color:var(--muted)">Caricamento...</p>';
+
+  // Leggi dalla cache in memoria (_dbCache già caricato al login)
+  const cacheUD = (_dbCache && _dbCache.userData) ? _dbCache.userData[uid] : null;
+  const cacheDevs = (cacheUD && cacheUD.__devices) ? cacheUD.__devices : null;
+  if(cacheDevs && Object.keys(cacheDevs).length > 0){
+    panel.innerHTML = renderDeviceList(uid, cacheDevs);
+  }
+
+  // Leggi anche da Firebase per dati freschi e retroattivi
+  // Usa _fbDB.ref('db') intero e naviga manualmente per evitare problemi con chiavi __
+  if(!_fbDB){
+    panel.innerHTML = renderDeviceList(uid, cacheDevs || {});
+    return;
+  }
+  _fbDB.ref('db').once('value').then(function(snap){
+    const db = snap.val();
+    const devs = (db && db.userData && db.userData[uid] && db.userData[uid].__devices)
+      ? db.userData[uid].__devices
+      : {};
+    // Aggiorna cache
+    if(_dbCache && _dbCache.userData){
+      if(!_dbCache.userData[uid]) _dbCache.userData[uid] = {};
+      _dbCache.userData[uid].__devices = devs;
+    }
+    if(document.getElementById('aeDevicesPanel')){
+      document.getElementById('aeDevicesPanel').innerHTML = renderDeviceList(uid, devs);
+    }
+  }).catch(function(err){
+    console.warn('[DEVICES] Errore lettura Firebase:', err);
+    if(document.getElementById('aeDevicesPanel')){
+      document.getElementById('aeDevicesPanel').innerHTML = renderDeviceList(uid, cacheDevs || {});
+    }
+  });
 }
 
 // Rende l'HTML della lista dispositivi per un utente (usato nell'Admin panel)
@@ -4839,37 +4878,9 @@ function selAdmin(uid){
   const devTitle = document.getElementById('adminDevicesTitle');
   const devPanel = document.getElementById('aeDevicesPanel');
   if(devPanel){
-    const _devUid = selAU.id; // cattura locale per evitare race condition
     if(devTitle) devTitle.textContent = 'DISPOSITIVI REGISTRATI — ' + (selAU.firstName||'').toUpperCase() + ' ' + (selAU.lastName||'').toUpperCase();
-    devPanel.innerHTML = '<p style="font-size:12px;color:var(--muted)">Caricamento...</p>';
-
-    function _showDevices(devs){
-      const panel = document.getElementById('aeDevicesPanel');
-      if(panel) panel.innerHTML = renderDeviceList(_devUid, devs || {});
-    }
-
-    // STEP 1: mostra subito quello che c'è già in cache (risposta immediata)
-    const cacheDevs = (_dbCache && _dbCache.userData && _dbCache.userData[_devUid])
-      ? (_dbCache.userData[_devUid].__devices || null)
-      : null;
-    console.log('[DEVICES] Cache uid='+_devUid+':', cacheDevs, '| userData keys:', _dbCache&&_dbCache.userData?Object.keys(_dbCache.userData):[]);
-    if(cacheDevs && Object.keys(cacheDevs).length > 0){
-      _showDevices(cacheDevs);
-    }
-
-    // STEP 2: leggi sempre anche da Firebase l'intero nodo userData/uid (non il subpath __devices)
-    // per avere dati freschi e per coprire dispositivi registrati retroattivamente
-    if(!_fbDB){ if(!cacheDevs) _showDevices({}); return; }
-    _fbDB.ref('db/userData/'+_devUid).once('value').then(snap=>{
-      const raw = snap.val();
-      console.log('[DEVICES] Firebase db/userData/'+_devUid+':', raw);
-      const devs = (raw && raw.__devices) ? raw.__devices : {};
-      console.log('[DEVICES] __devices estratti:', devs, '| count:', Object.keys(devs).length);
-      _showDevices(devs);
-    }).catch(err=>{
-      console.warn('[DEVICES] Errore lettura Firebase:', err);
-      if(!cacheDevs) _showDevices({});
-    });
+    // Carica dispositivi usando funzione top-level (evita problemi di closure/ridefinizione)
+    adminLoadDevices(selAU.id);
   }
 }
 
