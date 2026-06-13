@@ -2348,7 +2348,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     </div>
   </div>
 </div>
-<div id="g201overlay" style="position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden;gap:4px;padding:4px 4px 2px">
+<div id="g201overlay" style="position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden">
   <div class="g501-inner">
   <button onclick="close201()" class="g501-close">ESCI ×</button>
   <!-- Block 1: Score -->
@@ -2364,7 +2364,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   </div>
   <!-- Block 3: Display row -->
   <div class="g501-display-row">
-    <button onclick="g201Prev()" class="g501-prev-btn">TURNO PREC.</button>
+    <button onclick="g201PrevOrRimasti()" class="g501-prev-btn" id="g201prevBtn">TURNO PREC.</button>
     <div id="g201display" class="g501-display">—</div>
     <button onclick="g201Clear()" class="g501-clr-btn">CANCELLA</button>
   </div>
@@ -8850,6 +8850,13 @@ function start201Leg(){
 function g201UpdateDisplay(){
   document.getElementById('g201pts').textContent=G201.score;
   document.getElementById('g201display').textContent=G201.enteredStr||'—';
+  // TURNO PREC. → RIMASTI quando score<170 e c'è testo inserito
+  var pb201=document.getElementById('g201prevBtn');
+  if(pb201){
+    var showR=(G201.score<170 && G201.enteredStr.length>0);
+    pb201.textContent=showR?'RIMASTI':'TURNO PREC.';
+    pb201.dataset.rimasti=showR?'1':'0';
+  }
   document.getElementById('g201legNum').textContent=G201.currentLeg+1;
   document.getElementById('g201darts').textContent=G201.legDarts; // per-leg count
   document.getElementById('g201wins').textContent=G201.winsCount;
@@ -8875,6 +8882,20 @@ function g201UpdateDisplay(){
 
 function g201Digit(d){if(G201.enteredStr.length>=3)return;G201.enteredStr+=d;g201UpdateDisplay();}
 function g201Clear(){G201.enteredStr='';g201UpdateDisplay();}
+function g201PrevOrRimasti(){
+  var pb=document.getElementById('g201prevBtn');
+  if(pb && pb.dataset.rimasti==='1'){ g201Rimasti(); } else { g201Prev(); }
+}
+function g201Rimasti(){
+  if(!G201.enteredStr) return;
+  var rimasti=parseInt(G201.enteredStr);
+  if(isNaN(rimasti)||rimasti<0||rimasti>=G201.score){G201.enteredStr='';g201UpdateDisplay();return;}
+  var pts=G201.score-rimasti;
+  if(pts<=0||pts>180){G201.enteredStr='';g201UpdateDisplay();return;}
+  G201.enteredStr=String(pts);
+  g201UpdateDisplay();
+  g201OKBtn();
+}
 function g201Prev(){
   if(!G201.turns.length)return;
   const s=G201.turns.pop();
@@ -10297,9 +10318,13 @@ if(document.readyState==='loading'){
       el.style.top = top + 'px';
     });
 
-    // ── Step 2: misura l'altezza REALE dei 3 blocchi top nel g501overlay ─
-    var ov = document.getElementById('g501overlay');
-    if(!ov || !ov.classList.contains('open')) return;
+    // ── Step 2: trova l'overlay APERTO e misura l'altezza reale dei blocchi top ─
+    var ov = null;
+    for(var _i=0;_i<OVERLAY_IDS.length;_i++){
+      var _el=document.getElementById(OVERLAY_IDS[_i]);
+      if(_el && _el.classList.contains('open')){ ov=_el; break; }
+    }
+    if(!ov) return;
 
     var scoreEl   = ov.querySelector('.g501-score-area');
     var statsEl   = ov.querySelector('.g501-stats');
