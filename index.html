@@ -2579,25 +2579,26 @@ function saveDBToCloud(){
   _saveTimer = setTimeout(async ()=>{
     try{
       const cache = deepClean(_dbCache);
-      // Salva users separatamente
-      await _fbDB.ref('db/users').set(cache.users || []);
-      // Salva ogni userData[uid] separatamente SENZA __devices
-      // (i __devices hanno il loro path dedicato e non vanno mai sovrascritti)
+      // Usa update() con path granulari per non sovrascrivere mai sottonodi non inclusi
+      // In particolare db/userData/uid/__devices non viene mai toccato
+      const updates = {};
+      // Salva users
+      updates['db/users'] = cache.users || [];
+      // Salva ogni campo di userData[uid] TRANNE __devices
+      // update() a livello di singolo campo è l'unico modo per non sovrascrivere __devices
       if(cache.userData){
-        const updates = {};
         Object.keys(cache.userData).forEach(uid=>{
-          const ud = Object.assign({}, cache.userData[uid]);
-          delete ud.__devices; // non toccare mai __devices
-          updates['db/userData/'+uid] = ud;
+          const ud = cache.userData[uid] || {};
+          Object.keys(ud).forEach(field=>{
+            if(field !== '__devices'){
+              updates['db/userData/'+uid+'/'+field] = ud[field];
+            }
+          });
         });
-        if(Object.keys(updates).length > 0){
-          await _fbDB.ref('/').update(updates);
-        }
       }
-      // Salva requests se presenti
-      if(cache.requests !== undefined){
-        await _fbDB.ref('db/requests').set(cache.requests || null);
-      }
+      // Salva requests
+      updates['db/requests'] = cache.requests || null;
+      await _fbDB.ref('/').update(updates);
       _lastSaveTime = Date.now();
       console.log('✓ Firebase DB saved');
     } catch(e){
