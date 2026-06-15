@@ -708,7 +708,7 @@ select:hover{border-color:var(--green)}
 .pw-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0;line-height:1;transition:color .2s}
 .pw-eye:hover{color:var(--light)}
 /* ═══ GAME OVERLAY LAYOUT ═══ */
-#g501overlay{position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden}
+#g501overlay{position:fixed;inset:0;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden}
 #g501overlay.open{display:flex}
 #g201overlay.open{display:flex}
 
@@ -778,7 +778,7 @@ select:hover{border-color:var(--green)}
     aspect-ratio: unset !important;
   }
   /* Score area: NON si espande — tiene dimensione naturale (i 3 blocchi top sono fissi) */
-  .g501-score-area{ flex:1 1 0; min-height:0; overflow:hidden; }
+  .g501-score-area{ flex:0 0 auto; min-height:0; overflow:hidden; }
   .g501-pts{ font-size:clamp(28px,6svh,72px); }
   /* Il pad usa --key-dyn calcolata da JS visualViewport (aggiornata on resize) */
   .g501-pad{ --key: var(--key-dyn, calc((100vw - 16px - 2 * clamp(8px, 2.2vw, 14px)) / 3)); }
@@ -788,12 +788,14 @@ select:hover{border-color:var(--green)}
 .g501-score-area{
   background:#1a3a1a;border-radius:18px;
   flex:0 0 auto;
-  padding:10px 16px 8px;
+  padding:6px 16px 8px;
   position:relative;
   min-height:0;
   display:flex;
+  flex-direction:column;
   align-items:center;
   justify-content:center;
+  gap:2px;
 }
 /* checkout hint: absolute left */
 .g501-checkout{
@@ -919,11 +921,12 @@ select:hover{border-color:var(--green)}
 
 /* Close button */
 .g501-close{
-  position:absolute;top:10px;right:10px;z-index:520;
+  align-self:flex-end;
   background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.3);
-  color:#fff;padding:6px 14px;border-radius:999px!important;
-  font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;
+  color:#fff;padding:5px 12px;border-radius:999px!important;
+  font-family:'DM Sans',sans-serif;font-weight:700;font-size:13px;
   letter-spacing:.04em;cursor:pointer;transition:all .2s;white-space:nowrap;
+  flex-shrink:0;
 }
 /* Tournament mode: LEG PERSO button style */
 .g501-close.leg-lost-btn{
@@ -1016,7 +1019,7 @@ select:hover{border-color:var(--green)}
 /* Miss doubles screen */
 /* ─── DIALOG SCREENS (miss doubles, checkout, checkpoint) ─── */
 .g501-dialog-screen{
-  position:fixed;inset:0;z-index:510;
+  position:fixed;inset:0;z-index:9510;
   background:#000;
   display:none;
   flex-direction:column;
@@ -2269,8 +2272,8 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 </div>
 <div id="g501overlay">
   <div class="g501-inner">
-  <button class="g501-close" id="g501closeBtn" onclick="g501CloseOrLegLost()">ESCI ×</button>
   <div class="g501-score-area">
+    <button class="g501-close" id="g501closeBtn" onclick="g501CloseOrLegLost()">ESCI ×</button>
     <div id="g501pts" class="g501-pts">501</div>
     <div id="g501co" class="g501-checkout"></div>
   </div>
@@ -2372,7 +2375,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 </div>
 
 <!-- ═══════════════════════ PRESSURE GAME OVERLAY ═══════════════════════ -->
-<div id="pgOverlay" style="position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden">
+<div id="pgOverlay" style="position:fixed;inset:0;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden">
   <div class="g501-inner">
     <button class="g501-close" onclick="pgClose()">ESCI ×</button>
     <!-- Block 1: Score area — punteggio inserito qui, come il 501 -->
@@ -2425,7 +2428,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     </div>
   </div>
 </div>
-<div id="g201overlay" style="position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;overflow:hidden">
+<div id="g201overlay" style="position:fixed;inset:0;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden">
   <div class="g501-inner">
   <button onclick="close201()" class="g501-close">ESCI ×</button>
   <!-- Block 1: Score -->
@@ -2464,7 +2467,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 </div>
 
 <!-- Checkpoint SI/NO dialog (training 501) -->
-<div id="g501cpAsk" style="position:fixed;inset:0;z-index:520;background:#000;display:none;align-items:center;justify-content:center;padding:16px">
+<div id="g501cpAsk" style="position:fixed;inset:0;z-index:9510;background:#000;display:none;align-items:center;justify-content:center;padding:16px">
   <div class="g501-dialog-card">
     <div class="g501-dialog-body">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(20px,5vw,30px);color:var(--light);margin-bottom:10px;letter-spacing:.04em">CHIUSURA RAGGIUNTA?</div>
@@ -8735,7 +8738,8 @@ function _doMergeTournamentSessions(tourSessions){
 // ══ MERGE TRAINING (501free) SESSIONS ══
 function mergeTrainingSessions(){
   if(!CU || _selected501Sessions.length < 2) return;
-  const trainSess = _selected501Sessions.filter(s=>!s.isTournament);
+  // Include sessioni solitario (!isTournament) E sessioni avversario (isTournament && withOpponent)
+  const trainSess = _selected501Sessions.filter(s=>!s.isTournament || s.withOpponent);
   if(trainSess.length < 2) return;
   showConfirmPopup(
     'Unisci sessioni',
