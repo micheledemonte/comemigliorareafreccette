@@ -2617,8 +2617,9 @@ function saveDBToCloud(){
           });
         });
       }
-      // Salva requests
-      updates['db/requests'] = cache.requests || null;
+      // NOTA: db/requests NON viene mai toccato da saveDBToCloud
+      // Le requests sono scritte direttamente su Firebase path separato
+      // (come __devices) e non passano per _dbCache per evitare cancellazioni accidentali
       await _fbDB.ref('/').update(updates);
       _lastSaveTime = Date.now();
       console.log('✓ Firebase DB saved');
@@ -6400,7 +6401,7 @@ function reqOpenDetail(reqId){
   const _waPhone = (r.phone||'').replace(/\D/g,'');
   const _waNum = _waPhone.startsWith('39') ? _waPhone : (_waPhone ? '39'+_waPhone : '');
   const waBtn = (_waNum && _waText)
-    ? '<a href="https://wa.me/'+_waNum+'?text='+encodeURIComponent(_waText)+'" target="_blank" style="display:block;width:100%;box-sizing:border-box;background:#25d366;color:#fff;border:none;padding:11px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:14px;cursor:pointer;text-decoration:none;text-align:center;margin-bottom:10px">💬 RISPONDI SU WHATSAPP</a>'
+    ? '<a href="https://wa.me/'+_waNum+'?text='+encodeURIComponent(_waText)+'" target="_blank" onclick="reqToggleReplied(\''+reqId+'\')" style="display:block;width:100%;box-sizing:border-box;background:#25d366;color:#000;border:none;padding:12px;border-radius:999px;font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:14px;cursor:pointer;text-decoration:none;text-align:center;margin-bottom:10px;letter-spacing:.03em">💬 RISPONDI SU WHATSAPP</a>'
     : (!r.phone ? '<div style="font-size:12px;color:var(--mu2);margin-bottom:10px">⚠️ Numero di telefono non disponibile per questo utente.</div>' : '');
 
   document.getElementById('reqDetailContent').innerHTML =
@@ -6455,7 +6456,38 @@ function reqToggleReplied(elOrId){
     btn.classList.add('replied');
     btn.innerHTML = '\u2713 RISPOSTO';
   }
+  // Mostra bottone "Segna come Non Letto"
+  const existingUnread = document.getElementById('reqUnreadBtn');
+  if(!existingUnread){
+    const unreadBtn = document.createElement('button');
+    unreadBtn.id = 'reqUnreadBtn';
+    unreadBtn.textContent = '↩ SEGNA COME NON LETTO';
+    unreadBtn.style.cssText = 'width:100%;background:transparent;color:var(--mu2);border:1.5px solid var(--d5);padding:10px;border-radius:999px;font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:13px;cursor:pointer;margin-top:8px;letter-spacing:.03em';
+    unreadBtn.onclick = function(){ reqMarkUnread(reqId); };
+    if(btn.parentNode) btn.parentNode.insertBefore(unreadBtn, btn.nextSibling);
+  }
   // Aggiorna lista in background
+  reqRenderList();
+}
+
+function reqMarkUnread(reqId){
+  const r = _reqCache[reqId];
+  if(!r || !CU) return;
+  // Rimuovi readBy e repliedBy per questo admin
+  if(r.readBy) delete r.readBy[CU.id];
+  if(r.repliedBy) delete r.repliedBy[CU.id];
+  if(_firebaseOK && _fbDB){
+    _fbDB.ref('db/requests/'+reqId+'/readBy/'+CU.id).remove();
+    _fbDB.ref('db/requests/'+reqId+'/repliedBy/'+CU.id).remove();
+  }
+  // Chiudi il detail e torna alla lista "Da leggere"
+  reqCloseDetail();
+  _reqFilter = 'unread';
+  const unreadBtn = document.getElementById('reqFilterUnread');
+  if(unreadBtn){
+    document.querySelectorAll('.req-filter-btn').forEach(b=>b.classList.remove('active'));
+    unreadBtn.classList.add('active');
+  }
   reqRenderList();
 }
 
