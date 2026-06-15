@@ -5395,6 +5395,10 @@ function deleteAdmin501Sess(uid, key){
       const data=getUD(uid);
       delete data[key];
       setUD(uid,data);
+      // Elimina direttamente su Firebase (setUD/saveDBToCloud non cancella campi)
+      if(_firebaseOK && _fbDB){
+        _fbDB.ref('db/userData/'+uid+'/'+key).remove();
+      }
       if(_adminSelected501[uid]){
         const mode = (_admin501Mode && _admin501Mode[uid]) || 'training';
         const arr = _adminSelected501[uid][mode] || [];
@@ -5792,15 +5796,16 @@ function gsSavePercorso(uid){
 
   const existing = gsGetPercorso(uid);
   let lezioni;
+  const _newIcsId = ()=>'ics_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7);
   if(existing){
-    lezioni = existing.lezioni.map(l=>({svolta:l.svolta||false, pagata:l.pagata||false, dt:l.dt||null, note:l.note||null, adminRef:l.adminRef||null}));
-    while(lezioni.length < tot) lezioni.push({svolta:false, pagata:tipo==='anticipato', dt:null, note:null, adminRef:null});
+    lezioni = existing.lezioni.map(l=>({svolta:l.svolta||false, pagata:l.pagata||false, dt:l.dt||null, note:l.note||null, adminRef:l.adminRef||null, icsId:l.icsId||_newIcsId()}));
+    while(lezioni.length < tot) lezioni.push({svolta:false, pagata:tipo==='anticipato', dt:null, note:null, adminRef:null, icsId:_newIcsId()});
     if(lezioni.length > tot)   lezioni = lezioni.slice(0, tot);
     // Se si passa ad anticipato: segna pagate le non ancora pagate
     if(tipo==='anticipato') lezioni = lezioni.map(l=>({...l, pagata:true}));
     // Se si passa a lezione-per-lezione: non toccare stati esistenti
   } else {
-    lezioni = Array.from({length:tot}, ()=>({svolta:false, pagata:tipo==='anticipato', dt:null, note:null, adminRef:null}));
+    lezioni = Array.from({length:tot}, ()=>({svolta:false, pagata:tipo==='anticipato', dt:null, note:null, adminRef:null, icsId:_newIcsId()}));
   }
 
   gsSetPercorso(uid, {totLezioni:tot, tipoPagamento:tipo, lezioni});
@@ -6001,13 +6006,13 @@ function renderApptUser(){
     const dateLabel = (dateRaw + ' ORE ' + timeStr).toUpperCase();
     const isPast  = d < now;
     const teacher = adminName(l.adminRef);
-    const _icsKey = String(l.idx)+'_'+(l.dt?l.dt.slice(0,10):'');
+    const _icsKey = l.icsId || (String(l.idx)+'_'+(l.dt||''));
     const isSaved = _userIcsSaved.has(_icsKey);
     const locked  = isPast || l.svolta; // passato o già svolto → blocca azioni
 
     // Pillola ICS (solo se non locked)
     const icsB = locked ? '' : (
-      '<button class="cal-ics-btn'+(isSaved?' ics-saved':'')+'" data-dt="'+l.dt+'" data-idx="'+l.idx
+      '<button class="cal-ics-btn'+(isSaved?' ics-saved':'')+'" data-dt="'+l.dt+'" data-idx="'+l.idx+'" data-icsid="'+(l.icsId||'')
       +'" data-title="'+(teacher?teacher:'Lezione accademia')+' - Lezione '+(l.idx+1)+(l.note?' - '+l.note:'')+'"'
       +' onclick="userExportICS(this)" title="Aggiungi al calendario del dispositivo">'
       +(isSaved?'&#x2713; SALVATO':'&#x1F4C5; AGGIUNGI AL CALENDARIO')
@@ -6087,8 +6092,9 @@ function userExportICS(btn){
   const idx   = btn.dataset.idx;
   if(!dt){ alert('Nessuna data impostata.'); return; }
 
-  // Registra come salvato (persiste)
-  const _icsKeyFull = String(idx)+'_'+(dt?dt.slice(0,10):'');
+  // Registra come salvato (persiste) — usa icsId se disponibile per massima unicità
+  const _icsId = btn.dataset.icsid || '';
+  const _icsKeyFull = _icsId || (String(idx)+'_'+(dt||''));
   _userIcsSaved.add(_icsKeyFull);
   userSaveIcsSaved();
 
@@ -7336,8 +7342,10 @@ function calLoadIcsSaved(){
   // Tutti: carica __userIcsSaved (idx delle proprie lezioni)
   const userSaved = getUD(CU.id).__userIcsSaved;
   if(Array.isArray(userSaved)) userSaved.forEach(k=>{
-    // Scarta chiavi vecchie nel formato errato (solo numero, senza data)
-    if(k && k.includes('_')) _userIcsSaved.add(k);
+    // Accetta solo chiavi nel formato nuovo: idx_dt con orario (contengono ':' dopo '_')
+    // Scarta chiavi vecchie (solo numero, o idx_solo-data senza orario)
+    // Accetta: chiavi icsId (iniziano con 'ics_') o chiavi idx+dt con orario
+    if(k && (k.startsWith('ics_') || (k.includes('_') && k.includes(':')))) _userIcsSaved.add(k);
   });
 }
 
@@ -8267,6 +8275,9 @@ function tourFinalize(){
       legs: allLegs,
       sets: GT.sets,
     };
+    // Aggiorna titolo pannello risultati con nome avversario
+    const _resTitle = document.querySelector('#free501Results h3');
+    if(_resTitle) _resTitle.textContent = 'Risultati — vs '+oppName;
     const freeKeys = Object.keys(data).filter(k=>k.startsWith('free501_')).sort().reverse();
     freeKeys.slice(30).forEach(k=>delete data[k]);
     setUD(CU.id, data);
@@ -8913,6 +8924,9 @@ function finalizeFree501(){
   const data=getUD(CU.id);
   const fk='free501_'+Date.now();
   data[fk]={__meta:{type:'501free',title:'Gioca a 501',week:null,session:null,savedAt:new Date().toISOString()},legs:G.legsResults};
+  // Aggiorna titolo pannello risultati
+  const resTitle = document.querySelector('#free501Results h3');
+  if(resTitle) resTitle.textContent = 'Risultati ultima sessione 501';
   // Keep only the 10 most recent free501 sessions to avoid bloating the DB
   const allKeys=Object.entries(data)
     .filter(([k,v])=>v?.__meta?.type==='501free')
@@ -8964,6 +8978,9 @@ function loadPrev501Sessions(){
         const tn = v.__meta.tourName ? ' — '+v.__meta.tourName : '';
         return `<option value="${k}">${d}${tn}</option>`;
       }
+      if(v.__meta?.withOpponent && v.__meta?.opponentName){
+        return `<option value="${k}">${d} — vs ${v.__meta.opponentName}</option>`;
+      }
       return `<option value="${k}">${d} — ${(v.legs||[]).length} legs</option>`;
     }).join('');
 }
@@ -8989,7 +9006,9 @@ function showPrev501Sess(){
       meta:{totalSets:sess.__meta.totalSets, legsPerSet:sess.__meta.legsPerSet}});
   } else {
     if(!sess?.legs) return;
-    _selected501Sessions.push({key, date, legs:sess.legs, isTournament:false});
+    _selected501Sessions.push({key, date, legs:sess.legs, isTournament:false,
+      opponentName: sess.__meta?.opponentName||'',
+      withOpponent: sess.__meta?.withOpponent||false});
   }
   render501SessPanel();
 }
@@ -9195,7 +9214,7 @@ function render501SessPanel(){
     return `<div style="background:var(--d3);border-radius:8px;padding:14px;margin-bottom:10px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px">
         <div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--light)">📅 ${s.date}${s.tourName?' — '+s.tourName:''} — ${legs.length} legs</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--light)">📅 ${s.date}${s.tourName?' — '+s.tourName:''}${s.withOpponent&&s.opponentName?' — vs '+s.opponentName:(!s.isTournament&&!s.withOpponent?' — '+legs.length+' legs':'')}</div>
           ${nameField}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
@@ -9259,6 +9278,10 @@ function delete501Sess(key){
       const data=getUD(CU.id);
       delete data[key];
       setUD(CU.id,data);
+      // Elimina direttamente su Firebase (setUD/saveDBToCloud non cancella campi)
+      if(_firebaseOK && _fbDB){
+        _fbDB.ref('db/userData/'+CU.id+'/'+key).remove();
+      }
       // Remove from selected list too
       const idx=_selected501Sessions.findIndex(s=>s.key===key);
       if(idx>=0) _selected501Sessions.splice(idx,1);
