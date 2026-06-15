@@ -5266,7 +5266,16 @@ let _gsApptCtx  = null; // {uid, idx}
 // ── helpers ──────────────────────────────────────
 function gsGetPercorso(uid){ return (getUD(uid).__percorso) || null; }
 function gsSetPercorso(uid, p){ const d=getUD(uid); d.__percorso=p; setUD(uid,d); }
-function gsDelPercorso(uid){ const d=getUD(uid); delete d.__percorso; setUD(uid,d); }
+function gsDelPercorso(uid){
+  const d=getUD(uid);
+  delete d.__percorso;
+  setUD(uid,d);
+  // Firebase update() non trasmette i campi assenti — bisogna scrivere null esplicitamente
+  // per eliminare davvero il campo su Firebase
+  if(_firebaseOK && _fbDB){
+    _fbDB.ref('db/userData/'+uid+'/__percorso').remove();
+  }
+}
 
 function gsStatus(p){
   if(!p) return 'none';
