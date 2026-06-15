@@ -788,14 +788,12 @@ select:hover{border-color:var(--green)}
 .g501-score-area{
   background:#1a3a1a;border-radius:18px;
   flex:0 0 auto;
-  padding:6px 16px 8px;
+  padding:8px 16px 8px;
   position:relative;
   min-height:0;
   display:flex;
-  flex-direction:column;
   align-items:center;
   justify-content:center;
-  gap:2px;
 }
 /* checkout hint: absolute left */
 .g501-checkout{
@@ -920,13 +918,17 @@ select:hover{border-color:var(--green)}
 .g501-key.bust-btn:active{background:#7a1515;color:#ffaaaa}
 
 /* Close button */
+.g501-close-row{
+  display:flex;
+  justify-content:flex-end;
+  flex:0 0 auto;
+  padding:0 2px;
+}
 .g501-close{
-  align-self:flex-end;
   background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.3);
-  color:#fff;padding:5px 12px;border-radius:999px!important;
-  font-family:'DM Sans',sans-serif;font-weight:700;font-size:13px;
+  color:#fff;padding:5px 14px;border-radius:999px!important;
+  font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;
   letter-spacing:.04em;cursor:pointer;transition:all .2s;white-space:nowrap;
-  flex-shrink:0;
 }
 /* Tournament mode: LEG PERSO button style */
 .g501-close.leg-lost-btn{
@@ -2272,8 +2274,10 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 </div>
 <div id="g501overlay">
   <div class="g501-inner">
-  <div class="g501-score-area">
+  <div class="g501-close-row">
     <button class="g501-close" id="g501closeBtn" onclick="g501CloseOrLegLost()">ESCI ×</button>
+  </div>
+  <div class="g501-score-area">
     <div id="g501pts" class="g501-pts">501</div>
     <div id="g501co" class="g501-checkout"></div>
   </div>
@@ -3863,6 +3867,8 @@ function gameOverlayOpen(){
   document.getElementById('liquidDock').style.pointerEvents='none';
   const lo=document.getElementById('ldLogout');
   if(lo){lo.style.visibility='hidden';lo.style.pointerEvents='none';}
+  // Ricalcola layout dopo nascondere il dock (la viewport cambia su alcuni browser)
+  if(window._gameUpdateLayout){ setTimeout(window._gameUpdateLayout, 50); setTimeout(window._gameUpdateLayout, 200); }
 }
 // Ripristina dock dopo la chiusura di un gioco
 function gameOverlayClose(){
@@ -11238,6 +11244,7 @@ if(document.readyState==='loading'){
 
   function getOverlays(){ return OVERLAY_IDS.map(function(id){ return document.getElementById(id); }).filter(Boolean); }
 
+  window._gameUpdateLayout = null; // sarà assegnata sotto
   function updateLayout(){
     var vp  = window.visualViewport;
     var vh  = vp ? vp.height  : window.innerHeight;
@@ -11260,25 +11267,29 @@ if(document.readyState==='loading'){
     }
     if(!ov) return;
 
+    var closeRowEl = ov.querySelector('.g501-close-row');
     var scoreEl   = ov.querySelector('.g501-score-area');
     var statsEl   = ov.querySelector('.g501-stats');
     var displayEl = ov.querySelector('.g501-display-row');
     var innerEl   = ov.querySelector('.g501-inner');
     if(!scoreEl || !statsEl || !displayEl || !innerEl) return;
 
-    // Leggi le dimensioni reali renderizzate
-    var topH = scoreEl.offsetHeight + statsEl.offsetHeight + displayEl.offsetHeight;
+    // Leggi le dimensioni reali renderizzate (incluso close-row)
+    var closeH = closeRowEl ? closeRowEl.offsetHeight : 0;
+    var topH = closeH + scoreEl.offsetHeight + statsEl.offsetHeight + displayEl.offsetHeight;
     var gapPx = parseInt(getComputedStyle(innerEl).gap) || 4;
+    var numGaps = closeH > 0 ? 4 : 3; // gap tra close-row, score, stats, display, pad
     var padTop = 6; // padding-top di g501-inner
     var padBot = 3; // padding-bottom
-    var available = vh - topH - (3 * gapPx) - padTop - padBot;
+    var available = vh - topH - (numGaps * gapPx) - padTop - padBot;
 
     // ── Step 3: calcola dimensione cerchio ottimale ───────────────────────
     var gap = Math.max(8, Math.round(vw * 0.022));
     gap = Math.min(gap, 14);
     var pad = 8; // padding laterale dell'inner
+    var safeBot = 20; // margine sicurezza per safe-area iOS e barra URL
     var keyByW = Math.floor((vw - 2 * pad - 2 * gap) / 3);
-    var keyByH = Math.floor((Math.max(available, 100) - 3 * gap) / 4);
+    var keyByH = Math.floor((Math.max(available - safeBot, 80) - 3 * gap) / 4);
     var key = Math.min(keyByW, keyByH);
 
     // ── Step 4: applica --key-dyn a tutti gli overlay ─────────────────────
@@ -11307,8 +11318,12 @@ if(document.readyState==='loading'){
     });
     updateLayout();
   });
-  // Primo aggiornamento immediato
+  // Esporta per uso esterno (gameOverlayOpen)
+  window._gameUpdateLayout = updateLayout;
+  // Aggiornamenti multipli: Safari ritarda la visualViewport dopo apertura overlay
   setTimeout(updateLayout, 0);
+  setTimeout(updateLayout, 100);
+  setTimeout(updateLayout, 300);
 })();
 
 // ══════════════════════════════════════════════════
