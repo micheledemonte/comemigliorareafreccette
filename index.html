@@ -918,13 +918,8 @@ select:hover{border-color:var(--green)}
 .g501-key.bust-btn:active{background:#7a1515;color:#ffaaaa}
 
 /* Close button */
-.g501-close-row{
-  display:flex;
-  justify-content:flex-end;
-  flex:0 0 auto;
-  padding:0 2px;
-}
 .g501-close{
+  position:absolute;top:8px;right:10px;z-index:9520;
   background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.3);
   color:#fff;padding:5px 14px;border-radius:999px!important;
   font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;
@@ -2274,10 +2269,8 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 </div>
 <div id="g501overlay">
   <div class="g501-inner">
-  <div class="g501-close-row">
-    <button class="g501-close" id="g501closeBtn" onclick="g501CloseOrLegLost()">ESCI ×</button>
-  </div>
   <div class="g501-score-area">
+    <button class="g501-close" id="g501closeBtn" onclick="g501CloseOrLegLost()">ESCI ×</button>
     <div id="g501pts" class="g501-pts">501</div>
     <div id="g501co" class="g501-checkout"></div>
   </div>
@@ -11267,21 +11260,18 @@ if(document.readyState==='loading'){
     }
     if(!ov) return;
 
-    var closeRowEl = ov.querySelector('.g501-close-row');
     var scoreEl   = ov.querySelector('.g501-score-area');
     var statsEl   = ov.querySelector('.g501-stats');
     var displayEl = ov.querySelector('.g501-display-row');
     var innerEl   = ov.querySelector('.g501-inner');
     if(!scoreEl || !statsEl || !displayEl || !innerEl) return;
 
-    // Leggi le dimensioni reali renderizzate (incluso close-row)
-    var closeH = closeRowEl ? closeRowEl.offsetHeight : 0;
-    var topH = closeH + scoreEl.offsetHeight + statsEl.offsetHeight + displayEl.offsetHeight;
+    // Leggi le dimensioni reali renderizzate
+    var topH = scoreEl.offsetHeight + statsEl.offsetHeight + displayEl.offsetHeight;
     var gapPx = parseInt(getComputedStyle(innerEl).gap) || 4;
-    var numGaps = closeH > 0 ? 4 : 3; // gap tra close-row, score, stats, display, pad
     var padTop = 6; // padding-top di g501-inner
     var padBot = 3; // padding-bottom
-    var available = vh - topH - (numGaps * gapPx) - padTop - padBot;
+    var available = vh - topH - (3 * gapPx) - padTop - padBot;
 
     // ── Step 3: calcola dimensione cerchio ottimale ───────────────────────
     var gap = Math.max(8, Math.round(vw * 0.022));
