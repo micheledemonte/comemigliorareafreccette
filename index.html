@@ -6001,7 +6001,8 @@ function renderApptUser(){
     const dateLabel = (dateRaw + ' ORE ' + timeStr).toUpperCase();
     const isPast  = d < now;
     const teacher = adminName(l.adminRef);
-    const isSaved = _userIcsSaved.has(String(l.idx));
+    const _icsKey = String(l.idx)+'_'+(l.dt?l.dt.slice(0,10):'');
+    const isSaved = _userIcsSaved.has(_icsKey);
     const locked  = isPast || l.svolta; // passato o già svolto → blocca azioni
 
     // Pillola ICS (solo se non locked)
@@ -6087,7 +6088,8 @@ function userExportICS(btn){
   if(!dt){ alert('Nessuna data impostata.'); return; }
 
   // Registra come salvato (persiste)
-  _userIcsSaved.add(String(idx));
+  const _icsKeyFull = String(idx)+'_'+(dt?dt.slice(0,10):'');
+  _userIcsSaved.add(_icsKeyFull);
   userSaveIcsSaved();
 
   const d   = new Date(dt);
@@ -6224,9 +6226,16 @@ function reqSendReschedule(idx){
 
   const p = gsGetPercorso(CU.id);
   const lezione = p && p.lezioni[idx];
-  const dateLabel = lezione && lezione.dt
-    ? new Date(lezione.dt.slice(0,10).split('-').map(Number).reduce((a,v,i)=>i===1?v-1:v, 0) && lezione.dt).toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'})
-    : 'data non disponibile';
+  let _apptDateLabel = 'data non disponibile';
+  if(lezione && lezione.dt){
+    const _dp = lezione.dt.slice(0,10).split('-');
+    const _d  = new Date(parseInt(_dp[0]), parseInt(_dp[1])-1, parseInt(_dp[2]),
+                  ...(lezione.dt.length>10 ? lezione.dt.slice(11,16).split(':').map(Number) : [0,0]));
+    const _pad = n=>String(n).padStart(2,'0');
+    const _dateStr = _d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    const _timeStr = _pad(_d.getHours())+':'+_pad(_d.getMinutes());
+    _apptDateLabel = (_dateStr + ' ore ' + _timeStr).replace(/^\w/, c=>c.toUpperCase());
+  }
 
   const btn = ta.closest('div').querySelector('.req-compose-btn');
   if(btn){ btn.disabled = true; btn.textContent = '⏳ Invio...'; }
@@ -6245,9 +6254,10 @@ function reqSendReschedule(idx){
     ts:         Date.now(),
     readBy:     {},
     repliedBy:  {},
-    type:       'reschedule',
-    lessonIdx:  idx,
-    teacherName: _teacherName,
+    type:          'reschedule',
+    lessonIdx:     idx,
+    teacherName:   _teacherName,
+    appointmentDate: _apptDateLabel,
   };
 
   const doSave = async () => {
@@ -6632,6 +6642,7 @@ function reqOpenDetail(reqId){
     +'<div class="rdu-row"><span class="rdu-label">Email</span><span>'+r.email+'</span></div>'
     +(r.phone ? '<div class="rdu-row"><span class="rdu-label">Tel</span><span>'+r.phone+'</span></div>' : '')
     +(isReschedule && r.lessonIdx !== undefined ? '<div class="rdu-row"><span class="rdu-label">Lezione</span><span>Lezione '+(r.lessonIdx+1)+'</span></div>' : '')
+    +(isReschedule && r.appointmentDate ? '<div class="rdu-row"><span class="rdu-label">Appuntamento</span><span>📅 '+escHtml(r.appointmentDate)+'</span></div>' : '')
     +(isReschedule && r.teacherName ? '<div class="rdu-row"><span class="rdu-label">Insegnante</span><span>👨‍🏫 '+escHtml(r.teacherName)+'</span></div>' : '')
     +(isDevice && r.deviceName ? '<div class="rdu-row"><span class="rdu-label">Dispositivo</span><span>'+r.deviceName+'</span></div>' : '')
     +'</div>'
@@ -7324,7 +7335,10 @@ function calLoadIcsSaved(){
   }
   // Tutti: carica __userIcsSaved (idx delle proprie lezioni)
   const userSaved = getUD(CU.id).__userIcsSaved;
-  if(Array.isArray(userSaved)) userSaved.forEach(k=>_userIcsSaved.add(k));
+  if(Array.isArray(userSaved)) userSaved.forEach(k=>{
+    // Scarta chiavi vecchie nel formato errato (solo numero, senza data)
+    if(k && k.includes('_')) _userIcsSaved.add(k);
+  });
 }
 
 // Re-schedula notifiche al login per tutti gli appuntamenti futuri degli admin
