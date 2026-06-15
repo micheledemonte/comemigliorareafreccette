@@ -4787,9 +4787,12 @@ function renderStats(uid){
   const STAT_COLORS={frecce:'#38bdf8',media:'#facc15',doppie:'#f87171',pct:'#4ade80'};
 
   function render501FilterChart(canvasId, days, activeFilter){
+    // Distruggi qualsiasi chart esistente sul canvas (anche se _charts è stale)
     if(_charts[canvasId]){try{_charts[canvasId].destroy();}catch{} delete _charts[canvasId];}
     const cv=document.getElementById(canvasId);
     if(!cv) return;
+    // Distruggi anche via Chart.js registry (sicurezza aggiuntiva)
+    try{ const existing=Chart.getChart(cv); if(existing) existing.destroy(); }catch{}
     const keyMap={frecce:'frecce',media:'media',doppie:'doppie',pct:'pct'};
     const labelMap={frecce:'Frecce tirate',media:'Media punti',doppie:'Doppie',pct:'% Doppie'};
     const k=keyMap[activeFilter]||'media';
@@ -4833,7 +4836,7 @@ function renderStats(uid){
     const pillStyle=(k,active)=>`background:${active?STAT_COLORS[k]:'transparent'};color:${active?'#000':'var(--mu2)'};border:1.5px solid ${STAT_COLORS[k]};padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.04em;transition:all .15s`;
     const pills=['frecce','media','doppie','pct'];
     const labels={frecce:'FRECCE',media:'MEDIA',doppie:'DOPPIE',pct:'% DOPPIE'};
-    const pillsHtml=pills.map(k=>`<button style="${pillStyle(k,k==='media')}" onclick="stat501SwitchFilter('${id}','${k}',this)">${labels[k]}</button>`).join('');
+    const pillsHtml=pills.map(k=>`<button data-filter="${k}" style="${pillStyle(k,k==='media')}" onclick="stat501SwitchFilter('${id}','${k}',this)">${labels[k]}</button>`).join('');
     return `<div class="cw" style="margin-bottom:16px">
       <h3>${title}</h3>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="${id}_pills">${pillsHtml}</div>
@@ -4912,21 +4915,23 @@ function renderStats(uid){
 
 function stat501SwitchFilter(chartId, filter, btn){
   const d501=window._501chartDataPersist=window._501chartDataPersist||{};
-  // cerca i dati dal persist o dall'ultima renderStats
   const src=d501[chartId];
   if(!src) return;
+  // Aggiorna filtro attivo
+  src.activeFilter=filter;
   // Aggiorna stile pillole
+  const STAT_COLORS={frecce:'#38bdf8',media:'#facc15',doppie:'#f87171',pct:'#4ade80'};
   const pillsContainer=document.getElementById(chartId+'_pills');
   if(pillsContainer){
-    const STAT_COLORS={frecce:'#38bdf8',media:'#facc15',doppie:'#f87171',pct:'#4ade80'};
     pillsContainer.querySelectorAll('button').forEach(b=>{
-      const k=b.getAttribute('onclick').match(/'([^']+)',this/)[1];
+      // Leggi il filtro dal data attribute invece di parsare onclick
+      const k=b.dataset.filter;
+      if(!k) return;
       const active=k===filter;
       b.style.background=active?STAT_COLORS[k]:'transparent';
       b.style.color=active?'#000':'var(--mu2)';
     });
   }
-  src.activeFilter=filter;
   render501FilterChart(chartId,src.days,filter);
 }
 
