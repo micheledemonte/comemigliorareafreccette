@@ -4696,6 +4696,63 @@ function extractCrownsPerSession(uid){
 
 let _statsUID=null;
 
+// ── Colori fissi statistiche 501 ──
+const STAT_COLORS_501={frecce:'#38bdf8',media:'#facc15',doppie:'#f87171',pct:'#4ade80'};
+
+function render501FilterChart(canvasId, days, activeFilter){
+  if(_charts[canvasId]){try{_charts[canvasId].destroy();}catch{} delete _charts[canvasId];}
+  const cv=document.getElementById(canvasId);
+  if(!cv) return;
+  try{ const ex=Chart.getChart(cv); if(ex) ex.destroy(); }catch{}
+  const labelMap={frecce:'Frecce tirate',media:'Media punti',doppie:'Doppie',pct:'% Doppie'};
+  const k=activeFilter||'media';
+  const pts=days.map(d=>({label:d.label,value:d[k]})).filter(p=>p.value!==null);
+  if(!pts.length){
+    const ctx=cv.getContext('2d');
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.fillStyle='#555';
+    ctx.font='13px DM Sans, sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('Nessun dato per questo filtro',cv.width/2,50);
+    return;
+  }
+  _charts[canvasId]=new Chart(cv.getContext('2d'),{
+    type:'line',
+    data:{
+      labels:pts.map(p=>p.label),
+      datasets:[{
+        label:labelMap[k],
+        data:pts.map(p=>p.value),
+        borderColor:STAT_COLORS_501[k],
+        backgroundColor:STAT_COLORS_501[k]+'22',
+        pointBackgroundColor:STAT_COLORS_501[k],
+        pointRadius:5,pointHoverRadius:7,tension:.3,fill:true
+      }]
+    },
+    options:{responsive:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        title:t=>pts[t[0].dataIndex].label,
+        label:t=>`${labelMap[k]}: ${t.raw}`
+      }}},
+      scales:{
+        x:{ticks:{color:'#666',font:{size:10},maxRotation:45},grid:{color:'#1e1e1e'}},
+        y:{ticks:{color:'#666',font:{size:11}},grid:{color:'#1e1e1e'},beginAtZero:true}
+      }}
+  });
+}
+
+function build501FilterCard(id, title, days){
+  const ps=(k,active)=>`background:${active?STAT_COLORS_501[k]:'transparent'};color:${active?'#000':'var(--mu2)'};border:1.5px solid ${STAT_COLORS_501[k]};padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.04em;transition:all .15s`;
+  const pills=['frecce','media','doppie','pct'];
+  const labels={frecce:'FRECCE',media:'MEDIA',doppie:'DOPPIE',pct:'% DOPPIE'};
+  const pillsHtml=pills.map(k=>`<button data-filter="${k}" style="${ps(k,k==='media')}" onclick="stat501SwitchFilter('${id}','${k}',this)">${labels[k]}</button>`).join('');
+  return `<div class="cw" style="margin-bottom:16px">
+    <h3>${title}</h3>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="${id}_pills">${pillsHtml}</div>
+    <canvas id="${id}" height="100"></canvas>
+  </div>`;
+}
+
 function renderStats(uid){
   if(!uid) uid=CU?.id;
   if(!uid) return;
@@ -4783,67 +4840,6 @@ function renderStats(uid){
       }));
   }
 
-  // Colori fissi per ogni metrica
-  const STAT_COLORS={frecce:'#38bdf8',media:'#facc15',doppie:'#f87171',pct:'#4ade80'};
-
-  function render501FilterChart(canvasId, days, activeFilter){
-    // Distruggi qualsiasi chart esistente sul canvas (anche se _charts è stale)
-    if(_charts[canvasId]){try{_charts[canvasId].destroy();}catch{} delete _charts[canvasId];}
-    const cv=document.getElementById(canvasId);
-    if(!cv) return;
-    // Distruggi anche via Chart.js registry (sicurezza aggiuntiva)
-    try{ const existing=Chart.getChart(cv); if(existing) existing.destroy(); }catch{}
-    const keyMap={frecce:'frecce',media:'media',doppie:'doppie',pct:'pct'};
-    const labelMap={frecce:'Frecce tirate',media:'Media punti',doppie:'Doppie',pct:'% Doppie'};
-    const k=keyMap[activeFilter]||'media';
-    const pts=days.map(d=>({label:d.label,value:d[k]})).filter(p=>p.value!==null);
-    if(!pts.length){
-      // Nessun dato per questo filtro — mostra messaggio nel canvas
-      const ctx=cv.getContext('2d');
-      ctx.clearRect(0,0,cv.width,cv.height);
-      ctx.fillStyle='#555';
-      ctx.font='13px DM Sans, sans-serif';
-      ctx.textAlign='center';
-      ctx.fillText('Nessun dato disponibile per questo filtro',cv.width/2,cv.height/2);
-      return;
-    }
-    _charts[canvasId]=new Chart(cv.getContext('2d'),{
-      type:'line',
-      data:{
-        labels:pts.map(p=>p.label),
-        datasets:[{
-          label:labelMap[k],
-          data:pts.map(p=>p.value),
-          borderColor:STAT_COLORS[k],
-          backgroundColor:STAT_COLORS[k]+'22',
-          pointBackgroundColor:STAT_COLORS[k],
-          pointRadius:5,pointHoverRadius:7,tension:.3,fill:true
-        }]
-      },
-      options:{responsive:true,
-        plugins:{legend:{display:false},tooltip:{callbacks:{
-          title:t=>pts[t[0].dataIndex].label,
-          label:t=>`${labelMap[k]}: ${t.raw}`
-        }}},
-        scales:{
-          x:{ticks:{color:'#666',font:{size:10},maxRotation:45},grid:{color:'#1e1e1e'}},
-          y:{ticks:{color:'#666',font:{size:11}},grid:{color:'#1e1e1e'},beginAtZero:true}
-        }}
-    });
-  }
-
-  function build501FilterCard(id, title, days){
-    const pillStyle=(k,active)=>`background:${active?STAT_COLORS[k]:'transparent'};color:${active?'#000':'var(--mu2)'};border:1.5px solid ${STAT_COLORS[k]};padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.04em;transition:all .15s`;
-    const pills=['frecce','media','doppie','pct'];
-    const labels={frecce:'FRECCE',media:'MEDIA',doppie:'DOPPIE',pct:'% DOPPIE'};
-    const pillsHtml=pills.map(k=>`<button data-filter="${k}" style="${pillStyle(k,k==='media')}" onclick="stat501SwitchFilter('${id}','${k}',this)">${labels[k]}</button>`).join('');
-    return `<div class="cw" style="margin-bottom:16px">
-      <h3>${title}</h3>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="${id}_pills">${pillsHtml}</div>
-      <canvas id="${id}" height="100"></canvas>
-    </div>`;
-  }
-
   // 501 MODALITÀ ALLENAMENTO
   const trainSessions=Object.entries(data).filter(([k,v])=>v?.__meta?.type==='501free')
     .sort((a,b)=>new Date(a[1].__meta.savedAt)-new Date(b[1].__meta.savedAt));
@@ -4920,15 +4916,13 @@ function stat501SwitchFilter(chartId, filter, btn){
   // Aggiorna filtro attivo
   src.activeFilter=filter;
   // Aggiorna stile pillole
-  const STAT_COLORS={frecce:'#38bdf8',media:'#facc15',doppie:'#f87171',pct:'#4ade80'};
   const pillsContainer=document.getElementById(chartId+'_pills');
   if(pillsContainer){
     pillsContainer.querySelectorAll('button').forEach(b=>{
-      // Leggi il filtro dal data attribute invece di parsare onclick
       const k=b.dataset.filter;
       if(!k) return;
       const active=k===filter;
-      b.style.background=active?STAT_COLORS[k]:'transparent';
+      b.style.background=active?STAT_COLORS_501[k]:'transparent';
       b.style.color=active?'#000':'var(--mu2)';
     });
   }
