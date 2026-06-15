@@ -6031,18 +6031,20 @@ function reqSendReschedule(idx){
   if(btn){ btn.disabled = true; btn.textContent = '⏳ Invio...'; }
 
   const reqId  = 'req_'+Date.now()+'_'+CU.id.slice(-4);
+  const _teacherName = (lezione && lezione.adminRef) ? (adminName(lezione.adminRef) || '') : '';
   const reqObj = {
-    uid:       CU.id,
-    firstName: CU.firstName,
-    lastName:  CU.lastName,
-    email:     CU.email,
-    phone:     CU.phone || '',
-    msg:       msg,
-    ts:        Date.now(),
-    readBy:    {},
-    repliedBy: {},
-    type:      'reschedule',
-    lessonIdx: idx,
+    uid:        CU.id,
+    firstName:  CU.firstName,
+    lastName:   CU.lastName,
+    email:      CU.email,
+    phone:      CU.phone || '',
+    msg:        msg,
+    ts:         Date.now(),
+    readBy:     {},
+    repliedBy:  {},
+    type:       'reschedule',
+    lessonIdx:  idx,
+    teacherName: _teacherName,
   };
 
   const doSave = async () => {
@@ -6381,6 +6383,26 @@ function reqOpenDetail(reqId){
     ? `<button onclick="adminAddDeviceFromRequest('${r.uid}','${r.deviceFp}','${(r.deviceName||'').replace(/'/g,'\\\'')}')" style="width:100%;background:var(--green);color:#000;border:none;padding:11px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:10px">✅ AGGIUNGI QUESTO DISPOSITIVO</button>`
     : '';
 
+  // Costruisce tasto WhatsApp
+  const _waName = r.firstName || '';
+  let _waText = '';
+  if(r.type==='percorso'){
+    _waText = 'Ciao '+_waName+', ho letto la tua richiesta per iniziare un nuovo percorso. ';
+  } else if(r.type==='reschedule'){
+    _waText = 'Ciao '+_waName+', ho letto la tua richiesta per spostare l\'appuntamento che avevamo fissato. ';
+  } else if(r.type==='generic'){
+    _waText = 'Ciao '+_waName+', ho letto la tua richiesta. ';
+  } else if(r.type==='unblock'){
+    _waText = 'Ciao '+_waName+', ho letto la tua richiesta di sblocco del profilo. Sei stato bloccato perché ';
+  } else if(r.type==='device'){
+    _waText = 'Ciao '+_waName+', ho visto la tua richiesta di sblocco del profilo perché hai fatto l\'accesso da troppi dispositivi diversi. Questa è un\'impostazione automatica dell\'app per evitare che il tuo profilo venga prestato a qualcun altro che non è iscritto a "Centro Darts Lab". Spero non sia questo il tuo caso. Come mai hai dovuto fare l\'accesso da così tanti dispositivi diversi?';
+  }
+  const _waPhone = (r.phone||'').replace(/\D/g,'');
+  const _waNum = _waPhone.startsWith('39') ? _waPhone : (_waPhone ? '39'+_waPhone : '');
+  const waBtn = (_waNum && _waText)
+    ? '<a href="https://wa.me/'+_waNum+'?text='+encodeURIComponent(_waText)+'" target="_blank" style="display:block;width:100%;box-sizing:border-box;background:#25d366;color:#fff;border:none;padding:11px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:14px;cursor:pointer;text-decoration:none;text-align:center;margin-bottom:10px">💬 RISPONDI SU WHATSAPP</a>'
+    : (!r.phone ? '<div style="font-size:12px;color:var(--mu2);margin-bottom:10px">⚠️ Numero di telefono non disponibile per questo utente.</div>' : '');
+
   document.getElementById('reqDetailContent').innerHTML =
     '<h2 style="font-weight:700;font-size:20px;color:'+detailColor+';margin-bottom:18px">'+detailTitle+'</h2>'
     +'<div class="req-detail-user">'
@@ -6388,11 +6410,13 @@ function reqOpenDetail(reqId){
     +'<div class="rdu-row"><span class="rdu-label">Email</span><span>'+r.email+'</span></div>'
     +(r.phone ? '<div class="rdu-row"><span class="rdu-label">Tel</span><span>'+r.phone+'</span></div>' : '')
     +(isReschedule && r.lessonIdx !== undefined ? '<div class="rdu-row"><span class="rdu-label">Lezione</span><span>Lezione '+(r.lessonIdx+1)+'</span></div>' : '')
+    +(isReschedule && r.teacherName ? '<div class="rdu-row"><span class="rdu-label">Insegnante</span><span>👨‍🏫 '+escHtml(r.teacherName)+'</span></div>' : '')
     +(isDevice && r.deviceName ? '<div class="rdu-row"><span class="rdu-label">Dispositivo</span><span>'+r.deviceName+'</span></div>' : '')
     +'</div>'
     +'<div class="req-detail-ts">'+tsStr+'</div>'
     +'<div class="req-detail-msg">'+escHtml(r.msg)+'</div>'
     +deviceActionBtn
+    +waBtn
     +'<button class="req-reply-btn'+(isReplied?' replied':'')+'" id="reqReplyBtn" data-reqid="'+reqId+'" onclick="reqToggleReplied(this)">'
     +(isReplied ? '✓ HAI GIÀ RISPOSTO' : '📝 SEGNA COME RISPOSTO')+'</button>';
 
