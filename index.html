@@ -5953,8 +5953,16 @@ function userSaveIcsSaved(){
 let _reqFilter    = 'unread'; // default: Da leggere
 let _reqSearchUid = null;      // uid filtro ricerca | null = tutti
 let _reqListener  = null;   // Firebase .on listener
+let _reqTyping    = {};     // { reqId: { adminId: timestamp } } — chi sta rispondendo
+let _reqTypingListener = null; // listener Firebase per typing
 let _reqCache     = {};     // reqId → oggetto request (aggiornato live)
-let _reqDetailId  = null;   // id messaggio aperto in dettaglio
+let _reqDetailId  = null;
+// Heartbeat typing: aggiorna timestamp ogni 10s se dettaglio aperto
+setInterval(()=>{
+  if(_reqDetailId && _firebaseOK && _fbDB && CU && CU.role==='admin'){
+    _fbDB.ref('db/reqTyping/'+_reqDetailId+'/'+CU.id).set(Date.now());
+  }
+}, 10000);   // id messaggio aperto in dettaglio
 
 // ── Invio richiesta (utente normale) ──────────────────────────────────────────
 function reqSendRequest(){
@@ -6032,7 +6040,9 @@ function reqSendReschedule(idx){
   if(btn){ btn.disabled = true; btn.textContent = '⏳ Invio...'; }
 
   const reqId  = 'req_'+Date.now()+'_'+CU.id.slice(-4);
-  const _teacherName = (lezione && lezione.adminRef) ? (adminName(lezione.adminRef) || '') : '';
+  const _admins = getUsers().filter(u=>u.role==='admin');
+  const _adminLookup = (id) => { const a=_admins.find(a=>a.id===id); return a ? a.firstName+' '+a.lastName : null; };
+  const _teacherName = (lezione && lezione.adminRef) ? (_adminLookup(lezione.adminRef) || '') : '';
   const reqObj = {
     uid:        CU.id,
     firstName:  CU.firstName,
@@ -6177,12 +6187,28 @@ function reqStartListener(){
     reqRenderList();
     reqUpdateDot();
   });
+
+  // Listener typing real-time
+  if(!_reqTypingListener){
+    _reqTypingListener = _fbDB.ref('db/reqTyping').on('value', snap=>{
+      _reqTyping = snap.val() || {};
+      reqRenderList();
+    });
+  }
 }
 
 function reqStopListener(){
   if(_reqListener && _fbDB){
     _fbDB.ref('db/requests').off('value', _reqListener);
     _reqListener = null;
+  }
+  if(_reqTypingListener && _fbDB){
+    _fbDB.ref('db/reqTyping').off('value', _reqTypingListener);
+    _reqTypingListener = null;
+  }
+  // Rimuovi il proprio typing indicator se ancora presente
+  if(_reqDetailId && _firebaseOK && _fbDB && CU){
+    _fbDB.ref('db/reqTyping/'+_reqDetailId+'/'+CU.id).remove();
   }
 }
 
@@ -6267,12 +6293,15 @@ function reqRenderSection(el, reqs, isReadSection){
     } else {
       senderLabel = '<span style="font-size:11px;color:var(--green);font-weight:700;letter-spacing:.06em;text-transform:uppercase">🎯 PERCORSO</span> — <span style="color:var(--light)">'+r.firstName+' '+r.lastName+'</span>';
     }
-    return '<div class="'+cls+'" data-reqid="'+r.id+'" onclick="reqClickCard(this)">'
-      +'<div class="req-ts">'+tsStr+'</div>'
-      +'<div class="req-sender">'+senderLabel+'</div>'
-      +'<div class="req-preview">'+preview+'</div>'
-      +(badges ? '<div class="req-badges">'+badges+'</div>' : '')
-      +'</div>';
+    const _typingInfo = (_reqTyping[r.id] && Object.entries(_reqTyping[r.id]).filter(([aid,ts])=>aid!==CU.id&&(Date.now()-ts)<15000)) || [];
+    const _typingNames = _typingInfo.map(([aid])=>{ const a=getUsers().find(u=>u.id===aid); return a?a.firstName:'Admin'; });
+    const typingPill = _typingNames.length
+      ? '<div style="font-size:11px;color:var(--amber);margin-top:5px;font-style:italic">✏️ '+_typingNames.join(', ')+(_typingNames.length===1?' sta rispondendo...':' stanno rispondendo...')+'</div>'
+      : '';
+    const unreadPill = isReplied
+      ? '<button onclick="event.stopPropagation();reqMarkUnread(\''+r.id+'\')" style="background:transparent;border:1px solid var(--d5);color:var(--mu2);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;font-family:\'DM Sans\',sans-serif;letter-spacing:.03em;margin-top:6px">↩ NON LETTO</button>'
+      : '';
+    return '<div class="'+cls+'" data-reqid="'+r.id+'" onclick="reqClickCard(this)">'      +'<div class="req-ts">'+tsStr+'</div>'      +'<div class="req-sender">'+senderLabel+'</div>'      +'<div class="req-preview">'+preview+'</div>'      +(badges ? '<div class="req-badges">'+badges+'</div>' : '')      +typingPill      +(unreadPill ? '<div>'+unreadPill+'</div>' : '')      +'</div>';
   }).join('');
   if(isReadSection){
     el.innerHTML = '<div class="req-read-list">'+cards+'</div>';
@@ -6352,6 +6381,11 @@ function reqOpenDetail(reqId){
   if(!r || !CU) return;
   _reqDetailId = reqId;
 
+  // Segnala "sta rispondendo" su Firebase (typing indicator)
+  if(_firebaseOK && _fbDB){
+    _fbDB.ref('db/reqTyping/'+reqId+'/'+CU.id).set(Date.now());
+  }
+
   // Segna come letto da questo admin
   if(!r.readBy) r.readBy = {};
   if(!r.readBy[CU.id]){
@@ -6379,10 +6413,8 @@ function reqOpenDetail(reqId){
     : isGeneric ? 'var(--light)'
     : 'var(--green)';
 
-  // Bottone azione rapida per richieste dispositivo
-  const deviceActionBtn = isDevice && r.deviceFp && r.uid
-    ? `<button onclick="adminAddDeviceFromRequest('${r.uid}','${r.deviceFp}','${(r.deviceName||'').replace(/'/g,'\\\'')}')" style="width:100%;background:var(--green);color:#000;border:none;padding:11px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:10px">✅ AGGIUNGI QUESTO DISPOSITIVO</button>`
-    : '';
+  // Bottone azione rapida per richieste dispositivo — rimosso per type='device'
+  const deviceActionBtn = '';
 
   // Costruisce tasto WhatsApp
   const _waName = r.firstName || '';
@@ -6430,6 +6462,10 @@ function reqOpenDetail(reqId){
 }
 
 function reqCloseDetail(){
+  // Rimuovi "sta rispondendo" da Firebase
+  if(_reqDetailId && _firebaseOK && _fbDB && CU){
+    _fbDB.ref('db/reqTyping/'+_reqDetailId+'/'+CU.id).remove();
+  }
   _reqDetailId = null;
   document.getElementById('reqDetailOverlay').classList.remove('open');
   document.body.style.overflow = '';
@@ -6479,6 +6515,7 @@ function reqMarkUnread(reqId){
   if(_firebaseOK && _fbDB){
     _fbDB.ref('db/requests/'+reqId+'/readBy/'+CU.id).remove();
     _fbDB.ref('db/requests/'+reqId+'/repliedBy/'+CU.id).remove();
+    _fbDB.ref('db/reqTyping/'+reqId+'/'+CU.id).remove();
   }
   // Chiudi il detail e torna alla lista "Da leggere"
   reqCloseDetail();
