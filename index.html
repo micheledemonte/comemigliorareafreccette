@@ -3458,12 +3458,12 @@ const LD = {
     {id:'play501',        icon:'🏆', label:'501'},
     {id:'checkout',       icon:'✅', label:'Checkout'},
     {id:'appuntamenti',   icon:'📅', label:'Appuntamenti'},
-    {id:'user-calendario',icon:'📆', label:'Calendario'},
     {id:'profile',        icon:'👤', label:'Profilo'},
   ],
   adminTab:        {id:'admin',       icon:'⚙️', label:'Admin'},
   gestTab:         {id:'gestionale',  icon:'📋', label:'Gestionale'}, // admin-only
   calTab:          {id:'calendario',  icon:'📅', label:'Calendario'}, // admin-only
+  userCalTab:      {id:'user-calendario', icon:'📆', label:'Calendario'}, // user-only
   analysisTab:     {id:'shotanalysis',icon:'📹', label:'Analisi'}, // admin-only
   logoutTab:    {id:'__logout',    icon:'<img src="/logout.png" style="width:22px;height:22px;object-fit:contain" alt="Logout">',  label:'Logout', isLogout:true},
   showAdmin:  false,
@@ -3496,6 +3496,8 @@ function ldAllTabs(){
     all.push(LD.gestTab);     // GESTIONALE visible only to admins
     all.push(LD.calTab);      // CALENDARIO visible only to admins
     all.push(LD.adminTab);
+  } else {
+    all.push(LD.userCalTab);  // CALENDARIO visible only to normal users
   }
   all.push(LD.logoutTab);
   return all;
