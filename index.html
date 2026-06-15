@@ -3857,6 +3857,24 @@ function ldHide(){
   document.getElementById('ldLogout').style.display='none';
 }
 
+// Nasconde dock e logout button durante i giochi a schermo intero
+function gameOverlayOpen(){
+  document.getElementById('liquidDock').style.visibility='hidden';
+  document.getElementById('liquidDock').style.pointerEvents='none';
+  const lo=document.getElementById('ldLogout');
+  if(lo){lo.style.visibility='hidden';lo.style.pointerEvents='none';}
+}
+// Ripristina dock dopo la chiusura di un gioco
+function gameOverlayClose(){
+  const dock=document.getElementById('liquidDock');
+  if(dock && dock.style.display!=='none'){
+    dock.style.visibility='';
+    dock.style.pointerEvents='';
+  }
+  const lo=document.getElementById('ldLogout');
+  if(lo){lo.style.visibility='';lo.style.pointerEvents='';}
+}
+
 function showTab(name,silent=false){
   document.querySelectorAll('.tab-body').forEach(t=>t.classList.remove('active'));
   const tb=document.getElementById('tab-'+name);
@@ -4255,7 +4273,7 @@ function openPressureGame(gid, variant){
   document.getElementById('pgSector').textContent = cfg.sectorLabel;
   document.getElementById('pgResultBox').style.display = 'none'; // always hide result on open
   pgRefresh();
-  document.getElementById('pgOverlay').style.display = 'flex';
+  document.getElementById('pgOverlay').style.display = 'flex'; gameOverlayOpen();
 }
 
 function pgRefresh(){
@@ -4364,7 +4382,7 @@ function pgNextGame(){
 }
 
 function pgClose(){
-  document.getElementById('pgOverlay').style.display = 'none';
+  document.getElementById('pgOverlay').style.display = 'none'; gameOverlayClose();
   document.getElementById('pgResultBox').style.display = 'none';
   // Full state reset so next open always starts fresh
   _PG = {active: false};
@@ -8386,6 +8404,7 @@ function open501Training(gid){
   G.mode='training'; G.trainingGid=gid; G.totalLegs=3; G.currentLeg=0; G.legsResults=[];
   startLeg501();
   document.getElementById('g501overlay').classList.add('open');
+  gameOverlayOpen();
 }
 // ══════════════════════════════════════════════════
 // TOURNAMENT 501 ENGINE
@@ -8449,6 +8468,7 @@ function startTournament501(){
   g501UpdateSetLeg();
   const _ovT = document.getElementById('g501overlay');
   _ovT.classList.add('open');
+  gameOverlayOpen();
   requestAnimationFrame(()=>{ g501UpdateDisplay(); });
 }
 
@@ -8544,6 +8564,7 @@ function tourAdvance(){
 function tourFinalize(){
   GT.active = false;
   document.getElementById('g501overlay').classList.remove('open');
+  gameOverlayClose();
   // Reset button
   const btn = document.getElementById('g501closeBtn');
   if(btn){ btn.textContent = 'ESCI ×'; btn.classList.remove('leg-lost-btn'); }
@@ -8862,6 +8883,7 @@ function startOpponent501(){
 
   const _ovO = document.getElementById('g501overlay');
   _ovO.classList.add('open');
+  gameOverlayOpen();
   requestAnimationFrame(()=>{ g501UpdateDisplay(); });
   startTourLeg501();
 }
@@ -8873,6 +8895,7 @@ function startFree501(){
   startLeg501();
   const _ov = document.getElementById('g501overlay');
   _ov.classList.add('open');
+  gameOverlayOpen();
   requestAnimationFrame(()=>{ g501UpdateDisplay(); });
 }
 function startLeg501(){
@@ -8899,6 +8922,7 @@ function close501(){
   document.getElementById('g501overlay').classList.remove('open');
   document.getElementById('g501missScreen').classList.remove('open');
   document.getElementById('g501coScreen').classList.remove('open');
+  gameOverlayClose();
 }
 
 // ── keypad ──
@@ -9250,6 +9274,7 @@ function savePartialFree501(){
 
 function finalizeFree501(){
   document.getElementById('g501overlay').classList.remove('open');
+  gameOverlayClose();
   if(!CU) return;
   const data=getUD(CU.id);
   const fk='free501_'+Date.now();
@@ -9349,6 +9374,18 @@ function showPrev501Sess(){
         opponentName: _oppName,
         withOpponent: true,
         meta:{totalSets:sess.__meta?.totalSets||1, legsPerSet:sess.__meta?.legsPerSet||legs.length}});
+    } else if(_withOpp) {
+      // Sessione avversario post-merge: ha legs piatti senza sets
+      // → trattarla con isTournament:true per mantenere lo stile torneo
+      const flatLegs = toArr(sess.legs) || [];
+      // Costruisce rawSets sintetici (1 leg per set) per la visualizzazione
+      const syntheticSets = flatLegs.map((lg,i)=>({legs:[lg]}));
+      _selected501Sessions.push({key, date, legs:flatLegs, isTournament:true,
+        tourName: 'vs '+_oppName,
+        rawSets: syntheticSets,
+        opponentName: _oppName,
+        withOpponent: true,
+        meta:{totalSets:flatLegs.length, legsPerSet:1}});
     } else {
       _selected501Sessions.push({key, date, legs:sess.legs, isTournament:false,
         opponentName: _oppName,
@@ -9731,7 +9768,7 @@ function open201Game(gid){
     score:201,turns:[],round:1,legDarts:0,winsCount:0,
     enteredStr:'',legScores:[]};
   start201Leg();
-  document.getElementById('g201overlay').style.display='flex';
+  document.getElementById('g201overlay').style.display='flex'; gameOverlayOpen();
 }
 
 function start201Leg(){
@@ -9872,7 +9909,7 @@ function _g201RecordLeg(won, checkoutDarts){
   else{finalize201Game();}
 }
 function finalize201Game(){
-  document.getElementById('g201overlay').style.display='none';
+  document.getElementById('g201overlay').style.display='none'; gameOverlayClose();
   if(G201.gid){
     for(let i=0;i<10;i++){
       const inp=document.querySelector(`[data-gid="${G201.gid}"][data-key="${i}"]`);
@@ -9881,7 +9918,7 @@ function finalize201Game(){
     updTot(G201.gid);
   }
 }
-function close201(){document.getElementById('g201overlay').style.display='none';}
+function close201(){document.getElementById('g201overlay').style.display='none'; gameOverlayClose();}
 
 // ══════════════════════════════════════════════════
 // ANALISI TIRO — MediaPipe Pose engine
