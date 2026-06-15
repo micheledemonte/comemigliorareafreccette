@@ -1736,12 +1736,44 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <!-- MODALITÀ ALLENAMENTO 501 -->
     <div class="pc">
       <h3>MODALITÀ ALLENAMENTO 501</h3>
-      <p style="font-size:13px;color:var(--mu2);margin-bottom:20px;line-height:1.65">Seleziona quanti legs vuoi giocare e premi Inizia Allenamento. Al termine, i risultati verranno salvati nelle statistiche.</p>
-      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-        <div class="sel-group"><label>Numero di legs</label>
-          <select id="legCount"><option value="1">1 leg</option><option value="2">2 legs</option><option value="3" selected>3 legs</option><option value="4">4 legs</option><option value="5">5 legs</option><option value="6">6 legs</option><option value="7">7 legs</option><option value="8">8 legs</option><option value="9">9 legs</option><option value="10">10 legs</option><option value="11">11 legs</option><option value="12">12 legs</option><option value="13">13 legs</option><option value="14">14 legs</option><option value="15">15 legs</option><option value="16">16 legs</option><option value="17">17 legs</option><option value="18">18 legs</option><option value="19">19 legs</option><option value="20">20 legs</option><option value="21">21 legs</option></select>
+      <p style="font-size:13px;color:var(--mu2);margin-bottom:16px;line-height:1.65">Scegli se ti alleni da solo o con un avversario. I risultati verranno sempre salvati nelle statistiche di allenamento.</p>
+      <!-- Sub-mode selector -->
+      <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">
+        <button id="trainModeSolo" class="co-filter-btn active" onclick="setTrainMode('solo')">🎯 Solitario</button>
+        <button id="trainModeOpponent" class="co-filter-btn" onclick="setTrainMode('opponent')">🆚 Con avversario</button>
+      </div>
+      <!-- Solitario panel -->
+      <div id="trainPanelSolo">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div class="sel-group"><label>Numero di legs</label>
+            <select id="legCount"><option value="1">1 leg</option><option value="2">2 legs</option><option value="3" selected>3 legs</option><option value="4">4 legs</option><option value="5">5 legs</option><option value="6">6 legs</option><option value="7">7 legs</option><option value="8">8 legs</option><option value="9">9 legs</option><option value="10">10 legs</option><option value="11">11 legs</option><option value="12">12 legs</option><option value="13">13 legs</option><option value="14">14 legs</option><option value="15">15 legs</option><option value="16">16 legs</option><option value="17">17 legs</option><option value="18">18 legs</option><option value="19">19 legs</option><option value="20">20 legs</option><option value="21">21 legs</option></select>
+          </div>
+          <button class="playbtn" style="padding:10px 28px;font-size:16px;margin-top:16px" onclick="startFree501()">INIZIA ALLENAMENTO</button>
         </div>
-        <button class="playbtn" style="padding:10px 28px;font-size:16px;margin-top:16px" onclick="startFree501()">INIZIA ALLENAMENTO</button>
+      </div>
+      <!-- Con avversario panel -->
+      <div id="trainPanelOpponent" style="display:none">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px">
+          <div class="sel-group"><label>Nome avversario</label>
+            <input id="trainOpponentName" type="text" placeholder="Es. Mario Rossi" style="height:42px;padding:0 12px;border-radius:8px;border:1.5px solid var(--d5);background:var(--d2);color:var(--light);font-family:'DM Sans',sans-serif;font-size:15px;width:180px">
+          </div>
+          <div class="sel-group"><label>Tipo partita</label>
+            <select id="trainOppMatchType" onchange="trainOppMatchTypeChange()">
+              <option value="total" selected>Totale legs</option>
+              <option value="bestof">Alla meglio di…</option>
+            </select>
+          </div>
+          <div class="sel-group"><label>Numero di sets</label>
+            <select id="trainOppSetCount"><option value="1" selected>1 set</option><option value="2">2 sets</option><option value="3">3 sets</option><option value="4">4 sets</option><option value="5">5 sets</option><option value="6">6 sets</option><option value="7">7 sets</option></select>
+          </div>
+          <div class="sel-group" id="trainOppLegTotalGroup"><label>Legs per set</label>
+            <select id="trainOppLegCount"><option value="1">1 leg</option><option value="2">2 legs</option><option value="3" selected>3 legs</option><option value="4">4 legs</option><option value="5">5 legs</option><option value="6">6 legs</option><option value="7">7 legs</option></select>
+          </div>
+          <div class="sel-group" id="trainOppBestOfGroup" style="display:none"><label>Alla meglio di</label>
+            <select id="trainOppBestOfCount"><option value="3" selected>Best of 3 (vinci 2)</option><option value="5">Best of 5 (vinci 3)</option><option value="7">Best of 7 (vinci 4)</option><option value="9">Best of 9 (vinci 5)</option><option value="11">Best of 11 (vinci 6)</option></select>
+          </div>
+        </div>
+        <button class="playbtn" style="padding:10px 28px;font-size:16px" onclick="startOpponent501()">INIZIA ALLENAMENTO CON AVVERSARIO</button>
       </div>
     </div>
     <!-- MODALITÀ TORNEO 501 -->
@@ -3198,8 +3230,64 @@ function enterApp(){
     calLoadIcsSaved();
     gsRestoreNotifications();
     reqStartListener();
+    startDBListeners();
   }, 800);
-  else setTimeout(calLoadIcsSaved, 800);
+  else setTimeout(()=>{ calLoadIcsSaved(); startDBListeners(); }, 800);
+}
+
+function startDBListeners(){
+  if(!_firebaseOK || !_fbDB || !CU) return;
+  // Listener su userData del solo utente loggato
+  if(_dbUserDataListener) _fbDB.ref('db/userData/'+CU.id).off('value', _dbUserDataListener);
+  _dbUserDataListener = _fbDB.ref('db/userData/'+CU.id).on('value', snap=>{
+    if(!_dbCache) return;
+    const val = snap.val();
+    if(val && typeof val === 'object'){
+      const existing = (_dbCache.userData && _dbCache.userData[CU.id]) || {};
+      // Preserva __devices dalla cache locale (non sovrascrivere)
+      const devices = existing.__devices || val.__devices;
+      _dbCache.userData[CU.id] = val;
+      if(devices) _dbCache.userData[CU.id].__devices = devices;
+    }
+    // Aggiorna UI se la tab corrente dipende dai dati utente
+    const cur = document.querySelector('.tab-body.active');
+    if(cur){
+      const tabId = cur.id.replace('tab-','');
+      if(tabId==='stats')        renderStats();
+      if(tabId==='play501')      loadPrev501Sessions();
+      if(tabId==='appuntamenti') renderApptUser();
+    }
+  });
+  // Listener su users (necessario per admin e per aggiornamenti profilo)
+  if(_dbUsersListener) _fbDB.ref('db/users').off('value', _dbUsersListener);
+  _dbUsersListener = _fbDB.ref('db/users').on('value', snap=>{
+    if(!_dbCache) return;
+    const val = snap.val();
+    if(val && Array.isArray(val)){
+      _dbCache.users = val;
+      // Aggiorna CU con dati freschi
+      const me = val.find(u=>u.id===CU.id);
+      if(me) CU = me;
+      // Se admin e gestionale aperto, aggiorna
+      if(CU.role==='admin'){
+        const gEl = document.getElementById('tab-gestionale');
+        if(gEl && gEl.classList.contains('active')) gsRender();
+        const aEl = document.getElementById('tab-admin');
+        if(aEl && aEl.classList.contains('active')) renderAdmin();
+      }
+    }
+  });
+}
+
+function stopDBListeners(){
+  if(_dbUserDataListener && _fbDB && CU){
+    _fbDB.ref('db/userData/'+CU.id).off('value', _dbUserDataListener);
+    _dbUserDataListener = null;
+  }
+  if(_dbUsersListener && _fbDB){
+    _fbDB.ref('db/users').off('value', _dbUsersListener);
+    _dbUsersListener = null;
+  }
 }
 
 function autoLoadNextSession(){
@@ -3325,6 +3413,7 @@ function showSavingGuardPopup(remaining){
 
 async function doLogout(){
   reqStopListener(); // ferma listener richieste real-time
+  stopDBListeners(); // ferma listener real-time su userData/users
   CU=null;
   _dbCache=null;
   _reqCache={};
@@ -4665,70 +4754,162 @@ function renderStats(uid){
       .filter(p=>p.avg!==null);
   }
 
-  // 501 MODALITÀ ALLENAMENTO — 1 punto per giorno, media punti + % doppia
-  const trainSessions=Object.entries(data).filter(([k,v])=>v?.__meta?.type==='501free')
-    .sort((a,b)=>new Date(a[1].__meta.savedAt)-new Date(b[1].__meta.savedAt));
-  const trainDays=groupByDay(trainSessions,
-    sess=>{
-      const legs=sess.legs||[];
-      const avgs=legs.map(l=>l.avgPerRound||0).filter(n=>n>0);
-      return avgs.length?+(avgs.reduce((a,b)=>a+b,0)/avgs.length).toFixed(1):null;
-    },
-    sess=>{
-      const legs=sess.legs||[];
-      const totT=legs.reduce((s,l)=>s+(l.doublesThrown||0),0);
-      const totH=legs.reduce((s,l)=>s+(l.doublesHit||0),0);
-      return totT>0?Math.round(totH/totT*100):null;
+  // ── helpers per calcoli per giorno con 4 metriche ──
+  function groupByDay4(sessions, metricsFn){
+    const byDate={};
+    for(const [,sess] of sessions){
+      const d=new Date(sess.__meta.savedAt);
+      const dk=d.toLocaleDateString('it-IT');
+      if(!byDate[dk]) byDate[dk]={d,frecce:[],medie:[],doppie:[],pct:[]};
+      const m=metricsFn(sess);
+      if(m.frecce!==null) byDate[dk].frecce.push(m.frecce);
+      if(m.media!==null)  byDate[dk].medie.push(m.media);
+      if(m.doppie!==null) byDate[dk].doppie.push(m.doppie);
+      if(m.pct!==null)    byDate[dk].pct.push(m.pct);
     }
-  );
-  if(trainDays.length){
-    const fid=cid_();
-    html+=`<div class="cw" style="margin-bottom:16px"><h3>501 — MODALITÀ ALLENAMENTO — Media punti &amp; % doppia per giorno</h3><canvas id="${fid}" height="100"></canvas></div>`;
-    window._pendingCharts=window._pendingCharts||{};
-    window._pendingCharts[fid]={
-      pts:trainDays.map(d=>({label:d.label,value:d.avg})),
-      color:'#facc15',yLabel:'Media punti',
-      pts2:trainDays.filter(d=>d.pct!==null).map(d=>({label:d.label,value:d.pct})),
-      color2:'#fb923c',yLabel2:'% Doppia'
-    };
+    const avg=arr=>arr.length?+(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1):null;
+    const sum=arr=>arr.length?arr.reduce((a,b)=>a+b,0):null;
+    return Object.entries(byDate)
+      .sort((a,b)=>a[1].d-b[1].d)
+      .map(([dk,v])=>({
+        label:dk,
+        frecce:avg(v.frecce),
+        media:avg(v.medie),
+        doppie:sum(v.doppie),
+        pct:avg(v.pct)
+      }));
   }
 
-  // 501 MODALITÀ TORNEO — 1 punto per giorno, media punti + % doppia
+  // Colori fissi per ogni metrica
+  const STAT_COLORS={frecce:'#38bdf8',media:'#facc15',doppie:'#f87171',pct:'#4ade80'};
+
+  function render501FilterChart(canvasId, days, activeFilter){
+    if(_charts[canvasId]){try{_charts[canvasId].destroy();}catch{} delete _charts[canvasId];}
+    const cv=document.getElementById(canvasId);
+    if(!cv) return;
+    const keyMap={frecce:'frecce',media:'media',doppie:'doppie',pct:'pct'};
+    const labelMap={frecce:'Frecce tirate',media:'Media punti',doppie:'Doppie',pct:'% Doppie'};
+    const k=keyMap[activeFilter]||'media';
+    const pts=days.map(d=>({label:d.label,value:d[k]})).filter(p=>p.value!==null);
+    if(!pts.length) return;
+    _charts[canvasId]=new Chart(cv.getContext('2d'),{
+      type:'line',
+      data:{
+        labels:pts.map(p=>p.label),
+        datasets:[{
+          label:labelMap[k],
+          data:pts.map(p=>p.value),
+          borderColor:STAT_COLORS[k],
+          backgroundColor:STAT_COLORS[k]+'22',
+          pointBackgroundColor:STAT_COLORS[k],
+          pointRadius:5,pointHoverRadius:7,tension:.3,fill:true
+        }]
+      },
+      options:{responsive:true,
+        plugins:{legend:{display:false},tooltip:{callbacks:{
+          title:t=>pts[t[0].dataIndex].label,
+          label:t=>`${labelMap[k]}: ${t.raw}`
+        }}},
+        scales:{
+          x:{ticks:{color:'#666',font:{size:10},maxRotation:45},grid:{color:'#1e1e1e'}},
+          y:{ticks:{color:'#666',font:{size:11}},grid:{color:'#1e1e1e'},beginAtZero:true}
+        }}
+    });
+  }
+
+  function build501FilterCard(id, title, days){
+    const pillStyle=(k,active)=>`background:${active?STAT_COLORS[k]:'transparent'};color:${active?'#000':'var(--mu2)'};border:1.5px solid ${STAT_COLORS[k]};padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.04em;transition:all .15s`;
+    const pills=['frecce','media','doppie','pct'];
+    const labels={frecce:'FRECCE',media:'MEDIA',doppie:'DOPPIE',pct:'% DOPPIE'};
+    const pillsHtml=pills.map(k=>`<button style="${pillStyle(k,k==='media')}" onclick="stat501SwitchFilter('${id}','${k}',this)">${labels[k]}</button>`).join('');
+    return `<div class="cw" style="margin-bottom:16px">
+      <h3>${title}</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="${id}_pills">${pillsHtml}</div>
+      <canvas id="${id}" height="100"></canvas>
+    </div>`;
+  }
+
+  // 501 MODALITÀ ALLENAMENTO
+  const trainSessions=Object.entries(data).filter(([k,v])=>v?.__meta?.type==='501free')
+    .sort((a,b)=>new Date(a[1].__meta.savedAt)-new Date(b[1].__meta.savedAt));
+  const trainDays4=groupByDay4(trainSessions, sess=>{
+    const legs=sess.legs||[];
+    const frecce=legs.reduce((s,l)=>s+(l.dartsThrown||0),0)||null;
+    const avgs=legs.map(l=>l.avgPerRound||0).filter(n=>n>0);
+    const media=avgs.length?+(avgs.reduce((a,b)=>a+b,0)/avgs.length).toFixed(1):null;
+    const doppie=legs.reduce((s,l)=>s+(l.doublesHit||0),0)||null;
+    const totT=legs.reduce((s,l)=>s+(l.doublesThrown||0),0);
+    const totH=legs.reduce((s,l)=>s+(l.doublesHit||0),0);
+    const pct=totT>0?Math.round(totH/totT*100):null;
+    return {frecce,media,doppie,pct};
+  });
+  if(trainDays4.length){
+    const fid='chart501train';
+    html+=build501FilterCard(fid,'501 — MODALITÀ ALLENAMENTO',trainDays4);
+    window._501chartData=window._501chartData||{};
+    window._501chartData[fid]={days:trainDays4,activeFilter:'media'};
+    window._501chartDataPersist=window._501chartDataPersist||{};
+    window._501chartDataPersist[fid]={days:trainDays4,activeFilter:'media'};
+  }
+
+  // 501 MODALITÀ TORNEO
   const tourSessions=Object.entries(data).filter(([k,v])=>v?.__meta?.type==='501tournament')
     .sort((a,b)=>new Date(a[1].__meta.savedAt)-new Date(b[1].__meta.savedAt));
-  const tourDays=groupByDay(tourSessions,
-    sess=>{
-      const allLegs=(sess.sets||[]).flatMap(s=>s.legs||[]);
-      if(!allLegs.length) return null;
-      const perLegAvg=allLegs.map(l=>{
-        if(l.won===false) return l.avgPerRound||l.avg||0;
-        const d=l.darts||l.dartsThrown||0; return d>0?+((501/d)*3):0;
-      });
-      const avg=+(perLegAvg.reduce((a,v)=>a+v,0)/perLegAvg.length).toFixed(1);
-      return avg>0?avg:null;
-    },
-    sess=>{
-      const allLegs=(sess.sets||[]).flatMap(s=>s.legs||[]);
-      const totT=allLegs.reduce((s,l)=>s+(l.doublesThrown||0),0);
-      const totH=allLegs.reduce((s,l)=>s+(l.doublesHit||0),0);
-      return totT>0?Math.round(totH/totT*100):null;
-    }
-  );
-  if(tourDays.length){
-    const tid=cid_();
-    html+=`<div class="cw" style="margin-bottom:16px"><h3>501 — MODALITÀ TORNEO — Media punti &amp; % doppia per giorno</h3><canvas id="${tid}" height="100"></canvas></div>`;
-    window._pendingCharts=window._pendingCharts||{};
-    window._pendingCharts[tid]={
-      pts:tourDays.map(d=>({label:d.label,value:d.avg})),
-      color:'#60a5fa',yLabel:'Media punti',
-      pts2:tourDays.filter(d=>d.pct!==null).map(d=>({label:d.label,value:d.pct})),
-      color2:'#a78bfa',yLabel2:'% Doppia'
-    };
+  const tourDays4=groupByDay4(tourSessions, sess=>{
+    const allLegs=(sess.sets||[]).flatMap(s=>s.legs||[]);
+    if(!allLegs.length) return {frecce:null,media:null,doppie:null,pct:null};
+    const frecce=allLegs.reduce((s,l)=>s+(l.darts||l.dartsThrown||0),0)||null;
+    const perLegAvg=allLegs.map(l=>{
+      if(l.won===false) return l.avgPerRound||l.avg||0;
+      const d=l.darts||l.dartsThrown||0; return d>0?+((501/d)*3):0;
+    });
+    const media=+(perLegAvg.reduce((a,v)=>a+v,0)/perLegAvg.length).toFixed(1)||null;
+    const doppie=allLegs.reduce((s,l)=>s+(l.doublesHit||0),0)||null;
+    const totT=allLegs.reduce((s,l)=>s+(l.doublesThrown||0),0);
+    const totH=allLegs.reduce((s,l)=>s+(l.doublesHit||0),0);
+    const pct=totT>0?Math.round(totH/totT*100):null;
+    return {frecce,media,doppie,pct};
+  });
+  if(tourDays4.length){
+    const tid='chart501tour';
+    html+=build501FilterCard(tid,'501 — MODALITÀ TORNEO',tourDays4);
+    window._501chartData=window._501chartData||{};
+    window._501chartData[tid]={days:tourDays4,activeFilter:'media'};
+    window._501chartDataPersist=window._501chartDataPersist||{};
+    window._501chartDataPersist[tid]={days:tourDays4,activeFilter:'media'};
   }
 
   if(!html){html='<div class="nd" style="padding:40px;text-align:center;color:var(--muted)">Nessun dato ancora. Inizia ad allenarti e salva le sessioni per vedere i grafici.</div>';}
   container.innerHTML=html;
-  setTimeout(initPendingCharts,50);
+  setTimeout(()=>{
+    initPendingCharts();
+    // Init grafici 501 con filtro pillola
+    const d501=window._501chartData||{};
+    for(const [id,cfg] of Object.entries(d501)){
+      render501FilterChart(id,cfg.days,cfg.activeFilter);
+    }
+    window._501chartData={};
+  },50);
+}
+
+function stat501SwitchFilter(chartId, filter, btn){
+  const d501=window._501chartDataPersist=window._501chartDataPersist||{};
+  // cerca i dati dal persist o dall'ultima renderStats
+  const src=d501[chartId];
+  if(!src) return;
+  // Aggiorna stile pillole
+  const pillsContainer=document.getElementById(chartId+'_pills');
+  if(pillsContainer){
+    const STAT_COLORS={frecce:'#38bdf8',media:'#facc15',doppie:'#f87171',pct:'#4ade80'};
+    pillsContainer.querySelectorAll('button').forEach(b=>{
+      const k=b.getAttribute('onclick').match(/'([^']+)',this/)[1];
+      const active=k===filter;
+      b.style.background=active?STAT_COLORS[k]:'transparent';
+      b.style.color=active?'#000':'var(--mu2)';
+    });
+  }
+  src.activeFilter=filter;
+  render501FilterChart(chartId,src.days,filter);
 }
 
 // ══════════════════════════════════════════════════
@@ -5962,6 +6143,8 @@ function userSaveIcsSaved(){
 let _reqFilter    = 'unread'; // default: Da leggere
 let _reqSearchUid = null;      // uid filtro ricerca | null = tutti
 let _reqListener  = null;   // Firebase .on listener
+let _dbUserDataListener = null; // listener real-time su userData/uid
+let _dbUsersListener    = null; // listener real-time su users (admin)
 let _reqTyping    = {};     // { reqId: { adminId: timestamp } } — chi sta rispondendo
 let _reqTypingListener = null; // listener Firebase per typing
 let _reqCache     = {};     // reqId → oggetto request (aggiornato live)
@@ -6307,10 +6490,7 @@ function reqRenderSection(el, reqs, isReadSection){
     const typingPill = _typingNames.length
       ? '<div style="font-size:11px;color:var(--amber);margin-top:5px;font-style:italic">✏️ '+_typingNames.join(', ')+(_typingNames.length===1?' sta rispondendo...':' stanno rispondendo...')+'</div>'
       : '';
-    const unreadPill = isReplied
-      ? '<button onclick="event.stopPropagation();reqMarkUnread(\''+r.id+'\')" style="background:transparent;border:1px solid var(--d5);color:var(--mu2);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;font-family:\'DM Sans\',sans-serif;letter-spacing:.03em;margin-top:6px">↩ NON LETTO</button>'
-      : '';
-    return '<div class="'+cls+'" data-reqid="'+r.id+'" onclick="reqClickCard(this)">'      +'<div class="req-ts">'+tsStr+'</div>'      +'<div class="req-sender">'+senderLabel+'</div>'      +'<div class="req-preview">'+preview+'</div>'      +(badges ? '<div class="req-badges">'+badges+'</div>' : '')      +typingPill      +(unreadPill ? '<div>'+unreadPill+'</div>' : '')      +'</div>';
+    return '<div class="'+cls+'" data-reqid="'+r.id+'" onclick="reqClickCard(this)">'      +'<div class="req-ts">'+tsStr+'</div>'      +'<div class="req-sender">'+senderLabel+'</div>'      +'<div class="req-preview">'+preview+'</div>'      +(badges ? '<div class="req-badges">'+badges+'</div>' : '')      +typingPill      +'</div>';
   }).join('');
   if(isReadSection){
     el.innerHTML = '<div class="req-read-list">'+cards+'</div>';
@@ -6460,7 +6640,8 @@ function reqOpenDetail(reqId){
     +deviceActionBtn
     +waBtn
     +'<button class="req-reply-btn'+(isReplied?' replied':'')+'" id="reqReplyBtn" data-reqid="'+reqId+'" onclick="reqToggleReplied(this)">'
-    +(isReplied ? '✓ HAI GIÀ RISPOSTO' : '📝 SEGNA COME RISPOSTO')+'</button>';
+    +(isReplied ? '✓ HAI GIÀ RISPOSTO' : '📝 SEGNA COME RISPOSTO')+'</button>'
+    +(isReplied ? '<button id="reqUnreadBtn" onclick="reqMarkUnread(\''+reqId+'\')" style="width:100%;background:transparent;color:var(--mu2);border:1.5px solid var(--d5);padding:10px;border-radius:999px;font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:13px;cursor:pointer;margin-top:8px;letter-spacing:.03em">↩ SEGNA COME NON LETTO</button>' : '');
 
   document.getElementById('reqDetailOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -8056,8 +8237,40 @@ function tourFinalize(){
   if(!CU) return;
   // Save to Firebase
   const data = getUD(CU.id);
+  const savedAt = new Date().toISOString();
+  // Se modalità allenamento con avversario: salva come 501free
+  if(GT.isTrainingMode){
+    const fk = 'free501_' + Date.now();
+    const oppName = GT.opponentName || 'Avversario';
+    // Converti sets/legs in array piatto di legs per compatibilità con 501free
+    const allLegs = GT.sets.flatMap(s=>s.legs||[]);
+    data[fk] = {
+      __meta: {type:'501free', title:'vs '+oppName, savedAt,
+               week:null, session:null,
+               totalSets:GT.totalSets, legsPerSet:GT.legsPerSet,
+               matchType:GT.matchType, bestOf:GT.bestOf,
+               opponentName:oppName, withOpponent:true},
+      legs: allLegs,
+      sets: GT.sets,
+    };
+    const freeKeys = Object.keys(data).filter(k=>k.startsWith('free501_')).sort().reverse();
+    freeKeys.slice(30).forEach(k=>delete data[k]);
+    setUD(CU.id, data);
+    GT.isTrainingMode=false;
+    _prev501Mode = 'training';
+    var trBtn2=document.getElementById('prev501ModeTraining');
+    var tmBtn2=document.getElementById('prev501ModeTournament');
+    if(trBtn2) trBtn2.classList.add('active');
+    if(tmBtn2) tmBtn2.classList.remove('active');
+    loadPrev501Sessions();
+    setTimeout(function(){
+      var sel=document.getElementById('prevSessSelect');
+      if(sel&&sel.options.length>1){ sel.selectedIndex=1; sel.dispatchEvent(new Event('change')); }
+    }, 200);
+    return;
+  }
   const tk = 'tour501_' + Date.now();
-  const tourSavedAt = new Date().toISOString();
+  const tourSavedAt = savedAt;
   const tourDateStr = new Date(tourSavedAt).toLocaleDateString('it-IT');
   const tourAutoName = genTourAutoName(data, tourDateStr);
   data[tk] = {
@@ -8255,9 +8468,55 @@ function setPrev501Mode(mode){
   loadPrev501Sessions();
 }
 
+function setTrainMode(mode){
+  document.getElementById('trainModeSolo').classList.toggle('active', mode==='solo');
+  document.getElementById('trainModeOpponent').classList.toggle('active', mode==='opponent');
+  document.getElementById('trainPanelSolo').style.display = mode==='solo' ? '' : 'none';
+  document.getElementById('trainPanelOpponent').style.display = mode==='opponent' ? '' : 'none';
+}
+
+function trainOppMatchTypeChange(){
+  const t=document.getElementById('trainOppMatchType').value;
+  document.getElementById('trainOppLegTotalGroup').style.display = t==='total' ? '' : 'none';
+  document.getElementById('trainOppBestOfGroup').style.display   = t==='bestof' ? '' : 'none';
+}
+
+function startOpponent501(){
+  if(!CU){ alert('Devi essere loggato.'); return; }
+  const oppName = (document.getElementById('trainOpponentName').value.trim()) || 'Avversario';
+  const sets    = parseInt(document.getElementById('trainOppSetCount').value) || 1;
+  const mtype   = document.getElementById('trainOppMatchType').value || 'total';
+  const legs    = mtype==='total'
+    ? parseInt(document.getElementById('trainOppLegCount').value) || 3
+    : parseInt(document.getElementById('trainOppBestOfCount').value) || 3;
+  const winsNeeded = mtype==='bestof' ? Math.ceil(legs/2) : 0;
+
+  // Usa la stessa struttura GT del torneo ma salva come 501free con flag opponent
+  GT.active        = true;
+  GT.totalSets     = sets;
+  GT.legsPerSet    = legs;
+  GT.matchType     = mtype;
+  GT.bestOf        = legs;
+  GT.winsNeeded    = winsNeeded;
+  GT.winsCount     = 0;
+  GT.lossesCount   = 0;
+  GT.currentSet    = 0;
+  GT.currentLeg    = 0;
+  GT.sets          = [];
+  GT.currentLegData= null;
+  GT.isTrainingMode= true;  // flag: salva come 501free, non 501tournament
+  GT.opponentName  = oppName;
+
+  G.mode='tournament'; G.trainingGid=null; G.totalLegs=legs; G.currentLeg=0; G.legsResults=[];
+
+  document.getElementById('g501overlay').classList.add('open');
+  startTourLeg501();
+}
+
 function startFree501(){
   const n=parseInt(document.getElementById('legCount').value)||3;
   G.mode='free'; G.trainingGid=null; G.totalLegs=n; G.currentLeg=0; G.legsResults=[];
+  GT.isTrainingMode=false; GT.active=false;
   startLeg501();
   document.getElementById('g501overlay').classList.add('open');
 }
