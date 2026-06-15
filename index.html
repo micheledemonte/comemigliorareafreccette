@@ -8534,6 +8534,15 @@ function startOpponent501(){
 
   G.mode='tournament'; G.trainingGid=null; G.totalLegs=legs; G.currentLeg=0; G.legsResults=[];
 
+  // Stessa UI del torneo: tasto LEG PERSO, stat set/leg, nascondi turno
+  const _oppBtn = document.getElementById('g501closeBtn');
+  if(_oppBtn){ _oppBtn.textContent = 'LEG PERSO'; _oppBtn.classList.add('leg-lost-btn'); }
+  const _oppSetleg = document.getElementById('g501stat_setleg');
+  if(_oppSetleg) _oppSetleg.style.display = '';
+  const _oppTurno = document.getElementById('g501stat_turno');
+  if(_oppTurno) _oppTurno.style.display = 'none';
+  g501UpdateSetLeg();
+
   document.getElementById('g501overlay').classList.add('open');
   startTourLeg501();
 }
@@ -9006,9 +9015,22 @@ function showPrev501Sess(){
       meta:{totalSets:sess.__meta.totalSets, legsPerSet:sess.__meta.legsPerSet}});
   } else {
     if(!sess?.legs) return;
-    _selected501Sessions.push({key, date, legs:sess.legs, isTournament:false,
-      opponentName: sess.__meta?.opponentName||'',
-      withOpponent: sess.__meta?.withOpponent||false});
+    const _withOpp = sess.__meta?.withOpponent||false;
+    const _oppName = sess.__meta?.opponentName||'';
+    if(_withOpp && sess.sets && sess.sets.length){
+      // Sessione vs avversario: trattala come torneo per stile grafico
+      const allLegs=(sess.sets||[]).flatMap(set=>set.legs||[]);
+      _selected501Sessions.push({key, date, legs:allLegs, isTournament:true,
+        tourName: 'vs '+_oppName,
+        rawSets: sess.sets||[],
+        opponentName: _oppName,
+        withOpponent: true,
+        meta:{totalSets:sess.__meta?.totalSets||1, legsPerSet:sess.__meta?.legsPerSet||legs.length}});
+    } else {
+      _selected501Sessions.push({key, date, legs:sess.legs, isTournament:false,
+        opponentName: _oppName,
+        withOpponent: _withOpp});
+    }
   }
   render501SessPanel();
 }
