@@ -4755,6 +4755,9 @@ function renderStats(uid){
   }
 
   // ── helpers per calcoli per giorno con 4 metriche ──
+  // Helper: normalizza array da Firebase (può arrivare come oggetto {0:...,1:...})
+  const toArr = v => Array.isArray(v) ? v : (v && typeof v==='object' ? Object.values(v) : []);
+
   function groupByDay4(sessions, metricsFn){
     const byDate={};
     for(const [,sess] of sessions){
@@ -4833,7 +4836,7 @@ function renderStats(uid){
   const trainSessions=Object.entries(data).filter(([k,v])=>v?.__meta?.type==='501free')
     .sort((a,b)=>new Date(a[1].__meta.savedAt)-new Date(b[1].__meta.savedAt));
   const trainDays4=groupByDay4(trainSessions, sess=>{
-    const legs=sess.legs||[];
+    const legs=toArr(sess.legs);
     const frecce=legs.reduce((s,l)=>s+(l.dartsThrown||0),0)||null;
     const avgs=legs.map(l=>l.avgPerRound||0).filter(n=>n>0);
     const media=avgs.length?+(avgs.reduce((a,b)=>a+b,0)/avgs.length).toFixed(1):null;
@@ -4856,7 +4859,7 @@ function renderStats(uid){
   const tourSessions=Object.entries(data).filter(([k,v])=>v?.__meta?.type==='501tournament')
     .sort((a,b)=>new Date(a[1].__meta.savedAt)-new Date(b[1].__meta.savedAt));
   const tourDays4=groupByDay4(tourSessions, sess=>{
-    const allLegs=(sess.sets||[]).flatMap(s=>s.legs||[]);
+    const allLegs=toArr(sess.sets).flatMap(s=>toArr(s.legs));
     if(!allLegs.length) return {frecce:null,media:null,doppie:null,pct:null};
     const frecce=allLegs.reduce((s,l)=>s+(l.darts||l.dartsThrown||0),0)||null;
     const perLegAvg=allLegs.map(l=>{
@@ -5197,11 +5200,13 @@ function addAdmin501Sess(uid){
   if(arr.find(s=>s.key===key)) return;
   const date=new Date(sess.__meta.savedAt).toLocaleDateString('it-IT');
   if(mode==='training'){
-    if(!sess.legs) return;
-    arr.push({key,date,legs:sess.legs,isTournament:false});
+    const _legs = Array.isArray(sess.legs) ? sess.legs : (sess.legs && typeof sess.legs==='object' ? Object.values(sess.legs) : []);
+    if(!_legs.length) return;
+    arr.push({key,date,legs:_legs,isTournament:false});
   } else {
-    const allLegs=(sess.sets||[]).flatMap(s=>s.legs||[]);
-    arr.push({key,date,legs:allLegs,sets:sess.sets||[],isTournament:true,tourName:sess.__meta?.tourName||''});
+    const _sets = Array.isArray(sess.sets) ? sess.sets : (sess.sets && typeof sess.sets==='object' ? Object.values(sess.sets) : []);
+    const allLegs=_sets.flatMap(s=>Array.isArray(s.legs)?s.legs:(s.legs&&typeof s.legs==='object'?Object.values(s.legs):[]));
+    arr.push({key,date,legs:allLegs,sets:_sets,isTournament:true,tourName:sess.__meta?.tourName||''});
   }
   renderAdmin501Panel(uid);
 }
@@ -9008,7 +9013,8 @@ function showPrev501Sess(){
   const date=new Date(sess.__meta.savedAt).toLocaleDateString('it-IT');
   if(_prev501Mode==='tournament'){
     // Tournament session: flatten legs from sets but keep set/leg info
-    const allLegs=(sess.sets||[]).flatMap(set=>set.legs||[]);
+    const _sets2=Array.isArray(sess.sets)?sess.sets:(sess.sets&&typeof sess.sets==='object'?Object.values(sess.sets):[]);
+    const allLegs=_sets2.flatMap(set=>{const ll=set.legs;return Array.isArray(ll)?ll:(ll&&typeof ll==='object'?Object.values(ll):[]); });
     _selected501Sessions.push({key, date, legs:allLegs, isTournament:true,
       tourName: sess.__meta.tourName||'',
       rawSets: sess.sets||[],
@@ -9019,7 +9025,8 @@ function showPrev501Sess(){
     const _oppName = sess.__meta?.opponentName||'';
     if(_withOpp && sess.sets && sess.sets.length){
       // Sessione vs avversario: trattala come torneo per stile grafico
-      const allLegs=(sess.sets||[]).flatMap(set=>set.legs||[]);
+      const _setsOpp=Array.isArray(sess.sets)?sess.sets:(sess.sets&&typeof sess.sets==='object'?Object.values(sess.sets):[]);
+      const allLegs=_setsOpp.flatMap(set=>{const ll=set.legs;return Array.isArray(ll)?ll:(ll&&typeof ll==='object'?Object.values(ll):[]); });
       _selected501Sessions.push({key, date, legs:allLegs, isTournament:true,
         tourName: 'vs '+_oppName,
         rawSets: sess.sets||[],
