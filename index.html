@@ -4794,7 +4794,16 @@ function renderStats(uid){
     const labelMap={frecce:'Frecce tirate',media:'Media punti',doppie:'Doppie',pct:'% Doppie'};
     const k=keyMap[activeFilter]||'media';
     const pts=days.map(d=>({label:d.label,value:d[k]})).filter(p=>p.value!==null);
-    if(!pts.length) return;
+    if(!pts.length){
+      // Nessun dato per questo filtro — mostra messaggio nel canvas
+      const ctx=cv.getContext('2d');
+      ctx.clearRect(0,0,cv.width,cv.height);
+      ctx.fillStyle='#555';
+      ctx.font='13px DM Sans, sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText('Nessun dato disponibile per questo filtro',cv.width/2,cv.height/2);
+      return;
+    }
     _charts[canvasId]=new Chart(cv.getContext('2d'),{
       type:'line',
       data:{
@@ -4837,9 +4846,15 @@ function renderStats(uid){
     .sort((a,b)=>new Date(a[1].__meta.savedAt)-new Date(b[1].__meta.savedAt));
   const trainDays4=groupByDay4(trainSessions, sess=>{
     const legs=toArr(sess.legs);
-    const frecce=legs.reduce((s,l)=>s+(l.dartsThrown||0),0)||null;
-    const avgs=legs.map(l=>l.avgPerRound||0).filter(n=>n>0);
-    const media=avgs.length?+(avgs.reduce((a,b)=>a+b,0)/avgs.length).toFixed(1):null;
+    if(!legs.length) return {frecce:null,media:null,doppie:null,pct:null};
+    // Calcola avg per ogni leg: se ha avgPerRound usalo, altrimenti calcola da darts
+    const legAvgs=legs.map(l=>{
+      if(l.avgPerRound && l.avgPerRound>0) return l.avgPerRound;
+      const d=l.dartsThrown||l.darts||0;
+      return d>0?+((501/d)*3).toFixed(1):0;
+    }).filter(n=>n>0);
+    const frecce=legs.reduce((s,l)=>s+(l.dartsThrown||l.darts||0),0)||null;
+    const media=legAvgs.length?+(legAvgs.reduce((a,b)=>a+b,0)/legAvgs.length).toFixed(1):null;
     const doppie=legs.reduce((s,l)=>s+(l.doublesHit||0),0)||null;
     const totT=legs.reduce((s,l)=>s+(l.doublesThrown||0),0);
     const totH=legs.reduce((s,l)=>s+(l.doublesHit||0),0);
