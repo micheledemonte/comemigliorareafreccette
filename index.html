@@ -2118,6 +2118,13 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <div id="gsUserList" style="max-height:820px;overflow-y:auto;padding-right:4px;overscroll-behavior-y:auto"></div>
   </div>
 
+  <!-- CALENDARIO UTENTE -->
+  <div class="tab-body" id="tab-user-calendario">
+    <h2 style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:22px;color:var(--green);margin-bottom:4px;letter-spacing:-.01em">IL TUO CALENDARIO</h2>
+    <p style="font-size:13px;color:var(--mu2);margin-bottom:16px">Visualizza i tuoi appuntamenti e scopri le date libere per richiedere nuove lezioni. Le date con altri studenti appaiono come <strong style="color:var(--muted)">Occupato</strong> — così sai quando ci sono spazi disponibili.</p>
+    <div id="userCalContainer"></div>
+  </div>
+
   <!-- CALENDARIO -->
   <div class="tab-body" id="tab-calendario">
     <h2 style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:22px;color:var(--green);margin-bottom:4px;letter-spacing:-.01em">CALENDARIO LEZIONI</h2>
@@ -3451,6 +3458,7 @@ const LD = {
     {id:'play501',        icon:'🏆', label:'501'},
     {id:'checkout',       icon:'✅', label:'Checkout'},
     {id:'appuntamenti',   icon:'📅', label:'Appuntamenti'},
+    {id:'user-calendario',icon:'📆', label:'Calendario'},
     {id:'profile',        icon:'👤', label:'Profilo'},
   ],
   adminTab:        {id:'admin',       icon:'⚙️', label:'Admin'},
@@ -3858,6 +3866,7 @@ function showTab(name,silent=false){
     if(name==='admin')          renderAdmin();
     if(name==='gestionale')     renderGestionale();
     if(name==='calendario')     renderCalendario();
+    if(name==='user-calendario') renderUserCalendario();
     if(name==='appuntamenti')   renderApptUser();
     if(name==='profile')        loadProfileForm();
     if(name==='checkout')       renderCOTables();
@@ -5961,6 +5970,9 @@ function gsApptSave(){
   if(document.getElementById('tab-appuntamenti') && document.getElementById('tab-appuntamenti').classList.contains('active')){
     renderApptUser();
   }
+  if(document.getElementById('tab-user-calendario') && document.getElementById('tab-user-calendario').classList.contains('active')){
+    renderUserCalendario();
+  }
 }
 
 // ══════════════════════════════════════════════════
@@ -5985,15 +5997,15 @@ function renderApptUser(){
     return;
   }
 
-  // Filtra solo lezioni con data/ora fissata
-  const appts = p.lezioni.map((l,i)=>({...l, idx:i})).filter(l=>l.dt);
-  if(!appts.length){
-    el.innerHTML = '<div class="gs-empty" style="padding:40px 20px">Nessun appuntamento fissato al momento. Il tuo insegnante aggiungerà presto le date delle lezioni.</div>';
-    return;
-  }
-
-  // Ordina per data crescente
-  appts.sort((a,b)=>a.dt.localeCompare(b.dt));
+  // Tutte le lezioni del percorso (con e senza data)
+  const appts = p.lezioni.map((l,i)=>({...l, idx:i}));
+  // Ordina: prima le fissate (per data), poi le non fissate (per indice)
+  appts.sort((a,b)=>{
+    if(a.dt && b.dt) return a.dt.localeCompare(b.dt);
+    if(a.dt && !b.dt) return -1;
+    if(!a.dt && b.dt) return 1;
+    return a.idx - b.idx;
+  });
 
   // Ottieni mappa colori
   const colorMap = (typeof calGetUserColorMap === 'function') ? calGetUserColorMap() : {};
@@ -6015,10 +6027,13 @@ function renderApptUser(){
   const filterHtml = '<div class="req-filters" style="margin-bottom:14px">'
     +'<button class="req-filter-btn'+(window._apptFilter==='todo'?' active':'')+'" onclick="apptSetFilter(\'todo\')">📅 DA SVOLGERE</button>'
     +'<button class="req-filter-btn'+(window._apptFilter==='done'?' active':'')+'" onclick="apptSetFilter(\'done\')">✅ SVOLTE</button>'
+    +'<button class="req-filter-btn'+(window._apptFilter==='pending'?' active':'')+'" onclick="apptSetFilter(\'pending\')">🕐 DA FISSARE</button>'
     +'</div>';
 
   // Filtra in base allo stato selezionato
   const filtered = appts.filter(l=>{
+    if(window._apptFilter === 'pending') return !l.dt;
+    if(!l.dt) return false; // le non fissate appaiono solo in "pending"
     const _dp2 = l.dt.slice(0,10).split('-');
     const d2   = new Date(parseInt(_dp2[0]), parseInt(_dp2[1])-1, parseInt(_dp2[2]),
                    ...(l.dt.length>10 ? l.dt.slice(11,16).split(':').map(Number) : [0,0]));
@@ -6029,6 +6044,32 @@ function renderApptUser(){
 
   const rowsHtml = filtered.length
     ? filtered.map(l=>{
+    // Lezione senza data fissata: card semplice con stato pagamento e richiesta
+    if(!l.dt){
+      let pagBadgeNd = '';
+      if(p.tipoPagamento==='anticipato'){
+        pagBadgeNd = '<span style="display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:#1e3a5f;color:#93c5fd;border:1px solid #1d4ed8;white-space:nowrap">💰 PAGATA</span>';
+      } else {
+        pagBadgeNd = l.pagata
+          ? '<span style="display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:#1e3a5f;color:#93c5fd;border:1px solid #1d4ed8;white-space:nowrap">💰 PAGATA</span>'
+          : '<span style="display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--d3);color:var(--mu2);border:1px solid var(--d5);white-space:nowrap">DA PAGARE</span>';
+      }
+      return '<div class="cal-event-item" style="border-left:3px solid var(--d5);flex-direction:column;align-items:stretch;padding:12px 14px;gap:4px">'
+        +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--mu2);letter-spacing:.06em">LEZIONE '+(l.idx+1)+'</div>'
+        +'<div style="font-size:13px;color:var(--muted);margin-bottom:6px">Data non ancora fissata</div>'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px">'+pagBadgeNd
+        +'<button onclick="reqToggleApptForm('+(l.idx)+')" style="display:inline-flex;align-items:center;height:28px;background:transparent;border:1px solid var(--green);color:var(--green);border-radius:999px;padding:0 12px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.04em">📆 RICHIEDI APPUNTAMENTO</button>'
+        +'</div>'
+        +'<div id="apptRequestForm_'+(l.idx)+'" style="display:none;margin-top:8px;padding-top:10px;border-top:1px solid var(--d4)">'
+        +'<textarea id="apptRequestMsg_'+(l.idx)+'" placeholder="Scrivi quando sei disponibile (es. martedì o giovedì sera, dopo le 18:30)..." style="width:100%;min-height:70px;background:var(--d3);border:1px solid var(--d5);color:var(--light);border-radius:6px;padding:8px 10px;font-size:13px;resize:vertical;font-family:DM Sans,sans-serif"></textarea>'
+        +'<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">'
+        +'<button data-idx="'+(l.idx)+'" onclick="reqSendFixAppt('+(l.idx)+')" class="req-compose-btn" style="flex:1;font-size:13px;padding:10px 12px;margin-top:0">📨 INVIA RICHIESTA</button>'
+        +'<button onclick="document.getElementById(\'apptRequestForm_'+(l.idx)+'\').style.display=\'none\'" style="background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:6px;padding:10px 12px;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-weight:600">ANNULLA</button>'
+        +'</div>'
+        +'<div id="apptRequestFeedback_'+(l.idx)+'" style="font-size:12px;margin-top:6px;display:none"></div>'
+        +'</div>'
+        +'</div>';
+    }
     const _dp    = l.dt.slice(0,10).split('-');
     const d      = new Date(parseInt(_dp[0]), parseInt(_dp[1])-1, parseInt(_dp[2]),
                      ...(l.dt.length>10 ? l.dt.slice(11,16).split(':').map(Number) : [0,0]));
@@ -6151,10 +6192,33 @@ function userExportICS(btn){
   ].join(CRLF);
   const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
   const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = 'lezione-freccette.ics';
-  document.body.appendChild(a); a.click();
-  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 3000);
+
+  // Android Chrome non apre l'app calendario da blob ICS — usa Google Calendar come fallback
+  const isAndroid = /android/i.test(navigator.userAgent);
+  const isChrome  = /chrome/i.test(navigator.userAgent) && !/edg/i.test(navigator.userAgent);
+
+  if(isAndroid && isChrome){
+    // Google Calendar add-event URL come fallback primario su Android Chrome
+    const gcStart = d.toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+    const gcEnd   = dEnd.toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+    const gcUrl   = 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+      +'&text='+encodeURIComponent(title)
+      +'&dates='+gcStart+'/'+gcEnd
+      +'&details='+encodeURIComponent('Lezione freccette - Centro Darts Lab')
+      +'&sf=true&output=xml';
+    window.open(gcUrl, '_blank');
+    // Scarica anche il file ICS in background per chi ha altri client
+    const a2 = document.createElement('a');
+    a2.href=url; a2.download='lezione-freccette.ics';
+    document.body.appendChild(a2); a2.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a2.remove(); }, 3000);
+  } else {
+    // iOS Safari, desktop, altri browser: download diretto funziona
+    const a = document.createElement('a');
+    a.href=url; a.download='lezione-freccette.ics';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 3000);
+  }
 
   btn.classList.add('ics-saved');
   btn.innerHTML = '&#x2713; SALVATO';
@@ -6240,6 +6304,61 @@ function reqSendRequest(){
   }).catch(e=>{
     if(fb){ fb.style.display='block'; fb.style.color='#f87171'; fb.textContent='Errore durante l\'invio. Riprova.'; }
     if(btn){ btn.disabled = false; btn.textContent = '📨 INVIA RICHIESTA'; }
+  });
+}
+
+// ── Richiesta fissare appuntamento (lezione senza data) ─────────────────────
+function reqToggleApptForm(idx){
+  const form = document.getElementById('apptRequestForm_'+idx);
+  if(!form) return;
+  const isOpen = form.style.display !== 'none';
+  form.style.display = isOpen ? 'none' : 'block';
+  if(!isOpen){
+    const ta = document.getElementById('apptRequestMsg_'+idx);
+    if(ta) ta.focus();
+  }
+}
+
+function reqSendFixAppt(idx){
+  if(!CU) return;
+  const ta  = document.getElementById('apptRequestMsg_'+idx);
+  const fb  = document.getElementById('apptRequestFeedback_'+idx);
+  if(!ta) return;
+  const msg = ta.value.trim();
+  if(!msg){ ta.focus(); return; }
+  const btn = ta.closest('div') && ta.closest('div').querySelector('.req-compose-btn');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Invio...'; }
+  const reqId = 'req_'+Date.now()+'_'+CU.id.slice(-4);
+  const reqObj = {
+    uid:       CU.id,
+    firstName: CU.firstName,
+    lastName:  CU.lastName,
+    email:     CU.email,
+    phone:     CU.phone || '',
+    msg:       msg,
+    ts:        Date.now(),
+    readBy:    {},
+    repliedBy: {},
+    type:      'fixappt',
+    lessonIdx: idx,
+  };
+  const doSave = async () => {
+    if(_firebaseOK && _fbDB){
+      await _fbDB.ref('db/requests/'+reqId).set(reqObj);
+    } else {
+      if(!_dbCache.requests) _dbCache.requests = {};
+      _dbCache.requests[reqId] = reqObj;
+      saveDBToCloud();
+    }
+  };
+  doSave().then(()=>{
+    if(fb){ fb.style.display='block'; fb.style.color='var(--green)'; fb.textContent='✓ Richiesta inviata!'; }
+    ta.value = '';
+    if(btn){ btn.disabled=false; btn.textContent='📨 INVIA RICHIESTA'; }
+    setTimeout(()=>{ const f=document.getElementById('apptRequestForm_'+idx); if(f) f.style.display='none'; },2000);
+  }).catch(()=>{
+    if(fb){ fb.style.display='block'; fb.style.color='#f87171'; fb.textContent='Errore. Riprova.'; }
+    if(btn){ btn.disabled=false; btn.textContent='📨 INVIA RICHIESTA'; }
   });
 }
 
@@ -6522,9 +6641,12 @@ function reqRenderSection(el, reqs, isReadSection){
     const isGeneric    = r.type === 'generic';
     const isUnblock    = r.type === 'unblock';
     const isDevice     = r.type === 'device';
+    const isFixAppt    = r.type === 'fixappt';
     let senderLabel;
     if(isReschedule){
       senderLabel = '<span style="font-size:11px;color:var(--amber);font-weight:700;letter-spacing:.06em;text-transform:uppercase">📆 SPOSTAMENTO</span> — <span style="color:var(--light)">'+r.firstName+' '+r.lastName+'</span>';
+    } else if(isFixAppt){
+      senderLabel = '<span style="font-size:11px;color:#a78bfa;font-weight:700;letter-spacing:.06em;text-transform:uppercase">📌 FISSARE DATA</span> — <span style="color:var(--light)">'+r.firstName+' '+r.lastName+'</span>';
     } else if(isGeneric){
       senderLabel = '<span style="font-size:11px;color:var(--light);font-weight:700;letter-spacing:.06em;text-transform:uppercase">💬 GENERICO</span> — <span style="color:var(--light)">'+r.firstName+' '+r.lastName+'</span>';
     } else if(isUnblock){
@@ -6641,12 +6763,15 @@ function reqOpenDetail(reqId){
   const isGeneric    = r.type === 'generic';
   const isUnblock    = r.type === 'unblock';
   const isDevice     = r.type === 'device';
+  const isFixAppt = r.type === 'fixappt';
   const detailTitle = isReschedule ? '📆 Richiesta di spostamento'
+    : isFixAppt  ? '📌 FISSARE DATA — '+r.firstName+' '+r.lastName
     : isGeneric  ? '💬 Messaggio generico'
     : isUnblock  ? '🔒 Richiesta di sblocco'
     : isDevice   ? '📱 Richiesta sblocco dispositivo'
     : '🎯 Richiesta di percorso';
   const detailColor = isReschedule ? 'var(--amber)'
+    : isFixAppt  ? '#a78bfa'
     : (isUnblock||isDevice) ? '#f87171'
     : isGeneric ? 'var(--light)'
     : 'var(--green)';
@@ -6659,6 +6784,8 @@ function reqOpenDetail(reqId){
   let _waText = '';
   if(r.type==='percorso'){
     _waText = 'Ciao '+_waName+', ho letto la tua richiesta per iniziare un nuovo percorso. ';
+  } else if(r.type==='fixappt'){
+    _waText = 'Ciao '+_waName+', ho letto la tua richiesta per fissare la data per la lezione '+(r.lessonIdx!==undefined?r.lessonIdx+1:'')+'. ';
   } else if(r.type==='reschedule'){
     _waText = 'Ciao '+_waName+', ho letto la tua richiesta per spostare l\'appuntamento che avevamo fissato. ';
   } else if(r.type==='generic'){
@@ -6680,7 +6807,7 @@ function reqOpenDetail(reqId){
     +'<div class="rdu-row"><span class="rdu-label">Nome</span><strong>'+r.firstName+' '+r.lastName+'</strong></div>'
     +'<div class="rdu-row"><span class="rdu-label">Email</span><span>'+r.email+'</span></div>'
     +(r.phone ? '<div class="rdu-row"><span class="rdu-label">Tel</span><span>'+r.phone+'</span></div>' : '')
-    +(isReschedule && r.lessonIdx !== undefined ? '<div class="rdu-row"><span class="rdu-label">Lezione</span><span>Lezione '+(r.lessonIdx+1)+'</span></div>' : '')
+    +((isReschedule||isFixAppt) && r.lessonIdx !== undefined ? '<div class="rdu-row"><span class="rdu-label">Lezione</span><span>Lezione '+(r.lessonIdx+1)+'</span></div>' : '')
     +(isReschedule && r.appointmentDate ? '<div class="rdu-row"><span class="rdu-label">Appuntamento</span><span>📅 '+escHtml(r.appointmentDate)+'</span></div>' : '')
     +(isReschedule && r.teacherName ? '<div class="rdu-row"><span class="rdu-label">Insegnante</span><span>👨‍🏫 '+escHtml(r.teacherName)+'</span></div>' : '')
     +(isDevice && r.deviceName ? '<div class="rdu-row"><span class="rdu-label">Dispositivo</span><span>'+r.deviceName+'</span></div>' : '')
@@ -6820,6 +6947,134 @@ function calGetUserColorMap(){
   const map = {};
   active.forEach((u,i)=>{ map[u.id] = CAL_PALETTE[i % CAL_PALETTE.length]; });
   return map;
+}
+
+// ══════════════════════════════════════════════════
+// CALENDARIO UTENTE (sezione non-admin)
+// ══════════════════════════════════════════════════
+var _userCalMonth = new Date().getMonth();
+var _userCalYear  = new Date().getFullYear();
+
+function renderUserCalendario(){
+  if(!CU) return;
+  const el = document.getElementById('userCalContainer');
+  if(!el) return;
+  el.innerHTML = userCalBuildHtml();
+}
+
+function userCalBuildHtml(){
+  const monthNames = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const today      = new Date();
+  const todayStr   = calDateStr(today);
+  const month      = _userCalMonth;
+  const year       = _userCalYear;
+
+  // Recupera tutti gli appuntamenti di tutti gli utenti
+  const allEvs   = calGetAllEvents(); // [{uid, userName, idx, dt, timeStr, note, adminRef}]
+  const myEvs    = allEvs.filter(ev=>ev.uid===CU.id);
+  const otherEvs = allEvs.filter(ev=>ev.uid!==CU.id);
+
+  // Percorso utente per ICS
+  const p = gsGetPercorso(CU.id);
+
+  // Costruisce header mese
+  let html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+    +'<button onclick="userCalPrev()" style="background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:8px 14px;border-radius:6px;font-family:DM Sans,sans-serif;font-weight:700;cursor:pointer">◀</button>'
+    +'<div style="font-family:Bebas Neue,sans-serif;font-size:22px;color:var(--green);letter-spacing:.06em">'+monthNames[month]+' '+year+'</div>'
+    +'<button onclick="userCalNext()" style="background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:8px 14px;border-radius:6px;font-family:DM Sans,sans-serif;font-weight:700;cursor:pointer">▶</button>'
+    +'</div>';
+
+  // Griglia calendario
+  const firstDay = new Date(year, month, 1);
+  const lastDay  = new Date(year, month+1, 0);
+  let startDow   = firstDay.getDay(); // 0=dom
+  if(startDow===0) startDow=7;        // lunedì=1
+
+  const days = ['LUN','MAR','MER','GIO','VEN','SAB','DOM'];
+  html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">'
+    +'<div style="min-width:calc(7*44px + 6*3px)">'
+    +'<div style="display:grid;grid-template-columns:repeat(7,minmax(44px,1fr));gap:3px;margin-bottom:4px">';
+  days.forEach(d=>{ html+='<div style="text-align:center;font-size:10px;color:var(--mu2);text-transform:uppercase;letter-spacing:.04em;padding:3px 0">'+d+'</div>'; });
+  html+='</div>';
+
+  html+='<div style="display:grid;grid-template-columns:repeat(7,minmax(44px,1fr));gap:3px">';
+
+  // Celle vuote prima del giorno 1
+  for(let i=1;i<startDow;i++){
+    html+='<div style="min-height:46px;background:transparent"></div>';
+  }
+
+  for(let d=1;d<=lastDay.getDate();d++){
+    const ds = year+'-'+(String(month+1).padStart(2,'0'))+'-'+(String(d).padStart(2,'0'));
+    const isToday = ds===todayStr;
+    const myDayEvs    = myEvs.filter(ev=>ev.dt.startsWith(ds));
+    const otherDayEvs = otherEvs.filter(ev=>ev.dt.startsWith(ds));
+
+    let borderColor = 'var(--d4)';
+    let bg = 'var(--d3)';
+    if(isToday){ borderColor='#ef4444'; }
+    if(myDayEvs.length){ borderColor='var(--green)'; bg='var(--gdim)'; }
+
+    html+='<div style="min-height:46px;background:'+bg+';border:1px solid '+borderColor+';border-radius:6px;padding:3px;overflow:hidden">'
+      +'<div style="font-size:11px;color:'+(isToday?'#ef4444':(myDayEvs.length?'var(--green)':'var(--mu2)'))+';font-weight:'+(isToday||myDayEvs.length?'700':'400')+';margin-bottom:1px">'+d+'</div>';
+
+    // Miei appuntamenti
+    myDayEvs.forEach(ev=>{
+      html+='<div style="background:var(--green);color:#000;border-radius:3px;font-size:8px;padding:1px 3px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700">'+ev.timeStr+' TUO</div>';
+    });
+    // Occupato per altri
+    if(otherDayEvs.length){
+      html+='<div style="background:var(--d5);color:var(--muted);border-radius:3px;font-size:8px;padding:1px 3px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Occupato</div>';
+    }
+
+    html+='</div>';
+  }
+  html+='</div></div></div>';
+
+  // Lista appuntamenti del mese corrente
+  const myMonthEvs = myEvs.filter(ev=>ev.dt.startsWith(year+'-'+String(month+1).padStart(2,'0')));
+  if(myMonthEvs.length){
+    html+='<div style="margin-top:20px">';
+    html+='<div style="font-family:Bebas Neue,sans-serif;font-size:18px;color:var(--green);letter-spacing:.06em;margin-bottom:10px">I TUOI APPUNTAMENTI IN '+monthNames[month].toUpperCase()+'</div>';
+    myMonthEvs.sort((a,b)=>a.dt.localeCompare(b.dt)).forEach(ev=>{
+      const d    = new Date(ev.dt);
+      const pad  = n=>String(n).padStart(2,'0');
+      const lbl  = d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'}).toUpperCase()+' ORE '+pad(d.getHours())+':'+pad(d.getMinutes());
+      const admins= getUsers().filter(u=>u.role==='admin');
+      const teacher= (()=>{ const a=admins.find(a=>a.id===ev.adminRef); return a?a.firstName+' '+a.lastName:null; })();
+      // ICS per questa lezione
+      const lezione = p && p.lezioni && p.lezioni[ev.idx];
+      const icsId   = lezione && lezione.icsId ? lezione.icsId : null;
+      const icsKey  = icsId || (String(ev.idx)+'_'+(ev.dt||'')); 
+      const isSaved = _userIcsSaved.has(icsKey);
+      const icsTitle= (teacher||'Lezione accademia')+' - Lezione '+(ev.idx+1)+(ev.note?' - '+ev.note:'');
+      const icsBtn  = '<button class="cal-ics-btn'+(isSaved?' ics-saved':'')+'" '
+        +'data-dt="'+ev.dt+'" data-idx="'+ev.idx+'" data-icsid="'+(icsId||'')+'" data-title="'+icsTitle.replace(/"/g,'&quot;')+'" '
+        +'onclick="userExportICS(this)" style="font-size:11px">'
+        +(isSaved?'&#x2713; SALVATO':'&#x1F4C5; AGGIUNGI AL CALENDARIO')+'</button>';
+      html+='<div style="background:var(--d2);border:1px solid var(--green);border-left:3px solid var(--green);border-radius:8px;padding:10px 14px;margin-bottom:8px">';
+      html+='<div style="font-family:Bebas Neue,sans-serif;font-size:16px;color:var(--light);letter-spacing:.04em">LEZIONE '+(ev.idx+1)+'</div>';
+      html+='<div style="font-family:Bebas Neue,sans-serif;font-size:13px;color:var(--green);margin-bottom:4px">'+lbl+'</div>';
+      if(teacher) html+='<div style="font-size:12px;color:var(--mu2);margin-bottom:6px">👨‍🏫 '+teacher+'</div>';
+      html+=icsBtn+'</div>';
+    });
+    html+='</div>';
+  } else {
+    html+='<div style="margin-top:20px;font-size:13px;color:var(--muted);text-align:center;padding:20px 0">Nessun appuntamento fissato in questo mese.</div>';
+  }
+
+  return html;
+}
+
+function userCalPrev(){
+  _userCalMonth--;
+  if(_userCalMonth<0){ _userCalMonth=11; _userCalYear--; }
+  renderUserCalendario();
+}
+function userCalNext(){
+  _userCalMonth++;
+  if(_userCalMonth>11){ _userCalMonth=0; _userCalYear++; }
+  renderUserCalendario();
 }
 
 function renderCalendario(){
@@ -8187,7 +8442,9 @@ function startTournament501(){
   const turnoStat = document.getElementById('g501stat_turno');
   if(turnoStat) turnoStat.style.display = 'none';
   g501UpdateSetLeg();
-  document.getElementById('g501overlay').classList.add('open');
+  const _ovT = document.getElementById('g501overlay');
+  _ovT.classList.add('open');
+  requestAnimationFrame(()=>{ g501UpdateDisplay(); });
 }
 
 function g501UpdateSetLeg(){
@@ -8452,12 +8709,18 @@ function _doMergeTournamentSessions(tourSessions){
     sets: mergedSets,
   };
 
-  // Delete original sessions from Firebase
-  sorted.forEach(s=>{ delete data[s.key]; });
+  // Delete original sessions — locale + Firebase (pattern obbligatorio come __percorso)
+  sorted.forEach(s=>{
+    delete data[s.key];
+    if(_firebaseOK && _fbDB) _fbDB.ref('db/userData/'+CU.id+'/'+s.key).remove();
+  });
 
   // Keep only 10 most recent tournament sessions
   const tourKeys = Object.keys(data).filter(k=>k.startsWith('tour501_')).sort().reverse();
-  tourKeys.slice(10).forEach(k=>delete data[k]);
+  tourKeys.slice(10).forEach(k=>{
+    if(_firebaseOK && _fbDB) _fbDB.ref('db/userData/'+CU.id+'/'+k).remove();
+    delete data[k];
+  });
 
   setUD(CU.id, data);
 
@@ -8489,23 +8752,38 @@ function _doMergeTrainingSessions(trainSess){
     const db = data[b.key]?.__meta?.savedAt||'';
     return da.localeCompare(db);
   });
-  // Merge all legs
+  // Merge all legs — gestisce sia sessioni semplici che sessioni "con avversario" (con sets)
   const mergedLegs = sorted.flatMap(s=>{
     const orig = data[s.key];
+    if(orig?.sets){
+      // Sessione con avversario: estrai legs dai sets
+      const ss = Array.isArray(orig.sets)?orig.sets:Object.values(orig.sets||{});
+      return ss.flatMap(set=>{ const ll=set.legs; return Array.isArray(ll)?ll:(ll&&typeof ll==='object'?Object.values(ll):[]); });
+    }
     return orig?.legs || s.legs;
   });
   const savedAt = data[sorted[0].key]?.__meta?.savedAt || new Date().toISOString();
+  // Preserva opponentName se tutte le sessioni sono vs avversario
+  const allOpp = sorted.every(s=>s.withOpponent);
+  const oppName = allOpp ? (sorted[0].opponentName||'Avversario') : null;
   // Create merged session
   const mk = 'free501_' + Date.now();
   data[mk] = {
-    __meta: {type:'501free', title:'Gioca a 501', savedAt, week:null, session:null},
+    __meta: {type:'501free', title:'Gioca a 501', savedAt, week:null, session:null,
+      ...(allOpp ? {withOpponent:true, opponentName:oppName} : {})},
     legs: mergedLegs,
   };
-  // Delete originals
-  sorted.forEach(s=>{ delete data[s.key]; });
+  // Delete originals — locale + Firebase (pattern obbligatorio come __percorso)
+  sorted.forEach(s=>{
+    delete data[s.key];
+    if(_firebaseOK && _fbDB) _fbDB.ref('db/userData/'+CU.id+'/'+s.key).remove();
+  });
   // Keep only 10 most recent free501 sessions
   const freeKeys = Object.keys(data).filter(k=>k.startsWith('free501_')).sort().reverse();
-  freeKeys.slice(10).forEach(k=>delete data[k]);
+  freeKeys.slice(10).forEach(k=>{
+    if(_firebaseOK && _fbDB) _fbDB.ref('db/userData/'+CU.id+'/'+k).remove();
+    delete data[k];
+  });
   setUD(CU.id, data);
   _selected501Sessions = [];
   document.getElementById('prev501Content').innerHTML = '';
@@ -8576,7 +8854,9 @@ function startOpponent501(){
   if(_oppTurno) _oppTurno.style.display = 'none';
   g501UpdateSetLeg();
 
-  document.getElementById('g501overlay').classList.add('open');
+  const _ovO = document.getElementById('g501overlay');
+  _ovO.classList.add('open');
+  requestAnimationFrame(()=>{ g501UpdateDisplay(); });
   startTourLeg501();
 }
 
@@ -8585,7 +8865,9 @@ function startFree501(){
   G.mode='free'; G.trainingGid=null; G.totalLegs=n; G.currentLeg=0; G.legsResults=[];
   GT.isTrainingMode=false; GT.active=false;
   startLeg501();
-  document.getElementById('g501overlay').classList.add('open');
+  const _ov = document.getElementById('g501overlay');
+  _ov.classList.add('open');
+  requestAnimationFrame(()=>{ g501UpdateDisplay(); });
 }
 function startLeg501(){
   G.score=501; G.turns=[]; G.round=1; G.totalDarts=0; G.closures=0;
@@ -9299,8 +9581,8 @@ function render501SessPanel(){
     <div style="font-size:13px;color:var(--muted)">${_selected501Sessions.length} sessione${_selected501Sessions.length>1?'i':''} selezionata${_selected501Sessions.length>1?'':'e'}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       ${_selected501Sessions.length>=2?`<button id="btn501Compare" onclick="toggle501Compare()" style="background:var(--green);color:#000;border:none;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;padding:7px 16px;border-radius:5px;cursor:pointer">CONFRONTA</button>`:''}
-      ${(_selected501Sessions.length>=2 && _selected501Sessions.every(s=>s.isTournament))?`<button onclick="mergeTournamentSessions()" style="background:var(--green);color:#000;border:none;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;padding:7px 16px;border-radius:5px;cursor:pointer">🔗 UNISCI</button>`:''}
-      ${(_selected501Sessions.length>=2 && _selected501Sessions.every(s=>!s.isTournament))?`<button onclick="mergeTrainingSessions()" style="background:var(--green);color:#000;border:none;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;padding:7px 16px;border-radius:5px;cursor:pointer">🔗 UNISCI</button>`:''}
+      ${(_selected501Sessions.length>=2 && _selected501Sessions.every(s=>s.isTournament && !s.withOpponent))?`<button onclick="mergeTournamentSessions()" style="background:var(--green);color:#000;border:none;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;padding:7px 16px;border-radius:5px;cursor:pointer">🔗 UNISCI</button>`:''}
+      ${(_selected501Sessions.length>=2 && _selected501Sessions.every(s=>!s.isTournament || s.withOpponent))?`<button onclick="mergeTrainingSessions()" style="background:var(--green);color:#000;border:none;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;padding:7px 16px;border-radius:5px;cursor:pointer">🔗 UNISCI</button>`:''}
     </div>
   </div>`;
 
