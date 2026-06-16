@@ -4798,8 +4798,8 @@ function render501FilterChart(canvasId, days, activeFilter){
 
 function build501FilterCard(id, title, days){
   const ps=(k,active)=>`background:${active?STAT_COLORS_501[k]:'transparent'};color:${active?'#000':'var(--mu2)'};border:1.5px solid ${STAT_COLORS_501[k]};padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.04em;transition:all .15s`;
-  const pills=['frecce','media','doppie','pct'];
-  const labels={frecce:'FRECCE',media:'MEDIA',doppie:'DOPPIE',pct:'% DOPPIE'};
+  const pills=['frecce','media','pct'];
+  const labels={frecce:'FRECCE',media:'MEDIA',pct:'% DOPPIE'};
   const pillsHtml=pills.map(k=>`<button data-filter="${k}" style="${ps(k,k==='media')}" onclick="stat501SwitchFilter('${id}','${k}',this)">${labels[k]}</button>`).join('');
   const noteHtml = `<div id="${id}_note" style="font-size:10px;color:var(--muted);margin-top:4px;min-height:14px"></div>`;
   return `<div class="cw" style="margin-bottom:16px">
@@ -5150,8 +5150,8 @@ function selAdmin(uid){
   // Render full stats + 501 sessions for this user
   document.getElementById('astContent').innerHTML=`
     <div id="adminStatsContainer" style="margin-top:8px"></div>
-    <div class="cw" style="margin-top:12px">
-      <h3>SESSIONI 501 — ${selAU.firstName} ${selAU.lastName}</h3>
+    <div style="margin-top:8px">
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--green);letter-spacing:.06em;margin-bottom:10px">SESSIONI 501 — ${selAU.firstName} ${selAU.lastName}</h3>
       <div style="display:flex;gap:8px;margin-bottom:14px">
         <button id="admin501ModeTraining_${selAU.id}" onclick="setAdmin501Mode('${selAU.id}','training')" style="flex:1;padding:8px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;cursor:pointer;border:1px solid var(--green);background:var(--green);color:#000">ALLENAMENTO</button>
         <button id="admin501ModeTournament_${selAU.id}" onclick="setAdmin501Mode('${selAU.id}','tournament')" style="flex:1;padding:8px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;cursor:pointer;border:1px solid var(--d5);background:var(--d3);color:var(--mu2)">TORNEO</button>
@@ -5428,7 +5428,6 @@ function renderAdmin501Panel(uid){
         <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--light)">📅 ${s.date}${tourName?' — '+tourName:''} — ${legs.length} legs</div>
         <div style="display:flex;gap:5px;flex-shrink:0">
           <button onclick="_adminSelected501['${uid}']['${mode}'].splice(${idx},1);renderAdmin501Panel('${uid}')" style="background:transparent;border:1px solid var(--d5);color:var(--muted);border-radius:4px;padding:4px 10px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:12px;cursor:pointer">✕ NASCONDI</button>
-          <button onclick="deleteAdmin501Sess('${uid}','${s.key}')" style="background:#3d0505;border:1px solid #ef4444;color:#f87171;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px"><img src="/cestino.svg" style="width:13px;height:13px;vertical-align:middle" alt=""> ELIMINA</button>
         </div>
       </div>
       ${bodyHtml}
