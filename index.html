@@ -4781,12 +4781,12 @@ function render501FilterChart(canvasId, days, activeFilter){
     },
     options:{responsive:true,
       plugins:{legend:{display:false},tooltip:{callbacks:{
-        title:t=>pts[t[0].dataIndex].label,
-        label:t=>{
-          const p=pts[t[0].dataIndex];
+        title:items=>pts[items[0].dataIndex].label,
+        label:item=>{
+          const p=pts[item.dataIndex];
           if(k==='doppie' && p.doppieThrown>0) return `Doppie: ${p.doppieHit}/${p.doppieThrown}`;
-          if(k==='frecce') return `${labelMap[k]}: ${t.raw} (solo leg vinti)`;
-          return `${labelMap[k]}: ${t.raw}`;
+          if(k==='frecce') return `${labelMap[k]}: ${item.raw} (solo leg vinti)`;
+          return `${labelMap[k]}: ${item.raw}`;
         }
       }}},
       scales:{
