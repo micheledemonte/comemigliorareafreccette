@@ -60,23 +60,68 @@ button{cursor:pointer}
 .modal-back:hover{color:var(--green)}
 
 /* ═══ LANDING ═══ */
-/* ═══ LANDING PAGE ═══ */
 #landing{background:var(--dark);overflow-x:hidden}
-.lhero{position:relative;overflow:hidden;padding:80px 24px 64px;text-align:center;min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.lhero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 100% 60% at 50% -10%,#052e16 0%,transparent 65%);pointer-events:none;z-index:0}
-.lhero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:200px;background:linear-gradient(to bottom,transparent,var(--dark));pointer-events:none;z-index:0}
-.lhero>*{position:relative;z-index:1}
-.l-logo{font-family:'Bebas Neue',sans-serif;font-size:clamp(18px,3.5vw,28px);color:var(--green);letter-spacing:.18em;margin-bottom:32px;opacity:.85}
-.l-head{font-family:'DM Sans',sans-serif;font-weight:700;font-size:clamp(42px,10vw,90px);line-height:.95;color:var(--light);margin-bottom:24px;letter-spacing:-.02em}
-.l-head span{color:var(--green);display:inline}
-.l-sub{font-size:clamp(14px,2vw,18px);color:var(--mu2);max-width:520px;margin:0 auto 48px;line-height:1.8}
-.l-cta{display:inline-block;background:var(--green);color:#000;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;letter-spacing:.01em;padding:16px 56px;border-radius:4px;border:none;transition:all .2s;cursor:pointer;box-shadow:0 0 32px #22c55e44}
-.l-cta:hover{background:var(--green2);box-shadow:0 0 48px #22c55e66;transform:translateY(-1px)}
-.l-scroll-hint{margin-top:48px;font-size:12px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;animation:bounce 2s infinite}
-@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
 
-/* ─── CAROUSEL SECTION ─── */
-.l-carousel-section{background:var(--d2);padding:100px 0 88px;border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
+/* ─── HERO ─── */
+.lhero{position:relative;overflow:hidden;padding:80px 24px 80px;text-align:center;min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.lhero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 110% 55% at 50% -5%,#052e16 0%,transparent 60%);pointer-events:none;z-index:0}
+.lhero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:240px;background:linear-gradient(to bottom,transparent,var(--dark));pointer-events:none;z-index:0}
+.lhero>*{position:relative;z-index:1}
+.l-logo{margin-bottom:36px}
+.l-head{font-family:'DM Sans',sans-serif;font-weight:700;font-size:clamp(44px,11vw,96px);line-height:.92;color:var(--light);margin-bottom:28px;letter-spacing:-.03em}
+.l-head span{color:var(--green)}
+.l-sub{font-size:clamp(15px,2vw,19px);color:var(--mu2);max-width:560px;margin:0 auto 52px;line-height:1.85}
+.l-cta{display:inline-block;background:var(--green);color:#000;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;letter-spacing:.02em;padding:17px 60px;border-radius:4px;border:none;transition:all .2s;cursor:pointer;box-shadow:0 0 40px #22c55e44}
+.l-cta:hover{background:var(--green2);box-shadow:0 0 56px #22c55e66;transform:translateY(-2px)}
+.l-scroll-hint{margin-top:52px;font-size:12px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;animation:bounce 2s infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
+
+/* ─── MANIFESTO ─── */
+.l-manifesto{padding:96px 24px;background:var(--dark)}
+.l-manifesto-inner{max-width:760px;margin:0 auto;text-align:center}
+.l-manifesto-quote{font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,8vw,64px);color:var(--light);line-height:1.0;letter-spacing:.03em;margin-bottom:32px}
+.l-manifesto-quote em{color:var(--green);font-style:normal}
+.l-manifesto-body{font-size:clamp(15px,2vw,18px);color:var(--mu2);line-height:1.9;max-width:640px;margin:0 auto}
+.l-manifesto-divider{width:64px;height:3px;background:var(--green);margin:40px auto;border-radius:2px;opacity:.7}
+
+/* ─── NUMERI ─── */
+.l-numbers{padding:0 24px 96px;background:var(--dark)}
+.l-numbers-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--d4);border:1px solid var(--d4);border-radius:12px;overflow:hidden;max-width:900px;margin:0 auto}
+@media(max-width:600px){.l-numbers-grid{grid-template-columns:repeat(2,1fr)}}
+.l-num-item{background:var(--d2);padding:36px 20px;text-align:center}
+.l-num-val{font-family:'Bebas Neue',sans-serif;font-size:clamp(42px,8vw,68px);color:var(--green);line-height:1;letter-spacing:-.01em}
+.l-num-label{font-size:12px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-top:8px;line-height:1.5}
+
+/* ─── PROBLEMA ─── */
+.l-problem-section{padding:96px 24px;background:var(--d2);border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
+.l-problem-inner{max-width:960px;margin:0 auto}
+.l-problem-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:0}
+@media(max-width:600px){.l-problem-grid{grid-template-columns:1fr}}
+.l-problem-card{background:var(--d3);border:1px solid #7f1d1d;border-radius:16px;padding:32px 24px;position:relative;overflow:hidden;transition:opacity .7s,transform .7s;opacity:0}
+.l-problem-card.from-left{transform:translateX(-60px)}
+.l-problem-card.from-right{transform:translateX(60px)}
+.l-problem-card.revealed{opacity:1;transform:translateX(0)!important}
+.l-problem-card-glow{position:absolute;top:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,#ef4444,transparent);border-radius:2px}
+.l-problem-icon{font-size:52px;margin-bottom:14px;text-align:center}
+.l-problem-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;color:var(--light);margin-bottom:10px}
+.l-problem-text{font-size:13px;color:var(--mu2);line-height:1.8}
+
+/* ─── SOLUZIONE ─── */
+.l-solution-section{padding:96px 24px;background:#000;border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
+.l-solution-inner{max-width:800px;margin:0 auto}
+.l-solution-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+@media(max-width:640px){.l-solution-grid{grid-template-columns:1fr}}
+.l-solution-item{display:flex;flex-direction:column;background:var(--d3);border:1px solid #166534;border-radius:14px;padding:28px 22px;position:relative;overflow:hidden;transition:opacity .65s,transform .65s;opacity:0;transform:translateY(36px);box-shadow:0 0 24px #22c55e0d}
+.l-solution-item::before{content:'';position:absolute;inset:0;border-radius:14px;background:radial-gradient(ellipse 70% 40% at 50% 0%,#052e1620,transparent);pointer-events:none}
+.l-solution-item-glow{position:absolute;top:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);border-radius:2px}
+.l-solution-item.revealed{opacity:1;transform:translateY(0)}
+.l-solution-icon{font-size:40px;margin-bottom:12px;position:relative}
+.l-solution-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;color:var(--light);margin-bottom:7px;position:relative}
+.l-solution-text{font-size:13px;color:var(--mu2);line-height:1.8;position:relative}
+.l-solution-cta{text-align:center;margin-top:48px}
+
+/* ─── CAROUSEL ─── */
+.l-carousel-section{background:var(--d2);padding:96px 0 80px;border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
 .l-carousel-header{text-align:center;margin-bottom:24px;padding:0 24px}
 .l-carousel-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,7vw,48px);color:var(--light);letter-spacing:.04em;margin-bottom:6px}
 .l-carousel-sub{font-size:13px;color:var(--muted);line-height:1.7}
@@ -104,10 +149,10 @@ button{cursor:pointer}
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 @keyframes swipeHint{0%,100%{transform:translateX(0)}50%{transform:translateX(-10px)}}
 
-/* ─── JOURNEY SECTION ─── */
-.l-journey{padding:100px 24px 100px;max-width:600px;margin:0 auto}
+/* ─── COME FUNZIONA (verticale) ─── */
+.l-journey{padding:96px 24px;max-width:620px;margin:0 auto}
 .l-journey-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,7vw,48px);color:var(--light);text-align:center;margin-bottom:12px;letter-spacing:.04em}
-.l-journey-sub{font-size:14px;color:var(--muted);text-align:center;margin-bottom:48px;line-height:1.7}
+.l-journey-sub{font-size:14px;color:var(--muted);text-align:center;margin-bottom:52px;line-height:1.7}
 .l-step{display:flex;gap:20px;margin-bottom:0;position:relative}
 .l-step-line{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
 .l-step-dot{width:44px;height:44px;border-radius:50%;background:var(--d3);border:2px solid var(--d5);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;transition:all .3s}
@@ -115,93 +160,57 @@ button{cursor:pointer}
 .l-step-connector{width:2px;flex:1;min-height:36px;background:linear-gradient(to bottom,var(--d5),var(--d4));margin:4px 0}
 .l-step-body{padding:2px 0 40px}
 .l-step-label{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--green);margin-bottom:5px}
-.l-step-heading{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--light);margin-bottom:7px;letter-spacing:.04em}
-.l-step-text{font-size:13px;color:var(--mu2);line-height:1.75}
+.l-step-heading{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--light);margin-bottom:8px;letter-spacing:.04em}
+.l-step-text{font-size:13px;color:var(--mu2);line-height:1.8}
 
-/* ─── SHARED SECTION LABELS ─── */
-.l-section-label{font-family:'Bebas Neue',sans-serif;font-size:clamp(16px,2.5vw,22px);letter-spacing:.22em;color:var(--muted);text-align:center;margin-bottom:14px;text-transform:uppercase}
+/* ─── SEZIONE "CHI SIAMO" ─── */
+.l-chi{padding:96px 24px;background:var(--d2);border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
+.l-chi-inner{max-width:820px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+@media(max-width:680px){.l-chi-inner{grid-template-columns:1fr;gap:32px}}
+.l-chi-text h2{font-family:'DM Sans',sans-serif;font-weight:700;font-size:clamp(26px,5vw,42px);color:var(--light);line-height:1.1;letter-spacing:-.02em;margin-bottom:20px}
+.l-chi-text h2 span{color:var(--green)}
+.l-chi-text p{font-size:14px;color:var(--mu2);line-height:1.9;margin-bottom:14px}
+.l-chi-text p:last-child{margin-bottom:0}
+.l-chi-facts{display:flex;flex-direction:column;gap:16px}
+.l-chi-fact{background:var(--d3);border:1px solid var(--d4);border-radius:12px;padding:20px 22px;position:relative;overflow:hidden}
+.l-chi-fact::before{content:'';position:absolute;top:-1px;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),transparent)}
+.l-chi-fact-num{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--green);line-height:1;margin-bottom:4px}
+.l-chi-fact-label{font-size:12px;color:var(--muted);letter-spacing:.08em;line-height:1.5}
+
+/* ─── CONDIZIONI DI ACCESSO ─── */
+.l-access{padding:96px 24px;background:var(--dark)}
+.l-access-inner{max-width:760px;margin:0 auto;text-align:center}
+.l-access-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:48px}
+@media(max-width:620px){.l-access-grid{grid-template-columns:1fr}}
+.l-access-card{background:var(--d2);border:1px solid var(--d4);border-radius:14px;padding:28px 20px;text-align:center}
+.l-access-icon{font-size:36px;margin-bottom:14px}
+.l-access-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;color:var(--light);margin-bottom:8px}
+.l-access-text{font-size:13px;color:var(--muted);line-height:1.75}
+
+/* ─── SHARED LABELS ─── */
+.l-section-label{font-family:'Bebas Neue',sans-serif;font-size:clamp(13px,2vw,16px);letter-spacing:.28em;color:var(--muted);text-align:center;margin-bottom:14px;text-transform:uppercase}
 .l-section-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:clamp(28px,7vw,52px);color:var(--light);text-align:center;line-height:1.05;margin-bottom:16px;letter-spacing:-.02em}
-.l-section-sub{font-size:14px;color:var(--mu2);text-align:center;max-width:520px;margin:0 auto 56px;line-height:1.8}
+.l-section-sub{font-size:14px;color:var(--mu2);text-align:center;max-width:540px;margin:0 auto 56px;line-height:1.85}
 
-/* ─── PROBLEM SECTION ─── */
-.l-problem-section{padding:100px 24px;background:var(--d2);border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
-.l-problem-inner{max-width:960px;margin:0 auto}
-.l-problem-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
-@media(max-width:600px){.l-problem-grid{grid-template-columns:1fr}}
-.l-problem-card{
-  background:var(--d3);border:1px solid #7f1d1d;border-radius:16px;padding:28px 24px;
-  position:relative;overflow:hidden;
-  transition:opacity .7s cubic-bezier(.4,0,.2,1), transform .7s cubic-bezier(.4,0,.2,1);
-  opacity:0;
-}
-.l-problem-card.from-left{ transform:translateX(-60px); }
-.l-problem-card.from-right{ transform:translateX(60px); }
-.l-problem-card.revealed{ opacity:1; transform:translateX(0) !important; }
-.l-problem-card-glow{position:absolute;top:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,#ef4444,transparent);border-radius:2px;opacity:1}
-.l-problem-icon{font-size:64px;margin-bottom:12px;text-align:center}
-.l-problem-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;color:var(--light);margin-bottom:8px;text-align:center}
-.l-problem-text{font-size:13px;color:var(--mu2);line-height:1.75}
-
-/* ─── SOLUTION SECTION ─── */
-.l-solution-section{padding:100px 24px;background:#000;border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
-.l-solution-inner{max-width:760px;margin:0 auto}
-.l-solution-grid{display:flex;flex-direction:column;gap:24px}
-.l-solution-item{
-  display:flex;flex-direction:column;align-items:center;text-align:center;
-  background:var(--d3);border:1px solid #166534;
-  border-radius:14px;padding:28px 24px;position:relative;overflow:hidden;
-  transition:opacity .65s cubic-bezier(.4,0,.2,1), transform .65s cubic-bezier(.4,0,.2,1);
-  opacity:0; transform:translateY(36px);
-  box-shadow:0 0 24px #22c55e12;
-}
-.l-solution-item::before{content:'';position:absolute;inset:0;border-radius:14px;background:radial-gradient(ellipse 70% 40% at 50% 0%,#052e1620,transparent);pointer-events:none}
-.l-solution-item-glow{position:absolute;top:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);border-radius:2px;opacity:1}
-.l-solution-item.revealed{ opacity:1; transform:translateY(0); }
-.l-solution-icon{font-size:56px;text-align:center;margin-bottom:10px;position:relative}
-.l-solution-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;color:var(--light);margin-bottom:6px;text-align:center;position:relative}
-.l-solution-text{font-size:13px;color:var(--mu2);line-height:1.75;position:relative}
-
-/* ─── SOLUTION CTA ─── */
-.l-solution-cta{text-align:center;margin-top:44px}
-
-/* ─── FAQ ACCORDION ─── */
-.l-faq-section{padding:100px 24px;background:var(--dark)}
+/* ─── FAQ ─── */
+.l-faq-section{padding:96px 24px;background:var(--d2);border-top:1px solid var(--d4)}
 .l-faq-inner{max-width:700px;margin:0 auto}
 .l-faq-list{display:flex;flex-direction:column;gap:0;margin-top:8px}
 .l-faq-item{border-bottom:1px solid var(--d4)}
 .l-faq-item:first-child{border-top:1px solid var(--d4)}
-.l-faq-q{
-  width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;
-  background:transparent;border:none;padding:22px 0;cursor:pointer;
-  font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;
-  color:var(--light);text-align:left;
-  transition:color 0s;
-}
-/* Desktop: hover verde */
-@media(min-width:769px){
-  .l-faq-q:hover{ color:var(--green); transition:color .2s; }
-}
-/* Aperta: verde su tutti i dispositivi */
-.l-faq-item.open .l-faq-q{ color:var(--green); transition:color .2s; }
-.l-faq-arrow{
-  font-size:12px;color:var(--muted);flex-shrink:0;
-  transition:transform .3s cubic-bezier(.4,0,.2,1), color .2s;
-  display:inline-block;
-}
-.l-faq-item.open .l-faq-arrow{ transform:rotate(180deg);color:var(--green); }
-.l-faq-a{
-  font-size:13px;color:var(--mu2);line-height:1.8;
-  overflow:hidden;max-height:0;
-  transition:max-height .4s cubic-bezier(.4,0,.2,1), padding .4s cubic-bezier(.4,0,.2,1), opacity .3s;
-  opacity:0;padding-bottom:0;
-}
-.l-faq-item.open .l-faq-a{ max-height:300px;opacity:1;padding-bottom:22px; }
+.l-faq-q{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;background:transparent;border:none;padding:22px 0;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;color:var(--light);text-align:left;transition:color 0s}
+@media(min-width:769px){.l-faq-q:hover{color:var(--green);transition:color .2s}}
+.l-faq-item.open .l-faq-q{color:var(--green);transition:color .2s}
+.l-faq-arrow{font-size:12px;color:var(--muted);flex-shrink:0;transition:transform .3s cubic-bezier(.4,0,.2,1),color .2s;display:inline-block}
+.l-faq-item.open .l-faq-arrow{transform:rotate(180deg);color:var(--green)}
+.l-faq-a{font-size:13px;color:var(--mu2);line-height:1.85;overflow:hidden;max-height:0;transition:max-height .4s cubic-bezier(.4,0,.2,1),padding .4s cubic-bezier(.4,0,.2,1),opacity .3s;opacity:0;padding-bottom:0}
+.l-faq-item.open .l-faq-a{max-height:360px;opacity:1;padding-bottom:24px}
 
 /* ─── BOTTOM CTA ─── */
-.l-bot{padding:72px 24px 60px;text-align:center;background:var(--d2);border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
-.l-bot-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:clamp(28px,7vw,48px);color:var(--light);margin-bottom:16px;letter-spacing:-.02em;line-height:1.1}
-.l-bot p{font-size:14px;color:var(--muted);max-width:500px;margin:0 auto 36px;line-height:1.8}
-.l-foot{padding:20px 24px;text-align:center;font-size:12px;color:var(--muted);border-top:1px solid var(--d4)}
+.l-bot{padding:96px 24px 80px;text-align:center;background:#000;border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
+.l-bot-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:clamp(28px,7vw,52px);color:var(--light);margin-bottom:20px;letter-spacing:-.02em;line-height:1.05}
+.l-bot p{font-size:15px;color:var(--muted);max-width:520px;margin:0 auto 40px;line-height:1.9}
+.l-foot{padding:24px 24px;text-align:center;font-size:12px;color:var(--muted);border-top:1px solid var(--d4)}
 
 /* ═══ APP SHELL — LIQUID GLASS DOCK ═══ */
 
@@ -1275,103 +1284,141 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   <!-- HERO -->
   <div class="lhero">
     <div class="l-logo">
-      <img src="/Centro_Darts_Lab_Logo_2.svg" alt="Centro Darts Lab" style="height:clamp(90px,18vw,160px);max-width:480px;object-fit:contain;filter:drop-shadow(0 0 24px rgba(35,197,94,.4))">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(11px,2vw,15px);color:var(--muted);letter-spacing:.25em;text-transform:uppercase;margin-top:6px;margin-bottom:0">L'APP UFFICIALE PER MIGLIORARE A FRECCETTE</div>
+      <img src="/Centro_Darts_Lab_Logo_2.svg" alt="Centro Darts Lab" style="height:clamp(88px,18vw,160px);max-width:480px;object-fit:contain;filter:drop-shadow(0 0 28px rgba(35,197,94,.4))">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(11px,1.8vw,14px);color:var(--muted);letter-spacing:.28em;text-transform:uppercase;margin-top:8px">L'APP UFFICIALE PER MIGLIORARE A FRECCETTE</div>
     </div>
-    <div style="height:clamp(40px,8vw,72px)"></div>
-    <h1 class="l-head">ALLENA IL TUO<br><span>TALENTO</span><br>A FRECCETTE NEL<br><span>MODO GIUSTO</span></h1>
-    <p class="l-sub">La maggior parte dei giocatori di freccette si allena senza metodo: tirano, tirano e tirano, ma i risultati non arrivano mai. Il programma specifico del <strong style="color:var(--green)">Centro Darts Lab</strong> trasforma ogni sessione in un miglioramento misurabile: esercizi progressivi, grafici, statistiche e analisi biomeccanica del tiro con intelligenza artificiale.</p>
-    <button class="l-cta" onclick="openLogin()">CLICCA QUI PER ACCEDERE</button>
+    <div style="height:clamp(36px,7vw,64px)"></div>
+    <h1 class="l-head">SMETTI DI<br><span>TIRARE A CASO.</span><br>INIZIA AD<br><span>ALLENARTI DAVVERO.</span></h1>
+    <p class="l-sub">Il <strong style="color:var(--green)">Centro Darts Lab</strong> è il primo centro italiano dedicato al miglioramento tecnico alle freccette. Non una palestra generica, non un club del giovedì sera: un percorso strutturato, con dati reali, esercizi progressivi e analisi biomeccanica del tiro con intelligenza artificiale.</p>
+    <button class="l-cta" onclick="openLogin()">ACCEDI ALL'APP</button>
     <div class="l-scroll-hint">↓ &nbsp; Scopri di più &nbsp; ↓</div>
   </div>
 
-  <!-- PROBLEMA — Formula #1 dal video -->
+  <!-- MANIFESTO -->
+  <div class="l-manifesto">
+    <div class="l-manifesto-inner">
+      <div class="l-manifesto-quote">
+        "LA DIFFERENZA TRA CHI MIGLIORA E CHI NO<br>NON È IL <em>TALENTO</em>.<br>È IL <em>METODO</em>."
+      </div>
+      <div class="l-manifesto-divider"></div>
+      <p class="l-manifesto-body">
+        Nella maggior parte dei club, l'allenamento alle freccette funziona così: si va al campo, si tirano frecce per un'ora, si chiacchiera, si va a casa. Settimana dopo settimana, anno dopo anno. Il livello rimane lo stesso perché nessuno sa esattamente su cosa lavorare, in quale ordine, con quale intensità.
+      </p>
+      <p class="l-manifesto-body" style="margin-top:18px">
+        Il Centro Darts Lab nasce per cambiare questo. È un luogo — fisico e digitale — dove ogni sessione ha uno scopo preciso, ogni risultato viene misurato, e ogni atleta sa sempre esattamente dove si trova nel suo percorso di crescita.
+      </p>
+    </div>
+  </div>
+
+  <!-- NUMERI -->
+  <div class="l-numbers">
+    <div class="l-numbers-grid">
+      <div class="l-num-item">
+        <div class="l-num-val">40</div>
+        <div class="l-num-label">Sessioni di allenamento<br>progressivo</div>
+      </div>
+      <div class="l-num-item">
+        <div class="l-num-val">8</div>
+        <div class="l-num-label">Allenamenti strutturati<br>in sequenza</div>
+      </div>
+      <div class="l-num-item">
+        <div class="l-num-val">501</div>
+        <div class="l-num-label">Con statistiche,<br>avversario e torneo</div>
+      </div>
+      <div class="l-num-item">
+        <div class="l-num-val">IA</div>
+        <div class="l-num-label">Analisi biomeccanica<br>del tiro in tempo reale</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROBLEMA -->
   <div class="l-problem-section">
     <div class="l-problem-inner">
-      <div class="l-section-label">IL PROBLEMA</div>
+      <div class="l-section-label">Il problema</div>
       <h2 class="l-section-title">PERCHÉ NON MIGLIORI,<br>ANCHE SE TI ALLENI?</h2>
-      <p class="l-section-sub">Tiri frecce ogni settimana, ma il tuo livello sembra sempre lo stesso. Ecco perché succede.</p>
+      <p class="l-section-sub">Vai al campo ogni settimana. Tiri frecce. Eppure il livello sembra sempre uguale. Non è colpa della tua coordinazione. È il metodo che manca.</p>
       <div class="l-problem-grid">
-        <div class="l-problem-card">
+        <div class="l-problem-card from-left">
           <div class="l-problem-card-glow"></div>
-          <div class="l-problem-icon">😔</div>
-          <div class="l-problem-title">Sempre gli stessi esercizi</div>
-          <div class="l-problem-text">Chi non ha un programma strutturato ripete gli stessi gesti all'infinito. Si consolida il livello attuale, non si supera.</div>
+          <div class="l-problem-icon">🔁</div>
+          <div class="l-problem-title">Ripeti sempre gli stessi gesti</div>
+          <div class="l-problem-text">Senza un programma strutturato, consolidi il livello che hai già. Non lo superi. Il tiro migliora solo quando viene messo in discussione con esercizi che ti portano fuori dalla zona di comfort.</div>
         </div>
-        <div class="l-problem-card">
+        <div class="l-problem-card from-right">
           <div class="l-problem-card-glow"></div>
-          <div class="l-problem-icon">😟</div>
-          <div class="l-problem-title">Nessun obiettivo misurabile</div>
-          <div class="l-problem-text">Senza dati non sai se stai migliorando o stai solo perdendo tempo. Ogni sessione è uguale alla precedente perché non tieni traccia di nulla.</div>
+          <div class="l-problem-icon">📉</div>
+          <div class="l-problem-title">Non misuri nulla</div>
+          <div class="l-problem-text">Senza dati non sai se stai crescendo o stai solo passando il tempo. La tua media per turno al 501 è migliorata? La percentuale alle doppie? Se non lo sai, non puoi lavorarci.</div>
         </div>
-        <div class="l-problem-card">
+        <div class="l-problem-card from-left">
           <div class="l-problem-card-glow"></div>
-          <div class="l-problem-icon">😣</div>
-          <div class="l-problem-title">Niente pressione, niente crescita</div>
-          <div class="l-problem-text">Allenarsi in modo comodo non migliora nessuna abilità. Senza simulare situazioni di pressione, checkout difficili, doppie decisive, il livello in gara rimane basso.</div>
+          <div class="l-problem-icon">😤</div>
+          <div class="l-problem-title">L'allenamento è troppo comodo</div>
+          <div class="l-problem-text">Il miglioramento avviene sotto pressione. Se ti alleni sempre nelle condizioni più facili, in gara cadi esattamente nei momenti che non hai mai simulato: il checkout, la doppia decisiva, il recupero dopo una leg persa.</div>
         </div>
-        <div class="l-problem-card">
+        <div class="l-problem-card from-right">
           <div class="l-problem-card-glow"></div>
-          <div class="l-problem-icon">😩</div>
-          <div class="l-problem-title">Il risultato finale</div>
-          <div class="l-problem-text">Continui a perdere partite che dovresti vincere. Le doppie ti sfuggono nel momento decisivo. E non capisci mai dove stai sbagliando davvero.</div>
+          <div class="l-problem-icon">🎯</div>
+          <div class="l-problem-title">Non sai cosa correggere</div>
+          <div class="l-problem-text">Il tiro alle freccette è un gesto tecnico preciso. Angolo di gomito, posizione della spalla, rilascio del polso: basta un millimetro fuori posto per perdere tiri che dovresti fare ad occhi chiusi. Senza analisi, lavori alla cieca.</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- SOLUZIONE — Formula #2 dal video -->
+  <!-- SOLUZIONE -->
   <div class="l-solution-section">
     <div class="l-solution-inner">
-      <div class="l-section-label" style="color:var(--green)">LA SOLUZIONE</div>
-      <h2 class="l-section-title">UN PROGRAMMA CHE TRASFORMA<br>I DATI IN <span style="color:var(--green)">MIGLIORAMENTO REALE</span></h2>
-      <p class="l-section-sub">Non si tratta di tirare più frecce. Si tratta di tirare le frecce giuste, nel modo giusto, e sapere ogni volta se stai crescendo.</p>
+      <div class="l-section-label" style="color:var(--green)">La soluzione</div>
+      <h2 class="l-section-title">UN SISTEMA COMPLETO<br>PER <span style="color:var(--green)">CRESCERE SUL SERIO</span></h2>
+      <p class="l-section-sub">Non si tratta di tirare più frecce. Si tratta di sapere sempre cosa stai facendo, perché lo stai facendo, e quanto stai migliorando.</p>
       <div class="l-solution-grid">
         <div class="l-solution-item">
           <div class="l-solution-item-glow"></div>
-          <div class="l-solution-icon">😄</div>
-          <div class="l-solution-title">Progressione scientifica</div>
-          <div class="l-solution-text">8 allenamenti progressivi con 5 sessioni ciascuno. Ogni settimana aumenta l'intensità e la specificità, esattamente come fa un atleta professionista.</div>
+          <div class="l-solution-icon">📋</div>
+          <div class="l-solution-title">Programma progressivo in 8 tappe</div>
+          <div class="l-solution-text">40 sessioni divise in 8 allenamenti progressivi. Ogni settimana il livello sale: gli esercizi aumentano di specificità e intensità, esattamente come in un percorso sportivo strutturato. Nessun salto casuale, nessuna ripetizione inutile.</div>
         </div>
         <div class="l-solution-item">
           <div class="l-solution-item-glow"></div>
-          <div class="l-solution-icon">😁</div>
-          <div class="l-solution-title">Dati che parlano chiaro</div>
-          <div class="l-solution-text">Ogni risultato viene registrato e trasformato in grafici temporali. Vedi con precisione dove migliori e dove hai ancora margine.</div>
+          <div class="l-solution-icon">📊</div>
+          <div class="l-solution-title">Statistiche che parlano chiaro</div>
+          <div class="l-solution-text">Ogni risultato viene salvato e trasformato in grafici temporali interattivi. Vedi la tua curva di miglioramento su Tripli, Doppie, Pressure Game e 501. I numeri non mentono: se migliori, lo vedi. Se stai fermo, lo vedi lo stesso.</div>
         </div>
         <div class="l-solution-item">
           <div class="l-solution-item-glow"></div>
-          <div class="l-solution-icon">😎</div>
-          <div class="l-solution-title">Allenamento sotto pressione</div>
-          <div class="l-solution-text">Il Pressure Game simula i momenti decisivi di gara. Le partite a 501 con statistiche complete ti insegnano a chiudere quando conta davvero.</div>
+          <div class="l-solution-icon">💥</div>
+          <div class="l-solution-title">Allenamento sotto pressione reale</div>
+          <div class="l-solution-text">Il Pressure Game simula i momenti decisivi di gara. Hai un numero definito di frecce per colpire bersagli specifici sotto pressione crescente. Non puoi bluffare con te stesso: o colpisci, o no. È lì che si costruisce la testa del giocatore.</div>
         </div>
         <div class="l-solution-item">
           <div class="l-solution-item-glow"></div>
-          <div class="l-solution-icon">🤩</div>
-          <div class="l-solution-title">Analisi biomeccanica del tiro</div>
-          <div class="l-solution-text">La funzione di Analisi del Tiro usa l'intelligenza artificiale per analizzare il tuo video e misurare angoli di gomito, polso, spalla e postura, indicandoti esattamente cosa correggere.</div>
+          <div class="l-solution-icon">🤖</div>
+          <div class="l-solution-title">Analisi biomeccanica con IA</div>
+          <div class="l-solution-text">Carica un video del tuo tiro. L'intelligenza artificiale (MediaPipe Pose) analizza angoli di gomito, polso, spalla e postura frame per frame, senza inviare nulla a server esterni. Ottieni un report diagnostico preciso che ti mostra esattamente cosa correggere.</div>
         </div>
         <div class="l-solution-item">
           <div class="l-solution-item-glow"></div>
-          <div class="l-solution-icon">😊</div>
-          <div class="l-solution-title">Checkout sempre a portata di mano</div>
-          <div class="l-solution-text">La guida checkout completa con tabelle Double Out, Master Out e Single Out, ti aiuterà a sapere dove tirare in ogni momento per usare le tue frecce al meglio.</div>
+          <div class="l-solution-icon">🎮</div>
+          <div class="l-solution-title">501 completo: solo, con avversario o in torneo</div>
+          <div class="l-solution-text">Segnapunti 501 con suggerimenti checkout automatici, doppie tentate e colpite, media per turno e storico sessioni con grafici. Tre modalità: allenamento libero, partita con avversario (nome, sets e legs configurabili), torneo con best-of. Ogni leg conta.</div>
         </div>
         <div class="l-solution-item">
           <div class="l-solution-item-glow"></div>
-          <div class="l-solution-icon">😍</div>
-          <div class="l-solution-title">Sempre con te, aggiornato in tempo reale</div>
-          <div class="l-solution-text">I dati si sincronizzano automaticamente tra tutti i tuoi dispositivi senza bisogno di ricaricare la pagina. Accedi dal telefono al campo, dal computer a casa o da tablet al club. Il tuo allenamento non si ferma mai.</div>
+          <div class="l-solution-icon">☁️</div>
+          <div class="l-solution-title">Sincronizzazione istantanea</div>
+          <div class="l-solution-text">I dati si aggiornano in tempo reale su tutti i tuoi dispositivi. Salvi dal telefono al campo e controlli i grafici dal computer a casa. Nessuna app da installare: funziona direttamente dal browser, ovunque tu sia.</div>
         </div>
       </div>
       <div class="l-solution-cta">
-        <button class="l-cta" onclick="openLogin()">INIZIA ORA — ACCEDI ALL'APP</button>
-        <div style="margin-top:16px;font-size:13px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase">L'app ufficiale del Centro Darts Lab</div>
+        <button class="l-cta" onclick="openLogin()">ACCEDI ALL'APP</button>
+        <div style="margin-top:16px;font-size:12px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase">Accesso su invito — Centro Darts Lab</div>
       </div>
     </div>
   </div>
 
-  <!-- CAROUSEL — FUNZIONALITÀ -->
+  <!-- CAROUSEL FUNZIONALITÀ -->
   <div class="l-carousel-section">
     <div class="l-carousel-header">
       <div class="l-carousel-title">LE FUNZIONALITÀ</div>
@@ -1385,7 +1432,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
           <div class="l-card-num">01 / 07</div>
           <div class="l-card-icon"><img src="/01.svg" style="width:144px;height:144px;object-fit:contain" alt=""></div>
           <div class="l-card-title">40 SESSIONI DI ALLENAMENTO</div>
-          <div class="l-card-desc">8 allenamenti progressivi × 5 sessioni ciascuno. Ogni sessione include esercizi mirati su scoring, precisione alle doppie, chiusure al checkout e partite a 501 con regole speciali.</div>
+          <div class="l-card-desc">8 allenamenti progressivi × 5 sessioni ciascuno. Ogni sessione include esercizi mirati su scoring, precisione alle doppie, chiusure al checkout e partite a 501 con regole speciali. Ogni esercizio ha le sue istruzioni integrate.</div>
           <div class="l-card-tag">Struttura progressiva</div>
         </div>
 
@@ -1394,7 +1441,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
           <div class="l-card-num">02 / 07</div>
           <div class="l-card-icon"><img src="/02.svg" style="width:144px;height:144px;object-fit:contain" alt=""></div>
           <div class="l-card-title">STATISTICHE DETTAGLIATE</div>
-          <div class="l-card-desc">Grafici temporali interattivi per ogni tipo di gioco. Potrai tenere monitorato il tuo miglioramento nel tempo. Ogni risultato è collegato ad allenamento e sessione specifici.</div>
+          <div class="l-card-desc">Grafici temporali interattivi per ogni tipo di gioco. Tieni monitorato il miglioramento nel tempo su ogni esercizio del programma. Ogni risultato è collegato all'allenamento e alla sessione specifici in cui è stato registrato.</div>
           <div class="l-card-tag">Grafici in tempo reale</div>
         </div>
 
@@ -1403,8 +1450,8 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
           <div class="l-card-num">03 / 07</div>
           <div class="l-card-icon"><img src="/03.svg" style="width:144px;height:144px;object-fit:contain" alt=""></div>
           <div class="l-card-title">501 CON STATISTICHE COMPLETE</div>
-          <div class="l-card-desc">Segnapunti 501 integrato con suggerimenti automatici di checkout, doppie tentate e colpite, media per turno e storico sessioni. Gioca da solo o con un avversario in modalità Allenamento o Torneo con sets, legs e best-of configurabili.</div>
-          <div class="l-card-tag">Training, Avversario & Torneo</div>
+          <div class="l-card-desc">Segnapunti 501 integrato con checkout automatici, doppie tentate e colpite, media per turno e storico sessioni. Tre modalità: allenamento libero, partita con avversario, torneo con sets, legs e best-of configurabili.</div>
+          <div class="l-card-tag">Training, Avversario &amp; Torneo</div>
         </div>
 
         <div class="l-card">
@@ -1412,7 +1459,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
           <div class="l-card-num">04 / 07</div>
           <div class="l-card-icon"><img src="/04.svg" style="width:144px;height:144px;object-fit:contain" alt=""></div>
           <div class="l-card-title">GUIDA CHECKOUT</div>
-          <div class="l-card-desc">La guida matematica per sbagliare meno in chiusura. Tabelle con le migliori combinazioni per Double Out, Master Out e Single Out, più un gioco interattivo per memorizzarle.</div>
+          <div class="l-card-desc">La guida matematica per sbagliare meno in chiusura. Tabelle con le migliori combinazioni per Double Out, Master Out e Single Out, più un gioco interattivo integrato per memorizzarle sotto pressione.</div>
           <div class="l-card-tag">Impara le chiusure</div>
         </div>
 
@@ -1420,8 +1467,8 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
           <div class="l-card-glow"></div>
           <div class="l-card-num">05 / 07</div>
           <div class="l-card-icon"><img src="/07.svg" style="width:144px;height:144px;object-fit:contain" alt=""></div>
-          <div class="l-card-title">ANALISI TIRO CON AI</div>
-          <div class="l-card-desc">Carica un video del tuo tiro (frontale e laterale) e l'intelligenza artificiale analizza in tempo reale la tua tecnica di tiro. Avrai un report diagnostico dettagliato che ti dirà dove migliorare.</div>
+          <div class="l-card-title">ANALISI TIRO CON IA</div>
+          <div class="l-card-desc">Carica un video del tuo tiro (frontale e laterale). L'intelligenza artificiale analizza la tecnica in tempo reale, misura angoli e postura frame per frame e genera un report diagnostico dettagliato. Tutto avviene nel browser: nessun video viene inviato fuori dal tuo dispositivo.</div>
           <div class="l-card-tag">Biomeccanica del tiro</div>
         </div>
 
@@ -1430,7 +1477,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
           <div class="l-card-num">06 / 07</div>
           <div class="l-card-icon"><img src="/05.svg" style="width:144px;height:144px;object-fit:contain" alt=""></div>
           <div class="l-card-title">DATI SEMPRE SINCRONIZZATI</div>
-          <div class="l-card-desc">Tutti i tuoi risultati sono salvati nel cloud e aggiornati in tempo reale su tutti i tuoi dispositivi — senza ricaricare la pagina. Accedi dal telefono al campo, dal tablet o dal computer a casa.</div>
+          <div class="l-card-desc">I tuoi risultati sono salvati nel cloud e aggiornati in tempo reale su tutti i dispositivi, senza ricaricare la pagina. Accedi dal telefono al campo, dal tablet o dal computer a casa: i dati ti seguono ovunque.</div>
           <div class="l-card-tag">Cloud sync in tempo reale</div>
         </div>
 
@@ -1439,7 +1486,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
           <div class="l-card-num">07 / 07</div>
           <div class="l-card-icon"><img src="/06.svg" style="width:144px;height:144px;object-fit:contain" alt=""></div>
           <div class="l-card-title">CICLI INFINITI</div>
-          <div class="l-card-desc">Completa tutti gli 8 allenamenti e ricomincia da capo. I dati storici di ogni ciclo precedente rimangono sempre visibili nelle statistiche per confrontare i progressi nel tempo.</div>
+          <div class="l-card-desc">Completi tutti gli 8 allenamenti e ricomincia da capo con un nuovo ciclo. I dati di ogni ciclo precedente rimangono nelle statistiche. Confronti i progressi, vedi quanto sei cresciuto rispetto al ciclo prima, e riparti da un livello più alto.</div>
           <div class="l-card-tag">Allenamento continuo</div>
         </div>
 
@@ -1459,44 +1506,74 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     <div class="l-swipe-hint">← SCORRI A SINISTRA →</div>
   </div>
 
-  <!-- JOURNEY — vertical steps -->
+  <!-- CHI SIAMO -->
+  <div class="l-chi">
+    <div class="l-chi-inner">
+      <div class="l-chi-text">
+        <h2>IL CENTRO DARTS LAB NON È<br><span>UNA PALESTRA.</span><br>È UN POSTO CON<br><span>UN METODO PRECISO.</span></h2>
+        <p>Il Centro Darts Lab nasce dalla convinzione che le freccette siano uno sport tecnico vero, che merita di essere allenato con la stessa serietà di qualsiasi altra disciplina. Non ci interessa fare numeri. Ci interessa che ogni atleta che entra qui esca con una comprensione più profonda del proprio gesto tecnico e con dati concreti che dimostrano che sta crescendo.</p>
+        <p>L'app è lo strumento digitale che accompagna ogni sessione in sala: registra i risultati, traccia i progressi, analizza il tiro. Ma il luogo fisico, i target, il bancone e il silenzio tra un tiro e l'altro — quello è il Centro Darts Lab.</p>
+        <p>L'accesso è su invito. Non per fare i preziosi, ma perché vogliamo seguire ogni atleta con la giusta attenzione. Un gruppo piccolo, un lavoro serio.</p>
+      </div>
+      <div class="l-chi-facts">
+        <div class="l-chi-fact">
+          <div class="l-chi-fact-num">8 ×5</div>
+          <div class="l-chi-fact-label">Allenamenti progressivi<br>per ogni ciclo completo</div>
+        </div>
+        <div class="l-chi-fact">
+          <div class="l-chi-fact-num">100%</div>
+          <div class="l-chi-fact-label">Analisi video elaborata<br>nel browser, nessun dato inviato</div>
+        </div>
+        <div class="l-chi-fact">
+          <div class="l-chi-fact-num">0 app</div>
+          <div class="l-chi-fact-label">Da installare — funziona<br>dal browser su qualsiasi dispositivo</div>
+        </div>
+        <div class="l-chi-fact">
+          <div class="l-chi-fact-num">∞</div>
+          <div class="l-chi-fact-label">Cicli di allenamento<br>con storico dati conservato</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COME FUNZIONA — JOURNEY -->
   <div class="l-journey">
-    <div class="l-journey-title">IL TUO PERCORSO</div>
-    <div class="l-journey-sub">Come funziona il programma, passo dopo passo</div>
+    <div class="l-journey-title">COME FUNZIONA</div>
+    <div class="l-journey-sub">Il percorso di ogni atleta del Centro Darts Lab, passo dopo passo</div>
 
     <div class="l-step active">
       <div class="l-step-line">
-        <div class="l-step-dot">🎯</div>
+        <div class="l-step-dot">🔑</div>
         <div class="l-step-connector"></div>
       </div>
       <div class="l-step-body">
         <div class="l-step-label">Passo 1</div>
-        <div class="l-step-heading">ACCEDI CON LE TUE CREDENZIALI</div>
-        <div class="l-step-text">L'amministratore crea il tuo account e ti fornisce le credenziali di accesso. Al primo accesso creerai una password personale sicura che userai da quel momento in poi.</div>
+        <div class="l-step-heading">ACCESSO SU INVITO</div>
+        <div class="l-step-text">L'accesso all'app è riservato agli atleti del Centro Darts Lab. Il responsabile crea il tuo account e ti fornisce le credenziali iniziali. Al primo accesso imposti una password personale. Da quel momento in poi, l'app è tua.</div>
       </div>
     </div>
 
     <div class="l-step active">
       <div class="l-step-line">
-        <div class="l-step-dot">📋</div>
+        <div class="l-step-dot">📍</div>
         <div class="l-step-connector"></div>
       </div>
       <div class="l-step-body">
         <div class="l-step-label">Passo 2</div>
-        <div class="l-step-heading">L'APP TI PORTA DOVE SERVE</div>
-        <div class="l-step-text">Al login l'app apre automaticamente l'ultima sessione in cui hai ancora caselle vuote anche se era già stata parzialmente salvata. Non devi ricordare nulla: il programma pensa per te.</div>
+        <div class="l-step-heading">L'APP SA DOVE SEI RIMASTO</div>
+        <div class="l-step-text">Al login l'app apre automaticamente l'ultima sessione ancora incompleta. Non devi ricordarti nulla: il programma sa esattamente dove sei nel percorso e ti porta lì. Se hai salvato a metà, riprendi da dove ti eri fermato.</div>
       </div>
     </div>
 
     <div class="l-step active">
       <div class="l-step-line">
-        <div class="l-step-dot">💪</div>
+        <div class="l-step-dot">🏋️</div>
         <div class="l-step-connector"></div>
       </div>
       <div class="l-step-body">
         <div class="l-step-label">Passo 3</div>
         <div class="l-step-heading">ALLENATI CON ESERCIZI MIRATI</div>
-        <div class="l-step-text">Ogni sessione contiene 7–9 esercizi progressivi: Tripli, Pressure Game, partite a 501 con regole speciali e molto molto altro. Il gioco interattivo integrato registra i risultati in tempo reale.</div>
+        <div class="l-step-text">Ogni sessione contiene 7–9 esercizi progressivi: Tripli, Around the Clock, Pressure Game, partite a 501 con regole speciali, Shanghai e molto altro. Il gioco interattivo integrato registra i risultati esercizio per esercizio, in tempo reale.</div>
       </div>
     </div>
 
@@ -1507,8 +1584,8 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       </div>
       <div class="l-step-body">
         <div class="l-step-label">Passo 4</div>
-        <div class="l-step-heading">SALVA E SINCRONIZZA</div>
-        <div class="l-step-text">Clicca "Salva sessione" al termine. I dati vengono salvati nel cloud in meno di un secondo e diventano subito visibili nei grafici delle statistiche.</div>
+        <div class="l-step-heading">SALVA IN UN SECONDO</div>
+        <div class="l-step-text">Clicca "Salva sessione" al termine. I dati vengono sincronizzati nel cloud in meno di un secondo e diventano immediatamente visibili nei grafici delle statistiche. Da qualsiasi dispositivo tu voglia consultarli.</div>
       </div>
     </div>
 
@@ -1519,32 +1596,32 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       </div>
       <div class="l-step-body">
         <div class="l-step-label">Passo 5</div>
-        <div class="l-step-heading">LEGGI I TUOI PROGRESSI NEI GRAFICI</div>
-        <div class="l-step-text">La sezione Statistiche mostra grafici temporali per ogni tipo di esercizio, il numero di corone (risultati perfetti) per sessione, e le tendenze del tuo 501 libero. Vedi in un colpo d'occhio dove stai crescendo e dove no.</div>
+        <div class="l-step-heading">LEGGI I TUOI PROGRESSI</div>
+        <div class="l-step-text">La sezione Statistiche mostra grafici temporali per ogni tipo di esercizio, il numero di corone (risultati perfetti) per sessione, e le tendenze del tuo 501. Vedi in un colpo d'occhio dove stai crescendo, dove sei fermo, e dove devi concentrarti di più.</div>
       </div>
     </div>
 
     <div class="l-step active">
       <div class="l-step-line">
-        <div class="l-step-dot">📹</div>
+        <div class="l-step-dot">🎥</div>
         <div class="l-step-connector"></div>
       </div>
       <div class="l-step-body">
         <div class="l-step-label">Passo 6</div>
-        <div class="l-step-heading">ANALIZZA IL TUO TIRO CON L'IA</div>
-        <div class="l-step-text">Quando vuoi scavare più in profondo, carica un video del tuo tiro nella sezione Analisi. L'intelligenza artificiale misura angoli e postura frame per frame, genera un report diagnostico e ti mostra esattamente cosa stai facendo e come correggere gli errori.</div>
+        <div class="l-step-heading">ANALIZZA IL TIRO CON L'IA</div>
+        <div class="l-step-text">Quando vuoi andare più in profondo, carica un video del tuo tiro nella sezione Analisi. L'intelligenza artificiale misura angoli e postura frame per frame e genera un report diagnostico che ti mostra esattamente cosa stai facendo bene e cosa correggere. Il tutto senza inviare nulla a server esterni: il video resta sul tuo dispositivo.</div>
       </div>
     </div>
 
     <div class="l-step active">
       <div class="l-step-line">
-        <div class="l-step-dot">🎮</div>
+        <div class="l-step-dot">⚔️</div>
         <div class="l-step-connector"></div>
       </div>
       <div class="l-step-body">
         <div class="l-step-label">Passo 7</div>
-        <div class="l-step-heading">GIOCA A 501 E ALLENA LE CHIUSURE</div>
-        <div class="l-step-text">Oltre all'allenamento strutturato, gioca partite a 501 da solo, con un avversario o in modalità Torneo con sets, legs e best-of personalizzabili. Statistiche complete: media per turno, percentuale alle doppie, storico grafico delle sessioni e visualizzazione vinto/perso per le partite con avversario.</div>
+        <div class="l-step-heading">GIOCA, SFIDA, MIGLIORA</div>
+        <div class="l-step-text">Oltre al programma strutturato, gioca partite a 501 da solo, con un avversario o in torneo con sets, legs e best-of personalizzabili. Statistiche complete per ogni partita: media per turno, percentuale alle doppie, checkout riusciti, grafico storico e registro vinto/perso.</div>
       </div>
     </div>
 
@@ -1555,81 +1632,115 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       <div class="l-step-body">
         <div class="l-step-label">Passo 8</div>
         <div class="l-step-heading">COMPLETA E RICOMINCIA PIÙ FORTE</div>
-        <div class="l-step-text">Dopo gli 8 allenamenti, il ciclo si azzera e ricomincia. I dati di tutti i cicli precedenti rimangono nelle statistiche. Confronti i progressi, vedi quanto sei cresciuto, e riparti da un livello più alto.</div>
+        <div class="l-step-text">Dopo gli 8 allenamenti il ciclo si azzera e ricomincia. I dati di tutti i cicli precedenti rimangono nelle statistiche. Confronti i progressi, misuri la crescita ciclo su ciclo, e riparti da un livello più alto di quello in cui hai iniziato.</div>
       </div>
     </div>
 
   </div>
 
-  <!-- BOTTOM CTA -->
-  <div class="l-bot">
-    <img src="/Centro_Darts_Lab_Logo_2.svg" alt="Centro Darts Lab" style="height:clamp(60px,12vw,100px);max-width:320px;object-fit:contain;filter:drop-shadow(0 0 20px rgba(35,197,94,.35));margin-bottom:28px">
-    <div class="l-bot-title">HAI UN METODO.<br>O HAI SOLO UN'ABITUDINE?</div>
-    <p>Chi migliora davvero a freccette non tira di più, tira meglio. Il <strong style="color:var(--green)">Centro Darts Lab</strong> ti dà un programma specifico, dati reali, analisi biomeccanica con IA e partite con avversario per portare il tuo livello a un nuovo standard.</p>
-    <button class="l-cta" onclick="openLogin()">CLICCA QUI PER ACCEDERE</button>
+  <!-- ACCESSO E CONDIZIONI -->
+  <div class="l-access">
+    <div class="l-access-inner">
+      <div class="l-section-label">Come si accede</div>
+      <h2 class="l-section-title">UN PROGETTO<br>PER CHI FA SUL SERIO</h2>
+      <p class="l-section-sub">Il Centro Darts Lab non è aperto a tutti. È un ambiente selezionato, dove si lavora con concentrazione e con un obiettivo chiaro: migliorare.</p>
+      <div class="l-access-grid">
+        <div class="l-access-card">
+          <div class="l-access-icon">🤝</div>
+          <div class="l-access-title">Solo su invito</div>
+          <div class="l-access-text">L'accesso all'app è riservato agli atleti del CDL. Il responsabile crea il profilo e fornisce le credenziali iniziali. Nessuna registrazione pubblica.</div>
+        </div>
+        <div class="l-access-card">
+          <div class="l-access-icon">📱</div>
+          <div class="l-access-title">Nessuna app da installare</div>
+          <div class="l-access-text">Funziona direttamente dal browser su telefono, tablet e computer. Vai su questo indirizzo, accedi con le tue credenziali, e sei dentro.</div>
+        </div>
+        <div class="l-access-card">
+          <div class="l-access-icon">🔒</div>
+          <div class="l-access-title">Dati protetti e privati</div>
+          <div class="l-access-text">I tuoi dati sono su Firebase con autenticazione sicura. Solo tu e il responsabile del tuo profilo potete accedere ai tuoi risultati.</div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- OBIEZIONI — tecniche dal video -->
+  <!-- BOTTOM CTA -->
+  <div class="l-bot">
+    <img src="/Centro_Darts_Lab_Logo_2.svg" alt="Centro Darts Lab" style="height:clamp(60px,12vw,100px);max-width:320px;object-fit:contain;filter:drop-shadow(0 0 22px rgba(35,197,94,.35));margin-bottom:32px">
+    <div class="l-bot-title">HAI UN METODO.<br>O HAI SOLO UN'ABITUDINE?</div>
+    <p>Chi migliora davvero a freccette non tira di più — tira meglio. Il <strong style="color:var(--green)">Centro Darts Lab</strong> ti dà un programma strutturato, dati reali su ogni sessione, analisi biomeccanica con intelligenza artificiale e partite a 501 complete in tutte le modalità. Smetti di allenarti alla cieca.</p>
+    <button class="l-cta" onclick="openLogin()">ACCEDI ALL'APP</button>
+  </div>
+
+  <!-- FAQ -->
   <div class="l-faq-section">
     <div class="l-faq-inner">
-      <div class="l-section-label" style="color:var(--muted)">DOMANDE FREQUENTI</div>
+      <div class="l-section-label">Domande frequenti</div>
       <h2 class="l-section-title">HAI DEI DUBBI?<br>LI CAPIAMO.</h2>
       <div class="l-faq-list">
 
         <div class="l-faq-item">
           <button class="l-faq-q" onclick="faqToggle(this)" aria-expanded="false">
-            <span>Funziona anche se sono un principiante?</span>
+            <span>Funziona anche se sono un principiante assoluto?</span>
             <span class="l-faq-arrow">▼</span>
           </button>
-          <div class="l-faq-a">Sì. Il programma parte dall'inizio e scala gradualmente. I primi allenamenti si concentrano sui fondamentali per poi aumentare di difficoltà assieme ai tuoi miglioramenti. Non serve nessuna esperienza precedente.</div>
+          <div class="l-faq-a">Sì. Il programma parte dai fondamentali e scala gradualmente. I primi allenamenti costruiscono le basi tecniche del gesto, per poi aumentare di specificità e difficoltà assieme al tuo livello. Non è richiesta nessuna esperienza precedente alle freccette.</div>
         </div>
 
         <div class="l-faq-item">
           <button class="l-faq-q" onclick="faqToggle(this)" aria-expanded="false">
-            <span>Quanto tempo richiede ogni sessione?</span>
+            <span>Quanto tempo richiede ogni sessione di allenamento?</span>
             <span class="l-faq-arrow">▼</span>
           </button>
-          <div class="l-faq-a">Mediamente 45–60 minuti per completare una sessione completa. Puoi però compilare parzialmente, salvare e riprendere in un altro momento: l'app ricorda esattamente dove eri rimasto.</div>
+          <div class="l-faq-a">Mediamente 45–60 minuti per completare una sessione intera. Puoi però salvare a metà e riprendere in un altro momento: l'app ricorda esattamente dove ti eri fermato e ci torna automaticamente al login successivo.</div>
         </div>
 
         <div class="l-faq-item">
           <button class="l-faq-q" onclick="faqToggle(this)" aria-expanded="false">
-            <span>Come accedo all'app?</span>
+            <span>Come accedo all'app? Devo installarla?</span>
             <span class="l-faq-arrow">▼</span>
           </button>
-          <div class="l-faq-a">L'accesso è su invito. L'amministratore crea il tuo account e ti fornisce le credenziali. Al primo login imposterai una password personale. Nessuna app da scaricare: funziona direttamente dal browser su telefono, tablet o computer.</div>
+          <div class="l-faq-a">Nessuna installazione: funziona direttamente dal browser su qualsiasi dispositivo. L'accesso è su invito: il responsabile crea il tuo profilo e ti fornisce le credenziali iniziali. Al primo login imposterai una password personale. Da quel momento puoi usare l'app ovunque.</div>
         </div>
 
         <div class="l-faq-item">
           <button class="l-faq-q" onclick="faqToggle(this)" aria-expanded="false">
-            <span>I miei dati sono al sicuro?</span>
+            <span>I miei dati di allenamento sono al sicuro?</span>
             <span class="l-faq-arrow">▼</span>
           </button>
-          <div class="l-faq-a">Tutti i dati sono salvati su Firebase di Google con autenticazione sicura e crittografati in transito. Solo tu e l'amministratore del tuo account potete accedere ai tuoi risultati.</div>
+          <div class="l-faq-a">Tutti i dati sono salvati su Firebase di Google (server in Europa) con autenticazione sicura e comunicazioni crittografate. Solo tu e il responsabile del tuo profilo potete accedere ai tuoi risultati. I video della funzione Analisi Tiro vengono elaborati interamente nel browser e non vengono mai inviati a server esterni.</div>
         </div>
 
         <div class="l-faq-item">
           <button class="l-faq-q" onclick="faqToggle(this)" aria-expanded="false">
-            <span>L'analisi tiro funziona su qualsiasi video?</span>
+            <span>Come funziona l'analisi del tiro con l'intelligenza artificiale?</span>
             <span class="l-faq-arrow">▼</span>
           </button>
-          <div class="l-faq-a">Funziona con qualsiasi video registrato da smartphone, sia frontale che laterale. L'IA rileva i punti del corpo e calcola angoli e postura frame per frame direttamente nel browser, senza caricare nulla su server esterni.</div>
+          <div class="l-faq-a">Carichi un video del tuo tiro registrato da smartphone (frontale, laterale, o entrambi). La libreria MediaPipe Pose rileva i punti chiave del corpo e calcola angoli di gomito, polso, spalla e postura frame per frame, direttamente nel browser del tuo dispositivo. Il risultato è un report diagnostico dettagliato. Nessun video viene inviato fuori dal tuo dispositivo.</div>
         </div>
 
         <div class="l-faq-item">
           <button class="l-faq-q" onclick="faqToggle(this)" aria-expanded="false">
-            <span>Posso usarla durante le partite vere o con un avversario?</span>
+            <span>Posso usare il segnapunti 501 con un avversario o durante tornei?</span>
             <span class="l-faq-arrow">▼</span>
           </button>
-          <div class="l-faq-a">Assolutamente sì. Il segnapunti 501 funziona in tre modalità: solitario, con avversario (nome libero, sets e legs configurabili) e torneo con best-of. L'app suggerisce i checkout automaticamente, tiene traccia di doppie e medie per turno e salva tutto nelle statistiche con grafico vinto/perso. Per non perdere il ritmo fatti aiutare da un amico nel turno avversario.</div>
+          <div class="l-faq-a">Assolutamente sì. Il 501 funziona in tre modalità: solitario, partita con avversario (nome libero, sets e legs configurabili) e torneo con best-of. L'app suggerisce i checkout automaticamente, tiene traccia di doppie e medie per turno e salva tutto nelle statistiche con grafico vinto/perso. Per non perdere il ritmo, fatti aiutare da un amico nel turno avversario.</div>
         </div>
 
         <div class="l-faq-item">
           <button class="l-faq-q" onclick="faqToggle(this)" aria-expanded="false">
-            <span>Cosa si intende per "aggiornamento in tempo reale"?</span>
+            <span>Cosa significa "aggiornamento in tempo reale"?</span>
             <span class="l-faq-arrow">▼</span>
           </button>
-          <div class="l-faq-a">L'app ascolta il database Firebase in tempo reale. Appena un dato cambia (appuntamenti, sessioni, messaggi), si aggiorna automaticamente su tutti i dispositivi senza dover ricaricare la pagina. Se sei al campo con il telefono e il tuo coach aggiorna il calendario dal computer, lo vedi comparire in pochi secondi.</div>
+          <div class="l-faq-a">L'app è collegata al database Firebase in modo persistente. Quando un dato cambia — un appuntamento aggiunto, una sessione salvata, un messaggio ricevuto — si aggiorna automaticamente su tutti i dispositivi connessi senza bisogno di ricaricare la pagina. Se sei al campo con il telefono e il responsabile aggiorna il calendario dal computer, lo vedi comparire in pochi secondi.</div>
+        </div>
+
+        <div class="l-faq-item">
+          <button class="l-faq-q" onclick="faqToggle(this)" aria-expanded="false">
+            <span>Cosa succede quando completo tutti gli 8 allenamenti?</span>
+            <span class="l-faq-arrow">▼</span>
+          </button>
+          <div class="l-faq-a">Il ciclo si azzera e ricomincia dall'allenamento 1. Ma i dati del ciclo appena completato rimangono nelle statistiche: puoi confrontare le tue performance ciclo dopo ciclo e misurare la crescita nel tempo. Ogni volta che ricominci, parti da un punto di partenza più alto.</div>
         </div>
 
       </div>
@@ -1637,6 +1748,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   </div>
 
   <div class="l-foot">© 2026 Centro Darts Lab — Tutti i diritti riservati &nbsp;·&nbsp; <a href="#" onclick="openLegal('privacy');return false;" style="color:var(--muted);text-decoration:none" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color='var(--muted)'">Privacy Policy</a> &nbsp;·&nbsp; <a href="#" onclick="openLegal('terms');return false;" style="color:var(--muted);text-decoration:none" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color='var(--muted)'">Termini e Condizioni</a> &nbsp;·&nbsp; <a href="#" onclick="openLegal('cookie');return false;" style="color:var(--muted);text-decoration:none" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color='var(--muted)'">Cookie Policy</a></div>
+</div>
 </div>
 
 <!-- ═══════════════════════ LOGIN MODAL ═══════════════════════ -->
@@ -6131,7 +6243,7 @@ function renderApptUser(){
     // Pillola ICS (solo se non locked)
     const icsB = locked ? '' : (
       '<button class="cal-ics-btn'+(isSaved?' ics-saved':'')+'" data-dt="'+l.dt+'" data-idx="'+l.idx+'" data-icsid="'+(l.icsId||'')
-      +'" data-title="'+(teacher?teacher:'Lezione accademia')+' - Lezione '+(l.idx+1)+(l.note?' - '+l.note:'')+'"'
+      +'" data-title="'+(teacher?teacher:'Sessione di allenamento')+' - Lezione '+(l.idx+1)+(l.note?' - '+l.note:'')+'"'
       +' onclick="userExportICS(this)" title="Aggiungi al calendario del dispositivo">'
       +(isSaved?'&#x2713; SALVATO':'&#x1F4C5; AGGIUNGI AL CALENDARIO')
       +'</button>'
@@ -7099,7 +7211,7 @@ function userCalBuildHtml(){
       const icsId   = lezione && lezione.icsId ? lezione.icsId : null;
       const icsKey  = icsId || (String(ev.idx)+'_'+(ev.dt||''));
       const isSaved = _userIcsSaved.has(icsKey);
-      const icsTitle= (teacher||'Lezione accademia')+' - Lezione '+(ev.idx+1)+(ev.note?' - '+ev.note:'');
+      const icsTitle= (teacher||'Sessione di allenamento')+' - Lezione '+(ev.idx+1)+(ev.note?' - '+ev.note:'');
       const icsBtn  = '<button class="cal-ics-btn'+(isSaved?' ics-saved':'')+'" data-dt="'+ev.dt+'" data-idx="'+ev.idx+'" data-icsid="'+(icsId||'')+'" data-title="'+icsTitle.replace(/"/g,'&quot;')+'" onclick="userExportICS(this)" style="font-size:11px;margin-top:6px">'+(isSaved?'&#x2713; SALVATO':'&#x1F4C5; AGGIUNGI AL CALENDARIO')+'</button>';
       html+='<div style="border-left:3px solid var(--green);padding:8px 12px;margin-bottom:8px;background:var(--d3);border-radius:6px">';
       html+='<div style="font-size:14px;font-weight:700;color:var(--green)">ORE '+lbl+' — LEZIONE '+(ev.idx+1)+'</div>';
@@ -9422,7 +9534,7 @@ function showPrev501Sess(){
         rawSets: sess.sets||[],
         opponentName: _oppName,
         withOpponent: true,
-        meta:{totalSets:sess.__meta?.totalSets||1, legsPerSet:sess.__meta?.legsPerSet||legs.length}});
+        meta:{totalSets:sess.__meta?.totalSets||1, legsPerSet:sess.__meta?.legsPerSet||allLegs.length}});
     } else if(_withOpp) {
       // Sessione avversario post-merge: ha legs piatti senza sets
       // → trattarla con isTournament:true per mantenere lo stile torneo
@@ -11598,7 +11710,7 @@ var _legalContent = {
         <li>Sessioni 501 con avversario e risultati torneo (sets, legs, esito vinto/perso)</li>
         <li>Risultati del Pressure Game e dei giochi speciali integrati</li>
         <li>Messaggi inviati tramite la funzione "Invia un messaggio" del profilo</li>
-        <li>Appuntamenti di lezione e relativi metadati (data, orario, insegnante)</li>
+        <li>Appuntamenti e relativi metadati (data, orario, responsabile di riferimento)</li>
         <li>Data e ora di salvataggio delle sessioni</li>
         <li>Storico dei cicli di allenamento completati</li>
         <li>Identificativi dispositivo per la gestione multi-device (localStorage)</li>
@@ -11666,7 +11778,7 @@ var _legalContent = {
       <p class="legal-chip">Termini di Utilizzo del Servizio</p>
 
       <h3>1. Descrizione del Servizio</h3>
-      <p><strong>Centro Darts Lab</strong> è un'applicazione web gestita a titolo personale e non professionale da <strong>Michele De Monte</strong> (Caprino Veronese, VR), strumento ufficiale dell'accademia di freccette Centro Darts Lab, che consente agli utenti registrati di:</p>
+      <p><strong>Centro Darts Lab</strong> è un'applicazione web gestita a titolo personale e non professionale da <strong>Michele De Monte</strong> (Caprino Veronese, VR), strumento ufficiale del centro di allenamento alle freccette Centro Darts Lab, che consente agli utenti registrati di:</p>
       <ul>
         <li>Registrare e monitorare sessioni di allenamento strutturato alle freccette (40 sessioni, 8 allenamenti progressivi)</li>
         <li>Visualizzare statistiche e grafici di progressione personale</li>
@@ -11674,11 +11786,11 @@ var _legalContent = {
         <li>Consultare una guida interattiva alle chiusure (checkout)</li>
         <li>Analizzare la tecnica di tiro tramite video con elaborazione locale basata su intelligenza artificiale (MediaPipe Pose)</li>
         <li>Allenarsi con giochi speciali integrati (Pressure Game, 201 in 9 frecce, Shanghai, ecc.)</li>
-        <li>Visualizzare e gestire appuntamenti di lezione con il proprio istruttore</li>
+        <li>Visualizzare e gestire i propri appuntamenti con il proprio responsabile di riferimento</li>
         <li>Inviare messaggi all'amministratore tramite il sistema di messaggistica integrato</li>
         <li>Ricevere notifiche e aggiornamenti in tempo reale su appuntamenti, sessioni e comunicazioni</li>
       </ul>
-      <p>Il servizio è accessibile tramite invito ed è riservato agli studenti e agli istruttori del Centro Darts Lab autorizzati dall'amministratore.</p>
+      <p>Il servizio è accessibile tramite invito ed è riservato agli atleti e ai responsabili del Centro Darts Lab autorizzati dall'amministratore.</p>
 
       <h3>2. Accettazione dei Termini</h3>
       <p>L'accesso e l'utilizzo del servizio implicano l'accettazione integrale dei presenti Termini e Condizioni e della Privacy Policy. Chi non accetta tali condizioni è pregato di non utilizzare il servizio.</p>
@@ -11698,7 +11810,7 @@ var _legalContent = {
       </ul>
 
       <h3>5. Funzione Analisi Tiro — Limitazioni</h3>
-      <p>La funzione di Analisi del Tiro utilizza tecnologia di intelligenza artificiale (MediaPipe Pose) per fornire indicazioni orientative sulla tecnica di tiro. I risultati hanno carattere puramente informativo e non sostituiscono la valutazione di un allenatore qualificato. Il titolare non garantisce l'accuratezza assoluta delle misurazioni. I video caricati vengono elaborati interamente nel browser dell'utente e non vengono trasmessi o conservati da parte del titolare.</p>
+      <p>La funzione di Analisi del Tiro utilizza tecnologia di intelligenza artificiale (MediaPipe Pose) per fornire indicazioni orientative sulla tecnica di tiro. I risultati hanno carattere puramente informativo e non sostituiscono la valutazione di un responsabile. Il titolare non garantisce l'accuratezza assoluta delle misurazioni. I video caricati vengono elaborati interamente nel browser dell'utente e non vengono trasmessi o conservati da parte del titolare.</p>
 
       <h3>6. Disponibilità del Servizio</h3>
       <p>Il servizio è fornito "così com'è" (<em>as is</em>), senza garanzie di continuità, disponibilità o assenza di errori. Il titolare si riserva il diritto di sospendere, modificare o interrompere il servizio in qualsiasi momento, con o senza preavviso, senza che ciò generi alcun diritto di rimborso o risarcimento.</p>
