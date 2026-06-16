@@ -718,9 +718,9 @@ select:hover{border-color:var(--green)}
 .pw-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0;line-height:1;transition:color .2s}
 .pw-eye:hover{color:var(--light)}
 /* ═══ GAME OVERLAY LAYOUT ═══ */
-#g501overlay{position:fixed;top:0;left:0;width:100vw;width:100dvw;height:100vh;height:100dvh;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden;overscroll-behavior:none;touch-action:none}
+#g501overlay{position:fixed;top:0;right:0;bottom:0;left:0;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden;overscroll-behavior:none;touch-action:none;isolation:isolate;transform:translateZ(0)}
 /* Blocco scroll totale quando un gioco a schermo intero è attivo */
-html.game-active,body.game-active{overflow:hidden!important;height:100%!important;position:fixed!important;width:100%!important;top:0;left:0;overscroll-behavior:none;touch-action:none}
+html.game-active,body.game-active{overflow:hidden!important;overscroll-behavior:none;touch-action:none}
 #g501overlay.open{display:flex}
 #g201overlay.open{display:flex}
 
@@ -767,7 +767,8 @@ html.game-active,body.game-active{overflow:hidden!important;height:100%!importan
 @media(max-width:768px){
   .g501-inner{
     gap:4px;
-    padding:6px 8px 3px;   /* 8px laterale = spazio visivo tra bordo e pad */
+    /* safe-area: top per notch/dynamic island, bottom per home indicator */
+    padding:calc(6px + env(safe-area-inset-top,0px)) 8px calc(3px + env(safe-area-inset-bottom,0px));
     flex:1 1 0;
     min-height:0;
     align-items:stretch;   /* tutti gli elementi a 100% larghezza */
@@ -2487,7 +2488,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 </div>
 
 <!-- ═══════════════════════ PRESSURE GAME OVERLAY ═══════════════════════ -->
-<div id="pgOverlay" style="position:fixed;top:0;left:0;width:100vw;width:100dvw;height:100vh;height:100dvh;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden;overscroll-behavior:none;touch-action:none">
+<div id="pgOverlay" style="position:fixed;top:0;right:0;bottom:0;left:0;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden;overscroll-behavior:none;touch-action:none;isolation:isolate;transform:translateZ(0)">
   <div class="g501-inner">
     <button class="g501-close" onclick="pgClose()">ESCI ×</button>
     <!-- Block 1: Score area — punteggio inserito qui, come il 501 -->
@@ -2540,7 +2541,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     </div>
   </div>
 </div>
-<div id="g201overlay" style="position:fixed;top:0;left:0;width:100vw;width:100dvw;height:100vh;height:100dvh;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden;overscroll-behavior:none;touch-action:none">
+<div id="g201overlay" style="position:fixed;top:0;right:0;bottom:0;left:0;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden;overscroll-behavior:none;touch-action:none;isolation:isolate;transform:translateZ(0)">
   <div class="g501-inner">
   <button onclick="close201()" class="g501-close">ESCI ×</button>
   <!-- Block 1: Score -->
@@ -3975,14 +3976,17 @@ function gameOverlayOpen(){
   document.getElementById('liquidDock').style.pointerEvents='none';
   const lo=document.getElementById('ldLogout');
   if(lo){lo.style.visibility='hidden';lo.style.pointerEvents='none';}
-  // Blocca lo scroll della pagina sottostante: il gioco è a schermo intero
-  // e non deve mai poter scorrere mostrando il contenuto retrostante.
-  // Salva la posizione di scroll corrente per ripristinarla alla chiusura.
-  window._gameScrollY = window.scrollY || window.pageYOffset || 0;
+  // Blocca lo scroll della pagina sottostante (solo overflow, niente position:fixed
+  // sul body che romperebbe il posizionamento degli overlay fixed).
   document.documentElement.classList.add('game-active');
   document.body.classList.add('game-active');
-  // Ricalcola layout dopo nascondere il dock (la viewport cambia su alcuni browser)
-  if(window._gameUpdateLayout){ setTimeout(window._gameUpdateLayout, 50); setTimeout(window._gameUpdateLayout, 200); }
+  // Ricalcola il layout del pad dopo l'apertura (più passaggi per Safari)
+  if(window._gameUpdateLayout){
+    requestAnimationFrame(window._gameUpdateLayout);
+    setTimeout(window._gameUpdateLayout, 60);
+    setTimeout(window._gameUpdateLayout, 180);
+    setTimeout(window._gameUpdateLayout, 350);
+  }
 }
 // Ripristina dock dopo la chiusura di un gioco
 function gameOverlayClose(){
@@ -3993,31 +3997,9 @@ function gameOverlayClose(){
   }
   const lo=document.getElementById('ldLogout');
   if(lo){lo.style.visibility='';lo.style.pointerEvents='';}
-  // Riabilita lo scroll della pagina e ripristina la posizione precedente
+  // Riabilita lo scroll della pagina
   document.documentElement.classList.remove('game-active');
   document.body.classList.remove('game-active');
-  if(typeof window._gameScrollY === 'number'){
-    window.scrollTo(0, window._gameScrollY);
-  }
-  // Pulisci gli style inline di geometria sugli overlay chiusi.
-  // Necessario perché se l'utente interagisce con la pagina (select, input)
-  // mentre un overlay è aperto, il resize handler potrebbe aver scritto
-  // dimensioni sbagliate sugli altri overlay. Al momento della chiusura
-  // resettiamo tutti per tornare al CSS pulito (inset:0).
-  var OVERLAY_IDS = ['g501overlay','g201overlay','pgOverlay'];
-  OVERLAY_IDS.forEach(function(id){
-    var el = document.getElementById(id);
-    if(!el) return;
-    var isOpen = el.classList.contains('open') || el.style.display === 'flex';
-    if(!isOpen){
-      el.style.top    = '';
-      el.style.bottom = '';
-      el.style.left   = '';
-      el.style.right  = '';
-      el.style.width  = '';
-      el.style.height = '';
-    }
-  });
 }
 
 function showTab(name,silent=false){
@@ -11447,18 +11429,14 @@ if(document.readyState==='loading'){
 
   window._gameUpdateLayout = null; // sarà assegnata sotto
   function updateLayout(){
-    var vp  = window.visualViewport;
-    var vh  = vp ? vp.height  : window.innerHeight;
-    var vw  = vp ? vp.width   : window.innerWidth;
-    var top = vp ? vp.offsetTop : 0;
+    // L'overlay è ancorato a tutto schermo dal CSS (position:fixed; top/left/
+    // right/bottom:0). NON tocchiamo MAI la geometria dell'overlay via JS:
+    // questo era la causa dei bug (overlay fuori schermo, dietro la pagina).
+    // Il compito di questa funzione è UNO SOLO: calcolare la dimensione
+    // ottimale dei tasti del tastierino (--key-dyn) in base allo spazio
+    // realmente disponibile nell'overlay aperto.
 
-    // ── Step 1: trova l'overlay APERTO ─────────────────────────────────
-    // IMPORTANTE: le dimensioni vengono applicate SOLO all'overlay aperto.
-    // Non toccare mai gli overlay chiusi: se l'utente interagisce con
-    // <select> o <input> nella pagina (iOS apre picker/tastiera e riduce
-    // la viewport), updateLayout verrebbe chiamato e scriverebbe dimensioni
-    // errate sugli overlay chiusi, che poi al momento dell'apertura
-    // risulterebbero con height sbagliata via style inline.
+    // Trova l'overlay attualmente aperto
     var ov = null;
     for(var _i=0;_i<OVERLAY_IDS.length;_i++){
       var _el=document.getElementById(OVERLAY_IDS[_i]);
@@ -11466,55 +11444,52 @@ if(document.readyState==='loading'){
     }
     if(!ov) return;
 
-    // ── Step 2: l'overlay resta fisso a top:0 con height:100dvh (CSS) ──
-    // NON manipoliamo più top/height via JS: position:fixed + 100dvh ancora
-    // già l'overlay all'area visibile del browser. Spostare top di offsetTop
-    // lo spingeva erroneamente fuori dallo schermo in alto. Il JS qui calcola
-    // SOLO la dimensione ottimale dei tasti del pad in base all'altezza reale.
-    ov.style.top = '';
-    ov.style.bottom = '';
-    ov.style.left = '';
-    ov.style.right = '';
-    ov.style.width = '';
-    ov.style.height = '';
-
     var scoreEl   = ov.querySelector('.g501-score-area');
     var statsEl   = ov.querySelector('.g501-stats');
     var displayEl = ov.querySelector('.g501-display-row');
     var innerEl   = ov.querySelector('.g501-inner');
-    if(!scoreEl || !statsEl || !displayEl || !innerEl) return;
+    var padEl     = ov.querySelector('.g501-pad');
+    if(!scoreEl || !statsEl || !displayEl || !innerEl || !padEl) return;
 
-    // Altezza reale dell'overlay renderizzato (100dvh = area visibile)
-    var ovH = ov.clientHeight || vh;
+    // Dimensioni reali dell'overlay così come renderizzato dal browser.
+    // clientHeight/clientWidth riflettono l'area visibile reale (CSS gestisce
+    // l'adattamento alla barra del browser tramite 100% dell'altezza fixed).
+    var ovH = ov.clientHeight;
+    var ovW = ov.clientWidth;
+    if(!ovH || !ovW) return;
 
-    // Leggi le dimensioni reali renderizzate
+    // Altezza occupata dai 3 blocchi superiori (score, stats, display row)
     var topH = scoreEl.offsetHeight + statsEl.offsetHeight + displayEl.offsetHeight;
-    var gapPx = parseInt(getComputedStyle(innerEl).gap) || 4;
-    var padTop = 6; // padding-top di g501-inner
-    var padBot = 3; // padding-bottom
-    var available = ovH - topH - (3 * gapPx) - padTop - padBot;
 
-    // ── Step 3: calcola dimensione cerchio ottimale ───────────────────────
-    var ovW = ov.clientWidth || vw;
-    var gap = Math.max(8, Math.round(ovW * 0.022));
-    gap = Math.min(gap, 14);
-    var pad = 8; // padding laterale dell'inner
-    // Margine di sicurezza inferiore: legge la safe-area reale di iOS
-    // (home indicator) se disponibile, con minimo 20px di fallback.
-    var safeBot = 20;
+    // Gap tra i blocchi flex dell'inner + padding verticale dell'inner
+    var cs = getComputedStyle(innerEl);
+    var gapPx  = parseInt(cs.rowGap || cs.gap) || 4;
+    var padTop = parseInt(cs.paddingTop) || 6;
+    var padBot = parseInt(cs.paddingBottom) || 3;
+
+    // Safe-area inferiore iOS (home indicator), minimo 12px
+    var safeBot = 12;
     try {
       var sab = getComputedStyle(document.documentElement).getPropertyValue('--sab');
       var sabPx = parseInt(sab);
-      if(!isNaN(sabPx)) safeBot = Math.max(20, sabPx + 8);
+      if(!isNaN(sabPx) && sabPx > safeBot) safeBot = sabPx;
     } catch(e){}
-    var keyByW = Math.floor((ovW - 2 * pad - 2 * gap) / 3);
-    var keyByH = Math.floor((Math.max(available - safeBot, 80) - 3 * gap) / 4);
-    var key = Math.min(keyByW, keyByH);
 
-    // ── Step 4: applica --key-dyn a tutti gli overlay ─────────────────────
-    getOverlays().forEach(function(el){
-      el.style.setProperty('--key-dyn', key + 'px');
-    });
+    // Spazio verticale rimasto per il tastierino (4 righe)
+    // 3 gap tra i 4 blocchi dell'inner + padding inner + safe area
+    var available = ovH - topH - (3 * gapPx) - padTop - padBot - safeBot;
+
+    // Gap orizzontale tra i tasti
+    var gap = Math.min(14, Math.max(8, Math.round(ovW * 0.022)));
+    var padLat = 8; // padding laterale interno
+
+    // Dimensione tasto limitata da larghezza (3 colonne) e altezza (4 righe)
+    var keyByW = Math.floor((ovW - 2 * padLat - 2 * gap) / 3);
+    var keyByH = Math.floor((Math.max(available, 80) - 3 * gap) / 4);
+    var key = Math.max(40, Math.min(keyByW, keyByH));
+
+    // Applica la dimensione calcolata SOLO all'overlay aperto
+    ov.style.setProperty('--key-dyn', key + 'px');
   }
 
   // Listener su visualViewport (Safari aggiorna questo quando la barra appare/scompare)
