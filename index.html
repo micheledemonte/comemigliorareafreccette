@@ -9391,14 +9391,24 @@ function showPrev501Sess(){
       // → trattarla con isTournament:true per mantenere lo stile torneo
       const _rawLegs = sess.legs;
       const flatLegs = Array.isArray(_rawLegs) ? _rawLegs : (_rawLegs && typeof _rawLegs==='object' ? Object.values(_rawLegs) : []);
-      // Costruisce rawSets sintetici (1 leg per set) per la visualizzazione
-      const syntheticSets = flatLegs.map((lg,i)=>({legs:[lg]}));
+      // Raggruppa legs per setNum (numero set originale) per ricostruire i set
+      // ogni leg ha setNum=1,2,3... che indica a quale set della partita originale appartiene
+      const setMap = {};
+      flatLegs.forEach(lg=>{
+        const sn = lg.setNum || 1;
+        if(!setMap[sn]) setMap[sn] = [];
+        setMap[sn].push(lg);
+      });
+      // Costruisce rawSets raggruppati per sessione originale (stesso setNum)
+      const syntheticSets = Object.keys(setMap)
+        .sort((a,b)=>Number(a)-Number(b))
+        .map((sn,i)=>({sessionName:'Sessione '+(i+1), legs:setMap[sn]}));
       _selected501Sessions.push({key, date, legs:flatLegs, isTournament:true,
         tourName: 'vs '+_oppName,
         rawSets: syntheticSets,
         opponentName: _oppName,
         withOpponent: true,
-        meta:{totalSets:flatLegs.length, legsPerSet:1}});
+        meta:{totalSets:syntheticSets.length, legsPerSet:syntheticSets[0]?.legs?.length||1}});
     } else {
       _selected501Sessions.push({key, date, legs:sess.legs, isTournament:false,
         opponentName: _oppName,
