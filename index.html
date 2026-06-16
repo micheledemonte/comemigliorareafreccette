@@ -9376,7 +9376,8 @@ function showPrev501Sess(){
     } else if(_withOpp) {
       // Sessione avversario post-merge: ha legs piatti senza sets
       // → trattarla con isTournament:true per mantenere lo stile torneo
-      const flatLegs = toArr(sess.legs) || [];
+      const _rawLegs = sess.legs;
+      const flatLegs = Array.isArray(_rawLegs) ? _rawLegs : (_rawLegs && typeof _rawLegs==='object' ? Object.values(_rawLegs) : []);
       // Costruisce rawSets sintetici (1 leg per set) per la visualizzazione
       const syntheticSets = flatLegs.map((lg,i)=>({legs:[lg]}));
       _selected501Sessions.push({key, date, legs:flatLegs, isTournament:true,
