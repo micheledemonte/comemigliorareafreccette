@@ -11419,11 +11419,16 @@ if(document.readyState==='loading'){
     var top = vp ? vp.offsetTop : 0;
 
     // ── Step 1: imposta altezza overlay = area VISIBILE esatta ─────────
+    // Nota: il CSS usa inset:0 (top/right/bottom/left:0).
+    // JS sovrascrive top e height — dobbiamo anche annullare bottom e right
+    // per evitare conflitti su iOS Safari quando la barra URL è visibile.
     getOverlays().forEach(function(el){
+      el.style.top    = top + 'px';
+      el.style.bottom = 'auto';
+      el.style.left   = '0px';
+      el.style.right  = 'auto';
+      el.style.width  = vw + 'px';
       el.style.height = vh + 'px';
-      // Sposta l'overlay al top della viewport visibile (quando la barra appare,
-      // visualViewport.offsetTop può essere > 0 su alcuni browser)
-      el.style.top = top + 'px';
     });
 
     // ── Step 2: trova l'overlay APERTO (classe 'open' OPPURE style.display='flex') ─
