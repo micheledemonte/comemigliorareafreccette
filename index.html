@@ -436,7 +436,7 @@ select:hover{border-color:var(--green)}
 .ic input.gold{border-color:#f59e0b;background:rgba(251,191,36,0.18);color:#fbbf24}
 .ic{position:relative}
 .ic:has(input.gold)::after{content:'👑';position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:11px;pointer-events:none;line-height:1;z-index:2}
-.wug{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin-bottom:10px}
+.wug{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;margin-bottom:10px;overflow:hidden}
 .wuc{display:flex;flex-direction:column;align-items:center;gap:3px;position:relative}
 .wuc input.gold{border-color:#f59e0b!important;background:rgba(251,191,36,0.18)!important;color:#fbbf24!important}
 .wuc:has(input.gold)::after{content:'👑';position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:10px;pointer-events:none;line-height:1;z-index:2}
@@ -494,9 +494,9 @@ select:hover{border-color:var(--green)}
 /* ═══ ADMIN ═══ */
 .ag{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
 @media(max-width:640px){.ag{grid-template-columns:1fr}}
-.ac{background:var(--d2);border:1px solid var(--d4);border-radius:14px;padding:18px}
+.ac{background:var(--d2);border:1px solid var(--d4);border-radius:14px;padding:18px;overflow:hidden;min-width:0}
 .ac h3{font-family:'DM Sans',sans-serif;font-weight:700;font-size:22px;color:var(--green);margin-bottom:14px;letter-spacing:-.01em}
-.ul{display:flex;flex-direction:column;gap:7px;max-height:380px;overflow-y:auto;overscroll-behavior-y:auto}
+.ul{display:flex;flex-direction:column;gap:7px;max-height:min(380px,45vh);overflow-y:auto;overscroll-behavior-y:auto}
 .ur{display:flex;align-items:center;gap:9px;padding:9px 11px;background:var(--d3);border-radius:6px;cursor:pointer;border:1px solid transparent;transition:all .2s}
 .ur:hover{background:var(--d4);border-color:var(--green)}
 .ur.sel{border-color:var(--green);background:#052e16}
@@ -512,7 +512,7 @@ select:hover{border-color:var(--green)}
 .iib.del:hover{color:var(--red)}
 .af input,.af select{width:100%;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:10px 12px;border-radius:6px;font-size:14px;margin-bottom:9px}
 .af input:focus,.af select:focus{outline:none;border-color:var(--green)}
-.r2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.r2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
 .a-sub{background:var(--green);color:#000;border:none;padding:10px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;letter-spacing:.01em;width:100%;transition:background .2s}
 .a-sub:hover{background:var(--green2)}
 .amsg{font-size:13px;text-align:center;margin-top:7px;min-height:18px}
@@ -622,11 +622,11 @@ select:hover{border-color:var(--green)}
 /* Fullscreen dettaglio messaggio */
 #reqDetailOverlay{position:fixed;inset:0;z-index:1900;background:#000;display:none;flex-direction:column;overflow-y:auto}
 #reqDetailOverlay.open{display:flex}
-.req-detail-wrap{max-width:600px;width:100%;margin:0 auto;padding:60px 24px 60px}
+.req-detail-wrap{max-width:600px;width:100%;margin:0 auto;padding:60px 24px 120px}
 .req-detail-close{background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:8px 18px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:24px;display:inline-flex;align-items:center;gap:6px;transition:all .2s}
 .req-detail-close:hover{border-color:var(--green);color:var(--green)}
 .req-detail-user{background:var(--d2);border:1px solid var(--d4);border-radius:10px;padding:16px;margin-bottom:16px}
-.req-detail-user .rdu-row{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--light);margin-bottom:5px}
+.req-detail-user .rdu-row{display:flex;gap:8px;align-items:flex-start;font-size:14px;color:var(--light);margin-bottom:5px;word-break:break-all;overflow-wrap:anywhere}
 .req-detail-user .rdu-row:last-child{margin-bottom:0}
 .req-detail-user .rdu-label{font-size:11px;color:var(--mu2);text-transform:uppercase;letter-spacing:.07em;min-width:60px}
 .req-detail-msg{background:var(--d2);border:1px solid var(--d4);border-radius:10px;padding:16px;margin-bottom:16px;font-size:15px;color:var(--light);line-height:1.6;white-space:pre-wrap}
@@ -3458,7 +3458,6 @@ const LD = {
     {id:'play501',        icon:'🏆', label:'501'},
     {id:'checkout',       icon:'✅', label:'Checkout'},
     {id:'appuntamenti',   icon:'📅', label:'Appuntamenti'},
-    {id:'profile',        icon:'👤', label:'Profilo'},
   ],
   adminTab:        {id:'admin',       icon:'⚙️', label:'Admin'},
   gestTab:         {id:'gestionale',  icon:'📋', label:'Gestionale'}, // admin-only
@@ -3496,6 +3495,7 @@ function ldAllTabs(){
     all.push(LD.gestTab);     // GESTIONALE visible only to admins
     all.push(LD.calTab);      // CALENDARIO visible only to admins
     all.push(LD.adminTab);
+    all.push({id:'profile', icon:'👤', label:'Profilo'});
   } else {
     all.push(LD.userCalTab);  // CALENDARIO visible only to normal users
   }
@@ -6974,8 +6974,9 @@ function calGetUserColorMap(){
 // ══════════════════════════════════════════════════
 // CALENDARIO UTENTE (sezione non-admin)
 // ══════════════════════════════════════════════════
-var _userCalMonth = new Date().getMonth();
-var _userCalYear  = new Date().getFullYear();
+var _userCalMonth  = new Date().getMonth();
+var _userCalYear   = new Date().getFullYear();
+var _userCalSelDay = null; // data selezionata nel calendario utente
 
 function renderUserCalendario(){
   if(!CU) return;
@@ -6984,117 +6985,129 @@ function renderUserCalendario(){
   el.innerHTML = userCalBuildHtml();
 }
 
+function userCalSelectDay(ds){
+  _userCalSelDay = (_userCalSelDay === ds) ? null : ds; // toggle
+  renderUserCalendario();
+}
+
 function userCalBuildHtml(){
   const monthNames = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   const today      = new Date();
   const todayStr   = calDateStr(today);
   const month      = _userCalMonth;
   const year       = _userCalYear;
+  const selDay     = _userCalSelDay;
 
-  // Recupera tutti gli appuntamenti di tutti gli utenti
-  const allEvs   = calGetAllEvents(); // [{uid, userName, idx, dt, timeStr, note, adminRef}]
+  // Recupera tutti gli appuntamenti
+  const allEvs   = calGetAllEvents();
   const myEvs    = allEvs.filter(ev=>ev.uid===CU.id);
   const otherEvs = allEvs.filter(ev=>ev.uid!==CU.id);
+  const p        = gsGetPercorso(CU.id);
 
-  // Percorso utente per ICS
-  const p = gsGetPercorso(CU.id);
-
-  // Costruisce header mese
+  // Header mese
   let html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
     +'<button onclick="userCalPrev()" style="background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:8px 14px;border-radius:6px;font-family:DM Sans,sans-serif;font-weight:700;cursor:pointer">◀</button>'
     +'<div style="font-family:Bebas Neue,sans-serif;font-size:22px;color:var(--green);letter-spacing:.06em">'+monthNames[month]+' '+year+'</div>'
     +'<button onclick="userCalNext()" style="background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:8px 14px;border-radius:6px;font-family:DM Sans,sans-serif;font-weight:700;cursor:pointer">▶</button>'
     +'</div>';
 
-  // Griglia calendario
+  // Griglia
   const firstDay = new Date(year, month, 1);
   const lastDay  = new Date(year, month+1, 0);
-  let startDow   = firstDay.getDay(); // 0=dom
-  if(startDow===0) startDow=7;        // lunedì=1
+  let startDow   = firstDay.getDay();
+  if(startDow===0) startDow=7;
 
   const days = ['LUN','MAR','MER','GIO','VEN','SAB','DOM'];
   html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">'
     +'<div style="min-width:calc(7*44px + 6*3px)">'
     +'<div style="display:grid;grid-template-columns:repeat(7,minmax(44px,1fr));gap:3px;margin-bottom:4px">';
   days.forEach(d=>{ html+='<div style="text-align:center;font-size:10px;color:var(--mu2);text-transform:uppercase;letter-spacing:.04em;padding:3px 0">'+d+'</div>'; });
-  html+='</div>';
+  html+='</div><div style="display:grid;grid-template-columns:repeat(7,minmax(44px,1fr));gap:3px">';
 
-  html+='<div style="display:grid;grid-template-columns:repeat(7,minmax(44px,1fr));gap:3px">';
-
-  // Celle vuote prima del giorno 1
-  for(let i=1;i<startDow;i++){
-    html+='<div style="min-height:46px;background:transparent"></div>';
-  }
+  for(let i=1;i<startDow;i++) html+='<div style="min-height:46px;background:transparent"></div>';
 
   for(let d=1;d<=lastDay.getDate();d++){
     const ds = year+'-'+(String(month+1).padStart(2,'0'))+'-'+(String(d).padStart(2,'0'));
-    const isToday = ds===todayStr;
-    const myDayEvs    = myEvs.filter(ev=>ev.dt.startsWith(ds));
-    const otherDayEvs = otherEvs.filter(ev=>ev.dt.startsWith(ds));
+    const isToday  = ds===todayStr;
+    const isSel    = ds===selDay;
+    const myDay    = myEvs.filter(ev=>ev.dt.startsWith(ds));
+    const otherDay = otherEvs.filter(ev=>ev.dt.startsWith(ds));
+    const hasEvt   = myDay.length || otherDay.length;
 
-    let borderColor = 'var(--d4)';
-    let bg = 'var(--d3)';
-    if(isToday){ borderColor='#ef4444'; }
-    if(myDayEvs.length){ borderColor='var(--green)'; bg='var(--gdim)'; }
+    let borderColor = isSel ? 'var(--green)' : (isToday ? '#ef4444' : (hasEvt ? 'var(--d5)' : 'var(--d4)'));
+    let bg = isSel ? 'var(--gdim)' : (myDay.length ? 'rgba(34,197,94,.08)' : 'var(--d3)');
+    const cursor = hasEvt ? 'cursor:pointer;' : '';
 
-    html+='<div style="min-height:46px;background:'+bg+';border:1px solid '+borderColor+';border-radius:6px;padding:3px;overflow:hidden">'
-      +'<div style="font-size:11px;color:'+(isToday?'#ef4444':(myDayEvs.length?'var(--green)':'var(--mu2)'))+';font-weight:'+(isToday||myDayEvs.length?'700':'400')+';margin-bottom:1px">'+d+'</div>';
+    html+='<div style="min-height:46px;background:'+bg+';border:2px solid '+borderColor+';border-radius:6px;padding:3px;overflow:hidden;'+cursor+'" data-date="'+ds+'" onclick="userCalSelectDay(this.dataset.date)">'
+      +'<div style="font-size:11px;color:'+(isSel?'var(--green)':(isToday?'#ef4444':(myDay.length?'var(--green)':'var(--mu2)')))+';font-weight:'+(isSel||isToday||myDay.length?'700':'400')+';margin-bottom:1px">'+d+'</div>';
 
-    // Miei appuntamenti
-    myDayEvs.forEach(ev=>{
-      html+='<div style="background:var(--green);color:#000;border-radius:3px;font-size:8px;padding:1px 3px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700">'+ev.timeStr+' TUO</div>';
+    myDay.forEach(ev=>{
+      html+='<div style="background:var(--green);color:#000;border-radius:3px;font-size:8px;padding:1px 3px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700">'+ev.timeStr+'</div>';
     });
-    // Occupato per altri
-    if(otherDayEvs.length){
+    if(otherDay.length){
       html+='<div style="background:var(--d5);color:var(--muted);border-radius:3px;font-size:8px;padding:1px 3px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Occupato</div>';
     }
-
     html+='</div>';
   }
   html+='</div></div></div>';
 
-  // Lista appuntamenti del mese corrente
-  const myMonthEvs = myEvs.filter(ev=>ev.dt.startsWith(year+'-'+String(month+1).padStart(2,'0')));
-  if(myMonthEvs.length){
-    html+='<div style="margin-top:20px">';
-    html+='<div style="font-family:Bebas Neue,sans-serif;font-size:18px;color:var(--green);letter-spacing:.06em;margin-bottom:10px">I TUOI APPUNTAMENTI IN '+monthNames[month].toUpperCase()+'</div>';
-    myMonthEvs.sort((a,b)=>a.dt.localeCompare(b.dt)).forEach(ev=>{
-      const d    = new Date(ev.dt);
-      const pad  = n=>String(n).padStart(2,'0');
-      const lbl  = d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'}).toUpperCase()+' ORE '+pad(d.getHours())+':'+pad(d.getMinutes());
-      const admins= getUsers().filter(u=>u.role==='admin');
+  // Dettaglio giorno selezionato
+  if(selDay){
+    const selParts = selDay.split('-');
+    const selDate  = new Date(parseInt(selParts[0]), parseInt(selParts[1])-1, parseInt(selParts[2]));
+    const selLabel = selDate.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).toUpperCase();
+    const mySelEvs    = myEvs.filter(ev=>ev.dt.startsWith(selDay));
+    const otherSelEvs = otherEvs.filter(ev=>ev.dt.startsWith(selDay));
+
+    html+='<div style="margin-top:16px;padding:12px;background:var(--d2);border:1px solid var(--d4);border-radius:10px">';
+    html+='<div style="font-family:Bebas Neue,sans-serif;font-size:16px;color:var(--green);letter-spacing:.04em;margin-bottom:10px">'+selLabel+'</div>';
+
+    if(!mySelEvs.length && !otherSelEvs.length){
+      html+='<div style="font-size:13px;color:var(--muted);text-align:center;padding:12px 0">Nessun appuntamento in questa data.</div>';
+    }
+
+    // Miei appuntamenti con pulsante ICS
+    mySelEvs.forEach(ev=>{
+      const dEv    = new Date(ev.dt);
+      const pad    = n=>String(n).padStart(2,'0');
+      const lbl    = pad(dEv.getHours())+':'+pad(dEv.getMinutes());
+      const admins = getUsers().filter(u=>u.role==='admin');
       const teacher= (()=>{ const a=admins.find(a=>a.id===ev.adminRef); return a?a.firstName+' '+a.lastName:null; })();
-      // ICS per questa lezione
       const lezione = p && p.lezioni && p.lezioni[ev.idx];
       const icsId   = lezione && lezione.icsId ? lezione.icsId : null;
-      const icsKey  = icsId || (String(ev.idx)+'_'+(ev.dt||'')); 
+      const icsKey  = icsId || (String(ev.idx)+'_'+(ev.dt||''));
       const isSaved = _userIcsSaved.has(icsKey);
       const icsTitle= (teacher||'Lezione accademia')+' - Lezione '+(ev.idx+1)+(ev.note?' - '+ev.note:'');
-      const icsBtn  = '<button class="cal-ics-btn'+(isSaved?' ics-saved':'')+'" '
-        +'data-dt="'+ev.dt+'" data-idx="'+ev.idx+'" data-icsid="'+(icsId||'')+'" data-title="'+icsTitle.replace(/"/g,'&quot;')+'" '
-        +'onclick="userExportICS(this)" style="font-size:11px">'
-        +(isSaved?'&#x2713; SALVATO':'&#x1F4C5; AGGIUNGI AL CALENDARIO')+'</button>';
-      html+='<div style="background:var(--d2);border:1px solid var(--green);border-left:3px solid var(--green);border-radius:8px;padding:10px 14px;margin-bottom:8px">';
-      html+='<div style="font-family:Bebas Neue,sans-serif;font-size:16px;color:var(--light);letter-spacing:.04em">LEZIONE '+(ev.idx+1)+'</div>';
-      html+='<div style="font-family:Bebas Neue,sans-serif;font-size:13px;color:var(--green);margin-bottom:4px">'+lbl+'</div>';
-      if(teacher) html+='<div style="font-size:12px;color:var(--mu2);margin-bottom:6px">👨‍🏫 '+teacher+'</div>';
+      const icsBtn  = '<button class="cal-ics-btn'+(isSaved?' ics-saved':'')+'" data-dt="'+ev.dt+'" data-idx="'+ev.idx+'" data-icsid="'+(icsId||'')+'" data-title="'+icsTitle.replace(/"/g,'&quot;')+'" onclick="userExportICS(this)" style="font-size:11px;margin-top:6px">'+(isSaved?'&#x2713; SALVATO':'&#x1F4C5; AGGIUNGI AL CALENDARIO')+'</button>';
+      html+='<div style="border-left:3px solid var(--green);padding:8px 12px;margin-bottom:8px;background:var(--d3);border-radius:6px">';
+      html+='<div style="font-size:14px;font-weight:700;color:var(--green)">ORE '+lbl+' — LEZIONE '+(ev.idx+1)+'</div>';
+      if(teacher) html+='<div style="font-size:12px;color:var(--mu2);margin-top:2px">👨‍🏫 '+teacher+'</div>';
       html+=icsBtn+'</div>';
     });
+
+    // Occupato per altri (solo data/ora, no nome)
+    otherSelEvs.forEach(ev=>{
+      const dEv = new Date(ev.dt);
+      const pad = n=>String(n).padStart(2,'0');
+      const lbl = pad(dEv.getHours())+':'+pad(dEv.getMinutes());
+      html+='<div style="border-left:3px solid var(--d5);padding:8px 12px;margin-bottom:8px;background:var(--d3);border-radius:6px">';
+      html+='<div style="font-size:14px;font-weight:700;color:var(--muted)">ORE '+lbl+' — OCCUPATO</div>';
+      html+='</div>';
+    });
+
     html+='</div>';
-  } else {
-    html+='<div style="margin-top:20px;font-size:13px;color:var(--muted);text-align:center;padding:20px 0">Nessun appuntamento fissato in questo mese.</div>';
   }
 
   return html;
 }
 
 function userCalPrev(){
-  _userCalMonth--;
+  _userCalMonth--; _userCalSelDay=null;
   if(_userCalMonth<0){ _userCalMonth=11; _userCalYear--; }
   renderUserCalendario();
 }
 function userCalNext(){
-  _userCalMonth++;
+  _userCalMonth++; _userCalSelDay=null;
   if(_userCalMonth>11){ _userCalMonth=0; _userCalYear++; }
   renderUserCalendario();
 }
@@ -9598,7 +9611,7 @@ function render501SessPanel(){
     const summary = calcTourSessSummary(filteredLegs, isTour);
     const globalSummary = `<div style="margin-top:8px;padding:8px;background:var(--d4);border-radius:6px;font-size:12px">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--green);margin-bottom:6px">RIEPILOGO SESSIONE${isTour&&_tourCompareFilter!=='all'?' ('+(_tourCompareFilter==='won'?'Solo vinti':'Solo persi')+')':''}</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:5px">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px 8px">
         <div><span style="color:var(--muted)">Turni avg: </span>${summary.avgRounds}</div>
         <div><span style="color:var(--muted)">Frecce avg: </span>${summary.avgDarts}</div>
         <div><span style="color:var(--muted)">Media avg: </span>${summary.avgPts}</div>
