@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Centro Darts Lab — L'app ufficiale per migliorare a freccette</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,6 +21,7 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
+  --sab:env(safe-area-inset-bottom, 0px);
   --green:#22c55e;--green2:#16a34a;--gdim:#052e16;
   --dark:#0a0a0a;--d2:#141414;--d3:#1e1e1e;--d4:#2a2a2a;--d5:#3a3a3a;
   --light:#f0ece4;--muted:#6b6b6b;--mu2:#888;
@@ -717,7 +718,7 @@ select:hover{border-color:var(--green)}
 .pw-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0;line-height:1;transition:color .2s}
 .pw-eye:hover{color:var(--light)}
 /* ═══ GAME OVERLAY LAYOUT ═══ */
-#g501overlay{position:fixed;inset:0;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden}
+#g501overlay{position:fixed;top:0;left:0;width:100vw;width:100dvw;height:100vh;height:100dvh;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden}
 #g501overlay.open{display:flex}
 #g201overlay.open{display:flex}
 
@@ -2484,7 +2485,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 </div>
 
 <!-- ═══════════════════════ PRESSURE GAME OVERLAY ═══════════════════════ -->
-<div id="pgOverlay" style="position:fixed;inset:0;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden">
+<div id="pgOverlay" style="position:fixed;top:0;left:0;width:100vw;width:100dvw;height:100vh;height:100dvh;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden">
   <div class="g501-inner">
     <button class="g501-close" onclick="pgClose()">ESCI ×</button>
     <!-- Block 1: Score area — punteggio inserito qui, come il 501 -->
@@ -2537,7 +2538,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     </div>
   </div>
 </div>
-<div id="g201overlay" style="position:fixed;inset:0;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden">
+<div id="g201overlay" style="position:fixed;top:0;left:0;width:100vw;width:100dvw;height:100vh;height:100dvh;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden">
   <div class="g501-inner">
   <button onclick="close201()" class="g501-close">ESCI ×</button>
   <!-- Block 1: Score -->
@@ -11451,15 +11452,40 @@ if(document.readyState==='loading'){
     }
     if(!ov) return;
 
-    // ── Step 2: imposta dimensioni SOLO sull'overlay aperto ────────────
-    // Annulla bottom/right da inset:0 CSS per evitare conflitti su iOS Safari
-    // quando la barra URL è visibile (vp.offsetTop > 0).
-    ov.style.top    = top + 'px';
-    ov.style.bottom = 'auto';
-    ov.style.left   = '0px';
-    ov.style.right  = 'auto';
-    ov.style.width  = vw + 'px';
-    ov.style.height = vh + 'px';
+    // ── Step 2: ancora l'overlay alla VISUAL VIEWPORT esatta ───────────
+    // PROBLEMA RISOLTO: position:fixed su iOS si ancora alla LAYOUT viewport
+    // (area totale, inclusa la zona dietro la barra URL), NON alla visual
+    // viewport (area realmente visibile). Quando la barra URL inferiore è
+    // presente, l'overlay si estende dietro la barra ma il contenuto calcolato
+    // su visualViewport.height risulta più corto → spazio nero in basso dove
+    // si vede la pagina sottostante.
+    //
+    // SOLUZIONE: rileviamo se la barra del browser è presente confrontando
+    // visualViewport.height con l'altezza della layout viewport. Se c'è una
+    // differenza, ancoriamo esplicitamente l'overlay all'area visibile reale
+    // tramite top/left/width/height in px. Se non c'è (barra assente o app a
+    // schermo intero), lasciamo che il CSS 100dvh gestisca tutto da solo.
+    var layoutH = document.documentElement.clientHeight || window.innerHeight;
+    var barPresent = vp ? (Math.abs(layoutH - vh) > 1 || top > 0) : false;
+
+    if(barPresent){
+      // Barra del browser rilevata: ancoraggio esplicito all'area visibile
+      ov.style.position = 'fixed';
+      ov.style.top    = top + 'px';
+      ov.style.bottom = 'auto';
+      ov.style.left   = (vp ? vp.offsetLeft : 0) + 'px';
+      ov.style.right  = 'auto';
+      ov.style.width  = vw + 'px';
+      ov.style.height = vh + 'px';
+    } else {
+      // Nessuna barra: torna al CSS pulito (100dvh copre tutto lo schermo)
+      ov.style.top    = '';
+      ov.style.bottom = '';
+      ov.style.left   = '';
+      ov.style.right  = '';
+      ov.style.width  = '';
+      ov.style.height = '';
+    }
 
     var scoreEl   = ov.querySelector('.g501-score-area');
     var statsEl   = ov.querySelector('.g501-stats');
@@ -11478,7 +11504,14 @@ if(document.readyState==='loading'){
     var gap = Math.max(8, Math.round(vw * 0.022));
     gap = Math.min(gap, 14);
     var pad = 8; // padding laterale dell'inner
-    var safeBot = 20; // margine sicurezza per safe-area iOS e barra URL
+    // Margine di sicurezza inferiore: legge la safe-area reale di iOS
+    // (home indicator) se disponibile, con minimo 20px di fallback.
+    var safeBot = 20;
+    try {
+      var sab = getComputedStyle(document.documentElement).getPropertyValue('--sab');
+      var sabPx = parseInt(sab);
+      if(!isNaN(sabPx)) safeBot = Math.max(20, sabPx + 8);
+    } catch(e){}
     var keyByW = Math.floor((vw - 2 * pad - 2 * gap) / 3);
     var keyByH = Math.floor((Math.max(available - safeBot, 80) - 3 * gap) / 4);
     var key = Math.min(keyByW, keyByH);
