@@ -774,16 +774,23 @@ html.game-active,body.game-active{overflow:hidden!important;overscroll-behavior:
     align-items:stretch;   /* tutti gli elementi a 100% larghezza */
   }
   .g501-pad{
-    flex:0 0 auto !important;
-    align-self:center;     /* solo il pad si centra orizzontalmente */
-    /* Cerchio perfetto: key = (100vw - 2*padding_inner - 2*gap) / 3 */
+    flex:1 1 0 !important;  /* il pad occupa tutto lo spazio verticale rimasto */
+    align-self:center;     /* il pad si centra orizzontalmente */
+    align-content:center;  /* righe centrate nello spazio verticale */
+    justify-content:center;/* colonne centrate nello spazio orizzontale */
     --pad: 8px;
-    --gap: clamp(8px, 2.2vw, 14px);
-    --key: calc((100vw - 2 * var(--pad) - 2 * var(--gap)) / 3);
+    /* key = dimensione tasto (cerchio perfetto), calcolata da JS */
+    --key: var(--key-dyn, calc((100vw - 16px - 2 * clamp(8px, 2.2vw, 14px)) / 3));
+    /* gap verticale e orizzontale calcolati da JS per riempire lo spazio */
+    --gapV: var(--gap-dyn-v, clamp(8px, 2.2vw, 14px));
+    --gapH: var(--gap-dyn-h, clamp(8px, 2.2vw, 14px));
     grid-template-columns: repeat(3, var(--key));
+    grid-template-rows: repeat(4, var(--key));
     grid-auto-rows: var(--key);
-    gap: var(--gap);
-    width: calc(3 * var(--key) + 2 * var(--gap));
+    row-gap: var(--gapV);
+    column-gap: var(--gapH);
+    width: 100%;
+    min-height:0;
   }
   .g501-key{
     width: var(--key) !important;
@@ -793,8 +800,6 @@ html.game-active,body.game-active{overflow:hidden!important;overscroll-behavior:
   /* Score area: NON si espande — tiene dimensione naturale (i 3 blocchi top sono fissi) */
   .g501-score-area{ flex:0 0 auto; min-height:0; overflow:hidden; }
   .g501-pts{ font-size:clamp(28px,6svh,72px); }
-  /* Il pad usa --key-dyn calcolata da JS visualViewport (aggiornata on resize) */
-  .g501-pad{ --key: var(--key-dyn, calc((100vw - 16px - 2 * clamp(8px, 2.2vw, 14px)) / 3)); }
 }
 
 /* Block 1: Score — green bg rounded, shrink if needed */
@@ -2490,9 +2495,9 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 <!-- ═══════════════════════ PRESSURE GAME OVERLAY ═══════════════════════ -->
 <div id="pgOverlay" style="position:fixed;top:0;right:0;bottom:0;left:0;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden;overscroll-behavior:none;touch-action:none;isolation:isolate;transform:translateZ(0)">
   <div class="g501-inner">
-    <button class="g501-close" onclick="pgClose()">ESCI ×</button>
     <!-- Block 1: Score area — punteggio inserito qui, come il 501 -->
     <div class="g501-score-area" style="flex-direction:column;">
+      <button class="g501-close" onclick="pgClose()">ESCI ×</button>
       <div id="pgSector" style="font-size:clamp(11px,2.5vw,14px);color:#7fffb5;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px"></div>
       <div class="g501-pts" id="pgDisplay" style="font-size:clamp(58px,14vw,96px);min-height:1em;line-height:1">—</div>
     </div>
@@ -2543,9 +2548,9 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 </div>
 <div id="g201overlay" style="position:fixed;top:0;right:0;bottom:0;left:0;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden;overscroll-behavior:none;touch-action:none;isolation:isolate;transform:translateZ(0)">
   <div class="g501-inner">
-  <button onclick="close201()" class="g501-close">ESCI ×</button>
   <!-- Block 1: Score -->
   <div class="g501-score-area">
+    <button onclick="close201()" class="g501-close">ESCI ×</button>
     <div id="g201pts" class="g501-pts">201</div>
     <div id="g201co" class="g501-checkout"></div>
   </div>
@@ -11479,17 +11484,45 @@ if(document.readyState==='loading'){
     // 3 gap tra i 4 blocchi dell'inner + padding inner + safe area
     var available = ovH - topH - (3 * gapPx) - padTop - padBot - safeBot;
 
-    // Gap orizzontale tra i tasti
+    // Gap orizzontale di base tra i tasti
     var gap = Math.min(14, Math.max(8, Math.round(ovW * 0.022)));
     var padLat = 8; // padding laterale interno
 
-    // Dimensione tasto limitata da larghezza (3 colonne) e altezza (4 righe)
+    // ── Dimensione tasto: il vincolo più stretto tra larghezza e altezza ──
+    // I tasti DEVONO restare cerchi perfetti (width == height == key), quindi
+    // prendiamo il minore tra il limite di larghezza (3 colonne) e quello di
+    // altezza (4 righe).
+    available = Math.max(available, 80);
     var keyByW = Math.floor((ovW - 2 * padLat - 2 * gap) / 3);
-    var keyByH = Math.floor((Math.max(available, 80) - 3 * gap) / 4);
+    var keyByH = Math.floor((available - 3 * gap) / 4);
     var key = Math.max(40, Math.min(keyByW, keyByH));
 
-    // Applica la dimensione calcolata SOLO all'overlay aperto
+    // ── Riempi lo spazio disponibile distribuendolo come gap extra ─────────
+    // Mantenendo i cerchi perfetti, lo spazio che avanza (verticale e/o
+    // orizzontale) viene distribuito sui gap così il pad occupa l'intera area
+    // senza mai deformare i tasti né eccedere lo spazio disponibile.
+    //
+    // VERTICALE: 4 righe di tasti (4*key) + 3 gap verticali = available.
+    //   gapV = (available - 4*key) / 3, mai inferiore al gap base.
+    var gapV = Math.floor((available - 4 * key) / 3);
+    if(gapV < gap) gapV = gap;
+    //
+    // ORIZZONTALE: 3 colonne di tasti (3*key) + 2 gap orizzontali = innerW.
+    //   gapH = (innerW - 3*key) / 2, mai inferiore al gap base.
+    var innerW = ovW - 2 * padLat;
+    var gapH = Math.floor((innerW - 3 * key) / 2);
+    if(gapH < gap) gapH = gap;
+    //
+    // Limita i gap a un massimo ragionevole per non distanziare troppo i tasti
+    // su schermi molto allungati (il pad resta comunque ben distribuito).
+    var maxGap = Math.round(key * 0.75);
+    if(gapV > maxGap) gapV = maxGap;
+    if(gapH > maxGap) gapH = maxGap;
+
+    // Applica le variabili calcolate SOLO all'overlay aperto
     ov.style.setProperty('--key-dyn', key + 'px');
+    ov.style.setProperty('--gap-dyn-v', gapV + 'px');
+    ov.style.setProperty('--gap-dyn-h', gapH + 'px');
   }
 
   // Listener su visualViewport (Safari aggiorna questo quando la barra appare/scompare)
