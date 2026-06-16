@@ -8778,26 +8778,39 @@ function _doMergeTrainingSessions(trainSess){
     const db = data[b.key]?.__meta?.savedAt||'';
     return da.localeCompare(db);
   });
-  // Merge all legs — gestisce sia sessioni semplici che sessioni "con avversario" (con sets)
-  const mergedLegs = sorted.flatMap(s=>{
+  // Merge: costruisce sets raggruppati per sessione originale
+  // Ogni sessione originale diventa un "set" con i suoi legs e sessionName
+  const mergedSets = [];
+  const mergedLegs = [];
+  sorted.forEach((s, si)=>{
     const orig = data[s.key];
+    const sessDate = orig?.__meta?.savedAt
+      ? new Date(orig.__meta.savedAt).toLocaleDateString('it-IT')
+      : ('Sessione '+(si+1));
+    const sessName = orig?.__meta?.opponentName
+      ? (sessDate+' vs '+orig.__meta.opponentName)
+      : sessDate;
+    let legs = [];
     if(orig?.sets){
-      // Sessione con avversario: estrai legs dai sets
       const ss = Array.isArray(orig.sets)?orig.sets:Object.values(orig.sets||{});
-      return ss.flatMap(set=>{ const ll=set.legs; return Array.isArray(ll)?ll:(ll&&typeof ll==='object'?Object.values(ll):[]); });
+      legs = ss.flatMap(set=>{ const ll=set.legs; return Array.isArray(ll)?ll:(ll&&typeof ll==='object'?Object.values(ll):[]); });
+    } else {
+      legs = Array.isArray(orig?.legs)?orig.legs:(orig?.legs&&typeof orig.legs==='object'?Object.values(orig.legs):[]);
     }
-    return orig?.legs || s.legs;
+    mergedSets.push({sessionName: sessName, legs});
+    mergedLegs.push(...legs);
   });
   const savedAt = data[sorted[0].key]?.__meta?.savedAt || new Date().toISOString();
   // Preserva opponentName se tutte le sessioni sono vs avversario
   const allOpp = sorted.every(s=>s.withOpponent);
   const oppName = allOpp ? (sorted[0].opponentName||'Avversario') : null;
-  // Create merged session
+  // Create merged session — salva sia sets (per raggruppamento) che legs (piatto)
   const mk = 'free501_' + Date.now();
   data[mk] = {
     __meta: {type:'501free', title:'Gioca a 501', savedAt, week:null, session:null,
       ...(allOpp ? {withOpponent:true, opponentName:oppName} : {})},
     legs: mergedLegs,
+    sets: mergedSets,
   };
   // Delete originals — locale + Firebase (pattern obbligatorio come __percorso)
   sorted.forEach(s=>{
