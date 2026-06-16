@@ -8930,10 +8930,10 @@ function startOpponent501(){
   if(_oppTurno) _oppTurno.style.display = 'none';
   g501UpdateSetLeg();
 
-  startLeg501();  // resetta G.score=501 e tutti i dati del leg corrente
   const _ovO = document.getElementById('g501overlay');
   _ovO.classList.add('open');
   gameOverlayOpen();
+  startLeg501(); // resetta G.score=501 e prepara il leg
   requestAnimationFrame(()=>{ g501UpdateDisplay(); });
 }
 
