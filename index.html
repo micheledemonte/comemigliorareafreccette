@@ -3457,7 +3457,6 @@ const LD = {
     {id:'stats',          icon:'📊', label:'Statistiche'},
     {id:'play501',        icon:'🏆', label:'501'},
     {id:'checkout',       icon:'✅', label:'Checkout'},
-    {id:'appuntamenti',   icon:'📅', label:'Appuntamenti'},
   ],
   adminTab:        {id:'admin',       icon:'⚙️', label:'Admin'},
   gestTab:         {id:'gestionale',  icon:'📋', label:'Gestionale'}, // admin-only
@@ -3491,13 +3490,14 @@ function ldIsDesktop(){ return window.innerWidth > 768; }
 function ldAllTabs(){
   const all = [...LD.tabs];
   if(LD.showAdmin){
-    all.push(LD.analysisTab); // ANALISI visible only to admins
-    all.push(LD.gestTab);     // GESTIONALE visible only to admins
-    all.push(LD.calTab);      // CALENDARIO visible only to admins
+    all.push(LD.gestTab);       // GESTIONALE visible only to admins
+    all.push(LD.calTab);        // CALENDARIO visible only to admins
+    all.push(LD.analysisTab);   // ANALISI after CALENDARIO
+    all.push({id:'profile', icon:'👤', label:'Profilo'}); // PROFILO before ADMIN
     all.push(LD.adminTab);
-    all.push({id:'profile', icon:'👤', label:'Profilo'});
   } else {
-    all.push(LD.userCalTab);  // CALENDARIO visible only to normal users
+    all.push({id:'appuntamenti', icon:'📅', label:'Appuntamenti'}); // user-only
+    all.push(LD.userCalTab);    // CALENDARIO visible only to normal users
   }
   all.push(LD.logoutTab);
   return all;
@@ -4749,9 +4749,14 @@ function render501FilterChart(canvasId, days, activeFilter){
   const cv=document.getElementById(canvasId);
   if(!cv) return;
   try{ const ex=Chart.getChart(cv); if(ex) ex.destroy(); }catch{}
-  const labelMap={frecce:'Frecce tirate',media:'Media punti',doppie:'Doppie',pct:'% Doppie'};
+  const labelMap={frecce:'Frecce avg (leg vinti)',media:'Media punti',doppie:'Doppie a segno',pct:'% Doppie'};
   const k=activeFilter||'media';
-  const pts=days.map(d=>({label:d.label,value:d[k]})).filter(p=>p.value!==null);
+  const pts=days.map(d=>({
+    label:d.label,
+    value:d[k],
+    doppieHit:d.doppieHit,
+    doppieThrown:d.doppieThrown
+  })).filter(p=>p.value!==null);
   if(!pts.length){
     const ctx=cv.getContext('2d');
     ctx.clearRect(0,0,cv.width,cv.height);
@@ -4777,7 +4782,12 @@ function render501FilterChart(canvasId, days, activeFilter){
     options:{responsive:true,
       plugins:{legend:{display:false},tooltip:{callbacks:{
         title:t=>pts[t[0].dataIndex].label,
-        label:t=>`${labelMap[k]}: ${t.raw}`
+        label:t=>{
+          const p=pts[t[0].dataIndex];
+          if(k==='doppie' && p.doppieThrown>0) return `Doppie: ${p.doppieHit}/${p.doppieThrown}`;
+          if(k==='frecce') return `${labelMap[k]}: ${t.raw} (solo leg vinti)`;
+          return `${labelMap[k]}: ${t.raw}`;
+        }
       }}},
       scales:{
         x:{ticks:{color:'#666',font:{size:10},maxRotation:45},grid:{color:'#1e1e1e'}},
@@ -4791,10 +4801,12 @@ function build501FilterCard(id, title, days){
   const pills=['frecce','media','doppie','pct'];
   const labels={frecce:'FRECCE',media:'MEDIA',doppie:'DOPPIE',pct:'% DOPPIE'};
   const pillsHtml=pills.map(k=>`<button data-filter="${k}" style="${ps(k,k==='media')}" onclick="stat501SwitchFilter('${id}','${k}',this)">${labels[k]}</button>`).join('');
+  const noteHtml = `<div id="${id}_note" style="font-size:10px;color:var(--muted);margin-top:4px;min-height:14px"></div>`;
   return `<div class="cw" style="margin-bottom:16px">
     <h3>${title}</h3>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="${id}_pills">${pillsHtml}</div>
     <canvas id="${id}" height="100"></canvas>
+    ${noteHtml}
   </div>`;
 }
 
@@ -4865,12 +4877,14 @@ function renderStats(uid){
     for(const [,sess] of sessions){
       const d=new Date(sess.__meta.savedAt);
       const dk=d.toLocaleDateString('it-IT');
-      if(!byDate[dk]) byDate[dk]={d,frecce:[],medie:[],doppie:[],pct:[]};
+      if(!byDate[dk]) byDate[dk]={d,frecce:[],medie:[],doppie:[],pct:[],doppieHit:0,doppieThrown:0};
       const m=metricsFn(sess);
-      if(m.frecce!==null) byDate[dk].frecce.push(m.frecce);
-      if(m.media!==null)  byDate[dk].medie.push(m.media);
-      if(m.doppie!==null) byDate[dk].doppie.push(m.doppie);
-      if(m.pct!==null)    byDate[dk].pct.push(m.pct);
+      if(m.frecce!==null)  byDate[dk].frecce.push(m.frecce);
+      if(m.media!==null)   byDate[dk].medie.push(m.media);
+      if(m.doppie!==null)  byDate[dk].doppie.push(m.doppie);
+      if(m.pct!==null)     byDate[dk].pct.push(m.pct);
+      byDate[dk].doppieHit     += (m.doppieHit||0);
+      byDate[dk].doppieThrown  += (m.doppieThrown||0);
     }
     const avg=arr=>arr.length?+(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1):null;
     const sum=arr=>arr.length?arr.reduce((a,b)=>a+b,0):null;
@@ -4878,9 +4892,11 @@ function renderStats(uid){
       .sort((a,b)=>a[1].d-b[1].d)
       .map(([dk,v])=>({
         label:dk,
-        frecce:avg(v.frecce),
+        frecce:avg(v.frecce),   // media frecce per leg vinto
         media:avg(v.medie),
-        doppie:sum(v.doppie),
+        doppie:sum(v.doppie),   // totale doppie a segno (per il valore Y del grafico)
+        doppieHit:v.doppieHit,
+        doppieThrown:v.doppieThrown,
         pct:avg(v.pct)
       }));
   }
@@ -4890,20 +4906,22 @@ function renderStats(uid){
     .sort((a,b)=>new Date(a[1].__meta.savedAt)-new Date(b[1].__meta.savedAt));
   const trainDays4=groupByDay4(trainSessions, sess=>{
     const legs=toArr(sess.legs);
-    if(!legs.length) return {frecce:null,media:null,doppie:null,pct:null};
+    if(!legs.length) return {frecce:null,media:null,doppie:null,pct:null,doppieHit:null,doppieThrown:null};
     // Calcola avg per ogni leg: se ha avgPerRound usalo, altrimenti calcola da darts
     const legAvgs=legs.map(l=>{
       if(l.avgPerRound && l.avgPerRound>0) return l.avgPerRound;
       const d=l.dartsThrown||l.darts||0;
       return d>0?+((501/d)*3).toFixed(1):0;
     }).filter(n=>n>0);
-    const frecce=legs.reduce((s,l)=>s+(l.dartsThrown||l.darts||0),0)||null;
+    // FRECCE = media frecce per leg VINTO (non somma totale)
+    const wonLegs=legs.filter(l=>l.won);
+    const frecce=wonLegs.length?+(wonLegs.reduce((s,l)=>s+(l.dartsThrown||l.darts||0),0)/wonLegs.length).toFixed(1):null;
     const media=legAvgs.length?+(legAvgs.reduce((a,b)=>a+b,0)/legAvgs.length).toFixed(1):null;
-    const doppie=legs.reduce((s,l)=>s+(l.doublesHit||0),0)||null;
     const totT=legs.reduce((s,l)=>s+(l.doublesThrown||0),0);
     const totH=legs.reduce((s,l)=>s+(l.doublesHit||0),0);
+    const doppie=totH||null;
     const pct=totT>0?Math.round(totH/totT*100):null;
-    return {frecce,media,doppie,pct};
+    return {frecce,media,doppie,pct,doppieHit:totH,doppieThrown:totT};
   });
   if(trainDays4.length){
     const fid='chart501train';
@@ -4919,18 +4937,20 @@ function renderStats(uid){
     .sort((a,b)=>new Date(a[1].__meta.savedAt)-new Date(b[1].__meta.savedAt));
   const tourDays4=groupByDay4(tourSessions, sess=>{
     const allLegs=toArr(sess.sets).flatMap(s=>toArr(s.legs));
-    if(!allLegs.length) return {frecce:null,media:null,doppie:null,pct:null};
-    const frecce=allLegs.reduce((s,l)=>s+(l.darts||l.dartsThrown||0),0)||null;
+    if(!allLegs.length) return {frecce:null,media:null,doppie:null,pct:null,doppieHit:null,doppieThrown:null};
+    // FRECCE = media frecce per leg VINTO
+    const wonLegs=allLegs.filter(l=>l.won);
+    const frecce=wonLegs.length?+(wonLegs.reduce((s,l)=>s+(l.darts||l.dartsThrown||0),0)/wonLegs.length).toFixed(1):null;
     const perLegAvg=allLegs.map(l=>{
       if(l.won===false) return l.avgPerRound||l.avg||0;
       const d=l.darts||l.dartsThrown||0; return d>0?+((501/d)*3):0;
     });
     const media=+(perLegAvg.reduce((a,v)=>a+v,0)/perLegAvg.length).toFixed(1)||null;
-    const doppie=allLegs.reduce((s,l)=>s+(l.doublesHit||0),0)||null;
     const totT=allLegs.reduce((s,l)=>s+(l.doublesThrown||0),0);
     const totH=allLegs.reduce((s,l)=>s+(l.doublesHit||0),0);
+    const doppie=totH||null;
     const pct=totT>0?Math.round(totH/totT*100):null;
-    return {frecce,media,doppie,pct};
+    return {frecce,media,doppie,pct,doppieHit:totH,doppieThrown:totT};
   });
   if(tourDays4.length){
     const tid='chart501tour';
@@ -5365,13 +5385,13 @@ function renderAdmin501Panel(uid){
 
     function renderGroupSummaryAdm(groupLegs){
       const sum = calcTourSessSummary(groupLegs, isTour);
-      return `<div style="padding:6px 10px;background:rgba(255,255,255,.04);border-radius:5px;font-size:11px;display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;margin-bottom:8px">
-        <span style="color:var(--muted)">Turni avg:</span> ${sum.avgRounds}
-        <span style="color:var(--muted)">Frecce avg:</span> ${sum.avgDarts}
-        <span style="color:var(--muted)">Media avg:</span> ${sum.avgPts}
-        <span style="color:var(--muted)">Doppie tot:</span> ${sum.totDbl}
-        <span style="color:var(--muted)">%:</span> ${sum.avgPct}%
-        <span style="color:var(--muted)">100+:</span> <span style="color:var(--green);font-weight:600">${sum.hundred||0}</span>
+      return `<div style="padding:6px 10px;background:rgba(255,255,255,.04);border-radius:5px;font-size:11px;display:grid;grid-template-columns:repeat(3,1fr);gap:3px 6px;margin-top:4px;margin-bottom:8px">
+        <div><span style="color:var(--muted)">Turni avg: </span>${sum.avgRounds}</div>
+        <div><span style="color:var(--muted)">Frecce avg: </span>${sum.avgDarts}</div>
+        <div><span style="color:var(--muted)">Media avg: </span>${sum.avgPts}</div>
+        <div><span style="color:var(--muted)">Doppie tot: </span>${sum.totDbl}</div>
+        <div><span style="color:var(--muted)">%: </span>${sum.avgPct}%</div>
+        <div><span style="color:var(--muted)">100+: </span><span style="color:var(--green);font-weight:600">${sum.hundred||0}</span></div>
       </div>`;
     }
 
@@ -9543,13 +9563,13 @@ function render501SessPanel(){
     // ── Helper: riepilogo per un gruppo di leg ────────────────────────────────
     function renderGroupSummary(groupLegs){
       const sum = calcTourSessSummary(groupLegs, isTour);
-      return `<div style="padding:6px 10px;background:rgba(255,255,255,.04);border-radius:5px;font-size:11px;display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;margin-bottom:8px">
-        <span style="color:var(--muted)">Turni avg:</span> ${sum.avgRounds}
-        <span style="color:var(--muted)">Frecce avg:</span> ${sum.avgDarts}
-        <span style="color:var(--muted)">Media avg:</span> ${sum.avgPts}
-        <span style="color:var(--muted)">Doppie tot:</span> ${sum.totDbl}
-        <span style="color:var(--muted)">%:</span> ${sum.avgPct}%
-        <span style="color:var(--muted)">100+:</span> <span style="color:var(--green);font-weight:600">${sum.hundred||0}</span>
+      return `<div style="padding:6px 10px;background:rgba(255,255,255,.04);border-radius:5px;font-size:11px;display:grid;grid-template-columns:repeat(3,1fr);gap:3px 6px;margin-top:4px;margin-bottom:8px">
+        <div><span style="color:var(--muted)">Turni avg: </span>${sum.avgRounds}</div>
+        <div><span style="color:var(--muted)">Frecce avg: </span>${sum.avgDarts}</div>
+        <div><span style="color:var(--muted)">Media avg: </span>${sum.avgPts}</div>
+        <div><span style="color:var(--muted)">Doppie tot: </span>${sum.totDbl}</div>
+        <div><span style="color:var(--muted)">%: </span>${sum.avgPct}%</div>
+        <div><span style="color:var(--muted)">100+: </span><span style="color:var(--green);font-weight:600">${sum.hundred||0}</span></div>
       </div>`;
     }
 
