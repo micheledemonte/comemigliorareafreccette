@@ -8553,6 +8553,7 @@ function open501Training(gid){
   startLeg501();
   document.getElementById('g501overlay').classList.add('open');
   gameOverlayOpen();
+  requestAnimationFrame(()=>{ g501UpdateDisplay(); });
 }
 // ══════════════════════════════════════════════════
 // TOURNAMENT 501 ENGINE
