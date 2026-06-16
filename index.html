@@ -3496,7 +3496,7 @@ function ldAllTabs(){
     all.push({id:'profile', icon:'👤', label:'Profilo'}); // PROFILO before ADMIN
     all.push(LD.adminTab);
   } else {
-    all.push({id:'appuntamenti', icon:'📅', label:'Appuntamenti'}); // user-only
+    all.push({id:'appuntamenti', icon:'🗓️', label:'Appuntamenti'}); // user-only
     all.push(LD.userCalTab);    // CALENDARIO visible only to normal users
   }
   all.push(LD.logoutTab);
@@ -4785,7 +4785,7 @@ function render501FilterChart(canvasId, days, activeFilter){
         label:item=>{
           const p=pts[item.dataIndex];
           if(k==='doppie' && p.doppieThrown>0) return `Doppie: ${p.doppieHit}/${p.doppieThrown}`;
-          if(k==='frecce') return `${labelMap[k]}: ${item.raw} (solo leg vinti)`;
+          if(k==='frecce') return `${labelMap[k]}: ${item.raw}`;
           return `${labelMap[k]}: ${item.raw}`;
         }
       }}},
@@ -5385,7 +5385,7 @@ function renderAdmin501Panel(uid){
 
     function renderGroupSummaryAdm(groupLegs){
       const sum = calcTourSessSummary(groupLegs, isTour);
-      return `<div style="padding:6px 10px;background:rgba(255,255,255,.04);border-radius:5px;font-size:11px;display:grid;grid-template-columns:repeat(3,1fr);gap:3px 6px;margin-top:4px;margin-bottom:8px">
+      return `<div style="padding:6px 10px;background:rgba(255,255,255,.04);border-radius:5px;font-size:11px;display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:3px 6px;margin-top:4px;margin-bottom:8px">
         <div><span style="color:var(--muted)">Turni avg: </span>${sum.avgRounds}</div>
         <div><span style="color:var(--muted)">Frecce avg: </span>${sum.avgDarts}</div>
         <div><span style="color:var(--muted)">Media avg: </span>${sum.avgPts}</div>
@@ -6075,7 +6075,10 @@ function renderApptUser(){
   // Filtra in base allo stato selezionato
   const filtered = appts.filter(l=>{
     if(window._apptFilter === 'pending') return !l.dt;
-    if(!l.dt) return false; // le non fissate appaiono solo in "pending"
+    if(!l.dt){
+      // Lezioni senza data: visibili anche in "todo" (DA SVOLGERE)
+      return window._apptFilter === 'todo';
+    }
     const _dp2 = l.dt.slice(0,10).split('-');
     const d2   = new Date(parseInt(_dp2[0]), parseInt(_dp2[1])-1, parseInt(_dp2[2]),
                    ...(l.dt.length>10 ? l.dt.slice(11,16).split(':').map(Number) : [0,0]));
@@ -7107,11 +7110,13 @@ function userCalBuildHtml(){
 
     // Occupato per altri (solo data/ora, no nome)
     otherSelEvs.forEach(ev=>{
-      const dEv = new Date(ev.dt);
-      const pad = n=>String(n).padStart(2,'0');
-      const lbl = pad(dEv.getHours())+':'+pad(dEv.getMinutes());
+      const dEv  = new Date(ev.dt);
+      const dEnd = new Date(dEv.getTime() + 60*60*1000); // +1 ora
+      const pad  = n=>String(n).padStart(2,'0');
+      const lbl  = pad(dEv.getHours())+':'+pad(dEv.getMinutes());
+      const lblE = pad(dEnd.getHours())+':'+pad(dEnd.getMinutes());
       html+='<div style="border-left:3px solid var(--d5);padding:8px 12px;margin-bottom:8px;background:var(--d3);border-radius:6px">';
-      html+='<div style="font-size:14px;font-weight:700;color:var(--muted)">ORE '+lbl+' — OCCUPATO</div>';
+      html+='<div style="font-size:14px;font-weight:700;color:var(--muted)">'+lbl+' - '+lblE+' — OCCUPATO</div>';
       html+='</div>';
     });
 
@@ -9563,7 +9568,7 @@ function render501SessPanel(){
     // ── Helper: riepilogo per un gruppo di leg ────────────────────────────────
     function renderGroupSummary(groupLegs){
       const sum = calcTourSessSummary(groupLegs, isTour);
-      return `<div style="padding:6px 10px;background:rgba(255,255,255,.04);border-radius:5px;font-size:11px;display:grid;grid-template-columns:repeat(3,1fr);gap:3px 6px;margin-top:4px;margin-bottom:8px">
+      return `<div style="padding:6px 10px;background:rgba(255,255,255,.04);border-radius:5px;font-size:11px;display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:3px 6px;margin-top:4px;margin-bottom:8px">
         <div><span style="color:var(--muted)">Turni avg: </span>${sum.avgRounds}</div>
         <div><span style="color:var(--muted)">Frecce avg: </span>${sum.avgDarts}</div>
         <div><span style="color:var(--muted)">Media avg: </span>${sum.avgPts}</div>
@@ -9631,7 +9636,7 @@ function render501SessPanel(){
     const summary = calcTourSessSummary(filteredLegs, isTour);
     const globalSummary = `<div style="margin-top:8px;padding:8px;background:var(--d4);border-radius:6px;font-size:12px">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--green);margin-bottom:6px">RIEPILOGO SESSIONE${isTour&&_tourCompareFilter!=='all'?' ('+(_tourCompareFilter==='won'?'Solo vinti':'Solo persi')+')':''}</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px 8px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:5px 8px">
         <div><span style="color:var(--muted)">Turni avg: </span>${summary.avgRounds}</div>
         <div><span style="color:var(--muted)">Frecce avg: </span>${summary.avgDarts}</div>
         <div><span style="color:var(--muted)">Media avg: </span>${summary.avgPts}</div>
