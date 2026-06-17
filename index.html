@@ -220,9 +220,7 @@ body.in-app #landing{display:none}
   position:fixed;
   bottom:calc(22px + env(safe-area-inset-bottom, 0px));
   left:50%;
-  /* --dock-shift: aggiornato da JS per seguire la barra Safari iOS quando si
-     rimpicciolisce (visual viewport). 0 in standalone/desktop. */
-  transform:translateX(-50%) translateY(var(--dock-shift, 0px));
+  transform:translateX(-50%);
   z-index:9000;
   display:none;
   touch-action:none;
@@ -770,8 +768,10 @@ html.game-active,body.game-active{overflow:hidden!important;overscroll-behavior:
 @media(max-width:768px){
   .g501-inner{
     gap:4px;
-    /* safe-area: top per notch/dynamic island, bottom per home indicator */
-    padding:calc(6px + env(safe-area-inset-top,0px)) 8px calc(3px + env(safe-area-inset-bottom,0px));
+    /* safe-area: top per notch/dynamic island. In basso riserviamo solo metà
+       dell'home indicator: così il tastierino riempie più schermo (niente
+       striscia scura) mantenendo un piccolo margine di sicurezza. */
+    padding:calc(6px + env(safe-area-inset-top,0px)) 8px calc(3px + env(safe-area-inset-bottom,0px) * 0.5);
     flex:1 1 0;
     min-height:0;
     align-items:stretch;   /* tutti gli elementi a 100% larghezza */
@@ -11468,59 +11468,42 @@ if(document.readyState==='loading'){
     var ovW = ov.clientWidth;
     if(!ovH || !ovW) return;
 
-    // Altezza occupata dai 3 blocchi superiori (score, stats, display row)
-    var topH = scoreEl.offsetHeight + statsEl.offsetHeight + displayEl.offsetHeight;
+    // ── GROUND TRUTH ──────────────────────────────────────────────────────
+    // Il pad è `flex:1 1 0; min-height:0`, quindi il browser gli assegna
+    // ESATTAMENTE lo spazio verticale e orizzontale rimasto, già al netto di:
+    // blocchi superiori, gap tra i blocchi, padding dell'inner E safe-area iOS
+    // (top/bottom). Leggiamo quelle dimensioni REALI invece di ricalcolarle a
+    // mano: questo elimina ogni stima sbagliata (era qui il doppio conteggio
+    // della safe-area che lasciava la striscia in fondo e non riempiva il pad).
+    var padH = padEl.clientHeight;   // altezza reale assegnata al tastierino
+    var padW = padEl.clientWidth;    // larghezza reale assegnata al tastierino
+    if(!padH || !padW) return;
 
-    // Gap tra i blocchi flex dell'inner + padding verticale dell'inner
-    var cs = getComputedStyle(innerEl);
-    var gapPx  = parseInt(cs.rowGap || cs.gap) || 4;
-    var padTop = parseInt(cs.paddingTop) || 6;
-    var padBot = parseInt(cs.paddingBottom) || 3;
-
-    // Spazio verticale realmente disponibile per il tastierino (4 righe).
-    // L'area flex del pad = altezza inner (ovH) − padding inner (padTop/padBot,
-    // che GIÀ includono la safe-area iOS via env(safe-area-inset-*)) − i 3
-    // blocchi superiori − i 3 gap tra i blocchi flex dell'inner.
-    // NB: la safe-area NON va sottratta di nuovo qui: il padding-bottom del CSS
-    // la riserva già. Sottrarla due volte lasciava una striscia vuota in fondo
-    // (visibile soprattutto in standalone/PWA) e impediva al pad di riempire
-    // tutta l'altezza reale dello schermo.
-    var available = ovH - topH - (3 * gapPx) - padTop - padBot;
-
-    // Gap orizzontale di base tra i tasti
+    // Gap base tra i tasti
     var gap = Math.min(14, Math.max(8, Math.round(ovW * 0.022)));
-    var padLat = 8; // padding laterale interno
 
-    // ── Dimensione tasto: il vincolo più stretto tra larghezza e altezza ──
-    // I tasti DEVONO restare cerchi perfetti (width == height == key), quindi
-    // prendiamo il minore tra il limite di larghezza (3 colonne) e quello di
-    // altezza (4 righe).
-    available = Math.max(available, 80);
-    var keyByW = Math.floor((ovW - 2 * padLat - 2 * gap) / 3);
-    var keyByH = Math.floor((available - 3 * gap) / 4);
+    // ── Dimensione tasto: cerchio perfetto = min tra vincolo di larghezza
+    // (3 colonne + 2 gap) e di altezza (4 righe + 3 gap).
+    var keyByW = Math.floor((padW - 2 * gap) / 3);
+    var keyByH = Math.floor((padH - 3 * gap) / 4);
     var key = Math.max(40, Math.min(keyByW, keyByH));
 
-    // ── Riempi lo spazio disponibile distribuendolo come gap extra ─────────
-    // Mantenendo i cerchi perfetti, lo spazio che avanza (verticale e/o
-    // orizzontale) viene distribuito sui gap così il pad occupa l'intera area
-    // senza mai deformare i tasti né eccedere lo spazio disponibile.
-    //
-    // VERTICALE: 4 righe di tasti (4*key) + 3 gap verticali = available.
-    //   gapV = (available - 4*key) / 3, mai inferiore al gap base.
-    var gapV = Math.floor((available - 4 * key) / 3);
+    // ── Riempi TUTTO lo spazio distribuendo l'avanzo sui gap (cerchi intatti).
+    // VERTICALE:  4*key + 3*gapV = padH  →  gapV riempie l'altezza reale.
+    var gapV = Math.floor((padH - 4 * key) / 3);
     if(gapV < gap) gapV = gap;
-    //
-    // ORIZZONTALE: 3 colonne di tasti (3*key) + 2 gap orizzontali = innerW.
-    //   gapH = (innerW - 3*key) / 2, mai inferiore al gap base.
-    var innerW = ovW - 2 * padLat;
-    var gapH = Math.floor((innerW - 3 * key) / 2);
+    // ORIZZONTALE: 3*key + 2*gapH = padW →  gapH riempie la larghezza reale.
+    var gapH = Math.floor((padW - 3 * key) / 2);
     if(gapH < gap) gapH = gap;
-    //
-    // Limita i gap a un massimo ragionevole per non distanziare troppo i tasti
-    // su schermi molto allungati (il pad resta comunque ben distribuito).
-    var maxGap = Math.round(key * 0.75);
-    if(gapV > maxGap) gapV = maxGap;
-    if(gapH > maxGap) gapH = maxGap;
+    // MOBILE: nessun cap sui gap → il pad riempie l'intero schermo (richiesta UX),
+    // qualunque sia il rapporto d'aspetto. DESKTOP: il pad è una colonna a
+    // larghezza fissa centrata, quindi limitiamo i gap per non distanziare
+    // troppo i tasti (comportamento invariato rispetto a prima).
+    if(!window.matchMedia('(max-width:768px)').matches){
+      var maxGap = Math.round(key * 0.75);
+      if(gapV > maxGap) gapV = maxGap;
+      if(gapH > maxGap) gapH = maxGap;
+    }
 
     // Applica le variabili calcolate SOLO all'overlay aperto
     ov.style.setProperty('--key-dyn', key + 'px');
@@ -11554,32 +11537,6 @@ if(document.readyState==='loading'){
   setTimeout(updateLayout, 0);
   setTimeout(updateLayout, 100);
   setTimeout(updateLayout, 300);
-})();
-
-// ══════════════════════════════════════════════════
-// DOCK — segue la barra Safari iOS quando si rimpicciolisce
-// Il dock è position:fixed ancorato al fondo della LAYOUT viewport. Quando la
-// barra di Safari si riduce allo scroll, la VISUAL viewport si estende più in
-// basso ma il dock resta su → resta un gap brutto. Qui spostiamo il dock verso
-// il basso esattamente dell'offset tra fondo-layout e fondo-visual, così resta
-// a distanza costante dalla barra. In standalone/desktop l'offset è 0 → nessun
-// effetto.
-(function dockFollowsViewport(){
-  var vv = window.visualViewport;
-  if(!vv) return;
-  function update(){
-    var dock = document.getElementById('liquidDock');
-    if(!dock) return;
-    // Quanto il fondo della visual viewport va OLTRE il fondo della layout viewport
-    var shift = (vv.offsetTop + vv.height) - document.documentElement.clientHeight;
-    if(shift < 0) shift = 0; // (es. tastiera aperta) — non spostare verso l'alto
-    dock.style.setProperty('--dock-shift', shift + 'px');
-  }
-  vv.addEventListener('resize', update);
-  vv.addEventListener('scroll', update);
-  window.addEventListener('scroll', update, {passive:true});
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', update);
-  else update();
 })();
 
 // ══════════════════════════════════════════════════
