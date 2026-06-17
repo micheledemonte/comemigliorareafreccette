@@ -220,7 +220,9 @@ body.in-app #landing{display:none}
   position:fixed;
   bottom:calc(22px + env(safe-area-inset-bottom, 0px));
   left:50%;
-  transform:translateX(-50%);
+  /* --dock-shift: aggiornato da JS per seguire la barra Safari iOS quando si
+     rimpicciolisce (visual viewport). 0 in standalone/desktop. */
+  transform:translateX(-50%) translateY(var(--dock-shift, 0px));
   z-index:9000;
   display:none;
   touch-action:none;
@@ -11475,17 +11477,15 @@ if(document.readyState==='loading'){
     var padTop = parseInt(cs.paddingTop) || 6;
     var padBot = parseInt(cs.paddingBottom) || 3;
 
-    // Safe-area inferiore iOS (home indicator), minimo 12px
-    var safeBot = 12;
-    try {
-      var sab = getComputedStyle(document.documentElement).getPropertyValue('--sab');
-      var sabPx = parseInt(sab);
-      if(!isNaN(sabPx) && sabPx > safeBot) safeBot = sabPx;
-    } catch(e){}
-
-    // Spazio verticale rimasto per il tastierino (4 righe)
-    // 3 gap tra i 4 blocchi dell'inner + padding inner + safe area
-    var available = ovH - topH - (3 * gapPx) - padTop - padBot - safeBot;
+    // Spazio verticale realmente disponibile per il tastierino (4 righe).
+    // L'area flex del pad = altezza inner (ovH) − padding inner (padTop/padBot,
+    // che GIÀ includono la safe-area iOS via env(safe-area-inset-*)) − i 3
+    // blocchi superiori − i 3 gap tra i blocchi flex dell'inner.
+    // NB: la safe-area NON va sottratta di nuovo qui: il padding-bottom del CSS
+    // la riserva già. Sottrarla due volte lasciava una striscia vuota in fondo
+    // (visibile soprattutto in standalone/PWA) e impediva al pad di riempire
+    // tutta l'altezza reale dello schermo.
+    var available = ovH - topH - (3 * gapPx) - padTop - padBot;
 
     // Gap orizzontale di base tra i tasti
     var gap = Math.min(14, Math.max(8, Math.round(ovW * 0.022)));
@@ -11554,6 +11554,32 @@ if(document.readyState==='loading'){
   setTimeout(updateLayout, 0);
   setTimeout(updateLayout, 100);
   setTimeout(updateLayout, 300);
+})();
+
+// ══════════════════════════════════════════════════
+// DOCK — segue la barra Safari iOS quando si rimpicciolisce
+// Il dock è position:fixed ancorato al fondo della LAYOUT viewport. Quando la
+// barra di Safari si riduce allo scroll, la VISUAL viewport si estende più in
+// basso ma il dock resta su → resta un gap brutto. Qui spostiamo il dock verso
+// il basso esattamente dell'offset tra fondo-layout e fondo-visual, così resta
+// a distanza costante dalla barra. In standalone/desktop l'offset è 0 → nessun
+// effetto.
+(function dockFollowsViewport(){
+  var vv = window.visualViewport;
+  if(!vv) return;
+  function update(){
+    var dock = document.getElementById('liquidDock');
+    if(!dock) return;
+    // Quanto il fondo della visual viewport va OLTRE il fondo della layout viewport
+    var shift = (vv.offsetTop + vv.height) - document.documentElement.clientHeight;
+    if(shift < 0) shift = 0; // (es. tastiera aperta) — non spostare verso l'alto
+    dock.style.setProperty('--dock-shift', shift + 'px');
+  }
+  vv.addEventListener('resize', update);
+  vv.addEventListener('scroll', update);
+  window.addEventListener('scroll', update, {passive:true});
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', update);
+  else update();
 })();
 
 // ══════════════════════════════════════════════════
