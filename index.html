@@ -728,12 +728,6 @@ select:hover{border-color:var(--green)}
 html.game-active,body.game-active{overscroll-behavior:none;touch-action:none}
 #g501overlay.open{display:flex}
 #g201overlay.open{display:flex}
-/* Anti-flash: il pad resta nascosto finché il JS non ha calcolato la dimensione
-   reale dei tasti (altrimenti si vedrebbe per un frame il valore di fallback del
-   CSS, calcolato sulla larghezza = grande, prima del ricalcolo sull'altezza).
-   `pad-ready` viene aggiunto da updateLayout (e da un failsafe a tempo). */
-#g501overlay .g501-pad,#pgOverlay .g501-pad,#g201overlay .g501-pad{visibility:hidden}
-#g501overlay.pad-ready .g501-pad,#pgOverlay.pad-ready .g501-pad,#g201overlay.pad-ready .g501-pad{visibility:visible}
 
 /* Inner wrapper */
 .g501-inner{
@@ -778,10 +772,10 @@ html.game-active,body.game-active{overscroll-behavior:none;touch-action:none}
 @media(max-width:768px){
   .g501-inner{
     gap:4px;
-    /* safe-area: top per notch/dynamic island; in basso riserviamo TUTTO l'home
-       indicator + un piccolo extra, così i tasti restano SOPRA la zona che li
-       taglierebbe (home indicator) e non vengono mai rimpiccioliti per evitarla. */
-    padding:calc(6px + env(safe-area-inset-top,0px)) 8px calc(8px + env(safe-area-inset-bottom,0px));
+    /* safe-area: top per notch/dynamic island. In basso riserviamo solo un quarto
+       dell'home indicator: così il tastierino riempie quasi tutto lo schermo
+       (striscia scura quasi eliminata) mantenendo un minimo margine di sicurezza. */
+    padding:calc(6px + env(safe-area-inset-top,0px)) 8px calc(3px + env(safe-area-inset-bottom,0px) * 0.25);
     flex:1 1 0;
     min-height:0;
     align-items:stretch;   /* tutti gli elementi a 100% larghezza */
@@ -4008,15 +4002,9 @@ function gameOverlayOpen(){
     document.documentElement.style.overflow='hidden';
     document.body.style.overflow='hidden';
   } else {
-    // Browser: spingi lo scroll in fondo (anche con un retry su frame successivo)
-    // per invogliare Safari a tenere/rendere la barra rimpicciolita.
     try {
-      var _se = document.scrollingElement || document.documentElement;
-      var _minScroll = _se.scrollHeight - window.innerHeight;
-      if(_minScroll > 2){
-        window.scrollTo(0, _minScroll);
-        requestAnimationFrame(function(){ try{ window.scrollTo(0, (document.scrollingElement||document.documentElement).scrollHeight - window.innerHeight); }catch(e){} });
-      }
+      var _minScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if(_minScroll > 2) window.scrollTo(0, _minScroll);
     } catch(e){}
   }
   // Ricalcola il layout del pad. La PRIMA chiamata è SINCRONA (prima del paint)
@@ -4028,14 +4016,6 @@ function gameOverlayOpen(){
     setTimeout(window._gameUpdateLayout, 180);
     setTimeout(window._gameUpdateLayout, 350);
   }
-  // Failsafe: rivela comunque il pad dell'overlay aperto entro 500ms, nel caso
-  // updateLayout non fosse riuscito a calcolare (il tastierino non resta invisibile).
-  setTimeout(function(){
-    ['g501overlay','pgOverlay','g201overlay'].forEach(function(id){
-      var o=document.getElementById(id);
-      if(o && (o.classList.contains('open') || o.style.display==='flex')) o.classList.add('pad-ready');
-    });
-  }, 500);
 }
 // Ripristina dock dopo la chiusura di un gioco
 function gameOverlayClose(){
@@ -11553,8 +11533,6 @@ if(document.readyState==='loading'){
     ov.style.setProperty('--key-dyn', key + 'px');
     ov.style.setProperty('--gap-dyn-v', gapV + 'px');
     ov.style.setProperty('--gap-dyn-h', gapH + 'px');
-    // Tasti dimensionati correttamente → rivela il pad (anti-flash)
-    ov.classList.add('pad-ready');
   }
 
   // Listener su visualViewport (Safari aggiorna questo quando la barra appare/scompare)
@@ -11568,12 +11546,6 @@ if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded', function(){
     // Osserva quando g501overlay viene aperto (classe 'open' aggiunta)
     var obs = new MutationObserver(function(){
-      // Ri-nascondi il pad di ogni overlay CHIUSO, così la prossima apertura
-      // riparte nascosta (e non mostra per un frame i vecchi --key-dyn stale).
-      OVERLAY_IDS.forEach(function(id){
-        var o = document.getElementById(id);
-        if(o && !o.classList.contains('open') && o.style.display !== 'flex') o.classList.remove('pad-ready');
-      });
       // Aspetta un frame per permettere al DOM di renderizzare le dimensioni
       requestAnimationFrame(updateLayout);
     });
