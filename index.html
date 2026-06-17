@@ -455,12 +455,12 @@ select:hover{border-color:var(--green)}
 .ic input.gold{border-color:#f59e0b;background:rgba(251,191,36,0.18);color:#fbbf24}
 .ic{position:relative}
 .ic:has(input.gold)::after{content:'👑';position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:11px;pointer-events:none;line-height:1;z-index:2}
-.wug{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;margin-bottom:10px;overflow:hidden}
+.wug{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-bottom:10px;overflow:hidden}
 .wuc{display:flex;flex-direction:column;align-items:center;gap:3px;position:relative}
 .wuc input.gold{border-color:#f59e0b!important;background:rgba(251,191,36,0.18)!important;color:#fbbf24!important}
 .wuc:has(input.gold)::after{content:'👑';position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:10px;pointer-events:none;line-height:1;z-index:2}
-.wuc .wn{font-size:11px;color:var(--muted)}
-.wuc input{width:100%;min-width:28px;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:5px 2px;text-align:center;font-size:13px;border-radius:4px}
+.wuc .wn{font-size:12px;color:var(--muted)}
+.wuc input{width:100%;min-width:28px;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:9px 2px;text-align:center;font-size:15px;border-radius:4px}
 .wuc input:focus{outline:none;border-color:var(--green)}
 .wuc input.ok{border-color:#166534;background:#052e16}
 .wuc input.xx{border-color:#7f1d1d;background:#1c0404;color:#f87171}
@@ -2834,9 +2834,10 @@ function getUD(uid){
 function setUD(uid,d){
   if(!_dbCache) _dbCache=emptyDB();
   if(!_dbCache.userData) _dbCache.userData={};
-  // Enforce 365-day retention: remove training sessions older than 365 days
+  // Enforce 2000-day retention: remove any saved data (sessioni, statistiche, ecc.)
+  // older than 2000 days.
   const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 365);
+  cutoff.setDate(cutoff.getDate() - 2000);
   const cleaned = deepClean(d);
   Object.keys(cleaned).forEach(k=>{
     const v = cleaned[k];
@@ -4198,17 +4199,17 @@ function rWU(gid,mode,sv){
     ?'Around the Clock: lancia 1 freccia su ogni settore 1-20. Triple e Doppie non contano. Scrivi quante frecce hai impiegato per colpire 1 volta ogni settore singolo.'
     :'Around the Clock: lancia 3 frecce sulla doppia di ogni settore 1-20. Scrivi quante frecce sei riuscito a tirare nella doppia. Se nessuna freccia ha colpito la doppia scrivi 0 e passa al settore successivo.';
   const nm = `AROUND THE CLOCK (${isS?'SINGOLE':'DOPPIE'})`;
-  let r1='',r2='';
-  for(let n=1;n<=10;n++) r1+=`<div class="wuc"><div class="wn">${n}</div>${mkI(gid,n,sv[n],'','width:100%;min-width:28px',nm)}</div>`;
-  for(let n=11;n<=20;n++) r2+=`<div class="wuc"><div class="wn">${n}</div>${mkI(gid,n,sv[n],'','width:100%;min-width:28px',nm)}</div>`;
+  // 20 caselle in un'unica griglia a 7 colonne → 3 righe (1-7, 8-14, 15-20).
+  // Niente più etichette "SETTORI 1-10/11-20": più spazio verticale, caselle più grandi.
+  let cells='';
+  for(let n=1;n<=20;n++) cells+=`<div class="wuc"><div class="wn">${n}</div>${mkI(gid,n,sv[n],'','width:100%;min-width:28px',nm)}</div>`;
   // compute totals from saved values
   const allVals=[];
   for(let n=1;n<=20;n++){const v=parseFloat(sv[n]);if(!isNaN(v))allVals.push(v);}
   const tot=allVals.reduce((a,b)=>a+b,0);
   const avg=allVals.length?+(tot/allVals.length).toFixed(1):0;
   const perfetto=isS?'20':'60';
-  const body=`<div class="sec-t">Settori 1–10</div><div class="wug" style="margin-bottom:10px">${r1}</div>
-    <div class="sec-t">Settori 11–20</div><div class="wug">${r2}</div>
+  const body=`<div class="wug">${cells}</div>
     <div class="sr">
       <span class="sl">Totale frecce</span><span class="sv" id="wut_${gid}">${tot||0}</span>
       <span class="sl" style="margin-left:8px">Gioco perfetto: ${perfetto}</span>
@@ -5389,8 +5390,11 @@ function setAdmin501Mode(uid, mode){
     rBtn.style.color      = mode==='tournament' ? '#000' : 'var(--mu2)';
     rBtn.style.borderColor= mode==='tournament' ? 'var(--green)' : 'var(--d5)';
   }
-  // Reset selezioni correnti per questa modalità
+  // Reset selezioni: come per l'utente (setPrev501Mode azzera _selected501Sessions),
+  // azzeriamo le sessioni selezionate di questa modalità al cambio, così la stessa
+  // sessione può essere riselezionata dal menu e ricompare subito (fix bug "non appare").
   if(!_adminSelected501[uid]) _adminSelected501[uid] = {training:[], tournament:[]};
+  _adminSelected501[uid][mode] = [];
   const panel = document.getElementById('admin501Panel_'+uid);
   if(panel) panel.innerHTML = '';
   // Re-render lista sessioni
@@ -5407,12 +5411,12 @@ function render501SessionsFor(uid, mode){
     sessions = Object.entries(data)
       .filter(([k,v])=>v?.__meta?.type==='501free')
       .sort((a,b)=>new Date(b[1].__meta.savedAt)-new Date(a[1].__meta.savedAt))
-      .slice(0,10);
+      .slice(0,2000);
   } else {
     sessions = Object.entries(data)
       .filter(([k,v])=>v?.__meta?.type==='501tournament')
       .sort((a,b)=>new Date(b[1].__meta.savedAt)-new Date(a[1].__meta.savedAt))
-      .slice(0,10);
+      .slice(0,2000);
   }
 
   if(!sessions.length) return '<p style="color:var(--muted);font-size:13px;padding:8px 0">Nessuna sessione '+(mode==='training'?'allenamento':'torneo')+' registrata.</p>';
@@ -5430,9 +5434,9 @@ function render501SessionsFor(uid, mode){
       return `<option value="${k}">${d} — ${count}</option>`;
     }).join('');
 
-  return `<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
-    <select id="admin501Sel_${uid}" style="flex:1;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:8px 10px;border-radius:6px;font-size:13px">${selectOpts}</select>
-    <button onclick="addAdmin501Sess('${uid}')" style="background:${selColor};color:#000;border:none;padding:8px 16px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;cursor:pointer;white-space:nowrap">AGGIUNGI</button>
+  // Selezione sessione = mostra subito (come per l'utente: select onchange, niente bottone AGGIUNGI)
+  return `<div style="margin-bottom:12px">
+    <select id="admin501Sel_${uid}" onchange="addAdmin501Sess('${uid}')" style="width:100%;background:var(--d3);border:1px solid var(--d5);color:var(--light);padding:8px 10px;border-radius:6px;font-size:13px">${selectOpts}</select>
   </div>
   <div id="admin501Panel_${uid}"></div>`;
 }
@@ -9542,7 +9546,7 @@ function loadPrev501Sessions(){
   const sessions=Object.entries(data)
     .filter(([k,v])=>v?.__meta?.type===type)
     .sort((a,b)=>new Date(b[1].__meta.savedAt)-new Date(a[1].__meta.savedAt))
-    .slice(0,10);
+    .slice(0,2000);
   const sel=document.getElementById('prevSessSelect');
   if(!sel) return;
   sel.innerHTML='<option value="">— Scegli una sessione —</option>'+
