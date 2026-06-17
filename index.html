@@ -720,8 +720,12 @@ select:hover{border-color:var(--green)}
 .pw-eye:hover{color:var(--light)}
 /* ═══ GAME OVERLAY LAYOUT ═══ */
 #g501overlay{position:fixed;top:0;right:0;left:0;height:100vh;height:100dvh;z-index:9500;background:#000;display:none;flex-direction:column;overflow:hidden;overscroll-behavior:none;touch-action:none;isolation:isolate;transform:translateZ(0)}
-/* Blocco scroll totale quando un gioco a schermo intero è attivo */
-html.game-active,body.game-active{overflow:hidden!important;overscroll-behavior:none;touch-action:none}
+/* Blocco scroll quando un gioco a schermo intero è attivo.
+   NB: l'overflow:hidden è gestito via JS SOLO in standalone (PWA). In browser
+   NON va applicato: renderebbe la pagina "non scrollabile" e Safari riaprirebbe
+   la barra grande. In browser l'interazione è impedita dall'overlay (touch-action:none)
+   e lo scroll viene spinto giù per tenere la barra rimpicciolita. */
+html.game-active,body.game-active{overscroll-behavior:none;touch-action:none}
 #g501overlay.open{display:flex}
 #g201overlay.open{display:flex}
 
@@ -768,10 +772,10 @@ html.game-active,body.game-active{overflow:hidden!important;overscroll-behavior:
 @media(max-width:768px){
   .g501-inner{
     gap:4px;
-    /* safe-area: top per notch/dynamic island. In basso riserviamo solo metà
-       dell'home indicator: così il tastierino riempie più schermo (niente
-       striscia scura) mantenendo un piccolo margine di sicurezza. */
-    padding:calc(6px + env(safe-area-inset-top,0px)) 8px calc(3px + env(safe-area-inset-bottom,0px) * 0.5);
+    /* safe-area: top per notch/dynamic island. In basso riserviamo solo un quarto
+       dell'home indicator: così il tastierino riempie quasi tutto lo schermo
+       (striscia scura quasi eliminata) mantenendo un minimo margine di sicurezza. */
+    padding:calc(6px + env(safe-area-inset-top,0px)) 8px calc(3px + env(safe-area-inset-bottom,0px) * 0.25);
     flex:1 1 0;
     min-height:0;
     align-items:stretch;   /* tutti gli elementi a 100% larghezza */
@@ -3984,12 +3988,29 @@ function gameOverlayOpen(){
   document.getElementById('liquidDock').style.pointerEvents='none';
   const lo=document.getElementById('ldLogout');
   if(lo){lo.style.visibility='hidden';lo.style.pointerEvents='none';}
-  // Blocca lo scroll della pagina sottostante (solo overflow, niente position:fixed
-  // sul body che romperebbe il posizionamento degli overlay fixed).
+  // Salva lo scroll corrente per ripristinarlo alla chiusura.
+  try { window._preGameScrollY = window.scrollY || window.pageYOffset || 0; } catch(e){ window._preGameScrollY = 0; }
   document.documentElement.classList.add('game-active');
   document.body.classList.add('game-active');
-  // Ricalcola il layout del pad dopo l'apertura (più passaggi per Safari)
+  // Blocco scroll DIFFERENZIATO:
+  // - STANDALONE (PWA, nessuna barra): overflow:hidden classico, sicuro.
+  // - BROWSER: NIENTE overflow:hidden (Safari riaprirebbe la barra grande).
+  //   Spingiamo lo scroll in fondo così la barra resta rimpicciolita; l'overlay
+  //   (touch-action:none) impedisce comunque l'interazione con la pagina sotto.
+  var _standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  if(_standalone){
+    document.documentElement.style.overflow='hidden';
+    document.body.style.overflow='hidden';
+  } else {
+    try {
+      var _minScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if(_minScroll > 2) window.scrollTo(0, _minScroll);
+    } catch(e){}
+  }
+  // Ricalcola il layout del pad. La PRIMA chiamata è SINCRONA (prima del paint)
+  // così i tasti nascono già alla dimensione giusta: niente "flash" grande→piccolo.
   if(window._gameUpdateLayout){
+    window._gameUpdateLayout();
     requestAnimationFrame(window._gameUpdateLayout);
     setTimeout(window._gameUpdateLayout, 60);
     setTimeout(window._gameUpdateLayout, 180);
@@ -4005,9 +4026,12 @@ function gameOverlayClose(){
   }
   const lo=document.getElementById('ldLogout');
   if(lo){lo.style.visibility='';lo.style.pointerEvents='';}
-  // Riabilita lo scroll della pagina
+  // Riabilita lo scroll della pagina e ripristina la posizione precedente.
   document.documentElement.classList.remove('game-active');
   document.body.classList.remove('game-active');
+  document.documentElement.style.overflow='';
+  document.body.style.overflow='';
+  try { if(typeof window._preGameScrollY === 'number') window.scrollTo(0, window._preGameScrollY); } catch(e){}
 }
 
 function showTab(name,silent=false){
@@ -11439,12 +11463,12 @@ if(document.readyState==='loading'){
 
   window._gameUpdateLayout = null; // sarà assegnata sotto
   function updateLayout(){
-    // L'overlay è ancorato a tutto schermo dal CSS (position:fixed; top/left/
-    // right/bottom:0). NON tocchiamo MAI la geometria dell'overlay via JS:
-    // questo era la causa dei bug (overlay fuori schermo, dietro la pagina).
-    // Il compito di questa funzione è UNO SOLO: calcolare la dimensione
-    // ottimale dei tasti del tastierino (--key-dyn) in base allo spazio
-    // realmente disponibile nell'overlay aperto.
+    // L'overlay è ancorato dal CSS (position:fixed; top/left/right:0; height:100dvh
+    // → viewport visibile, non si estende sotto la barra di Safari). NON tocchiamo
+    // MAI la geometria dell'overlay via JS (causa di vecchi bug). Compito UNICO di
+    // questa funzione: calcolare la dimensione ottimale dei tasti (--key-dyn) e i
+    // gap in base allo spazio reale del pad. Viene richiamata in modo sincrono
+    // all'apertura (anti-flash) e da un ResizeObserver sul pad (riempimento sicuro).
 
     // Trova l'overlay attualmente aperto
     var ov = null;
@@ -11529,6 +11553,19 @@ if(document.readyState==='loading'){
       var el = document.getElementById(id);
       if(el) obs.observe(el, {attributes:true, attributeFilter:['class','style']});
     });
+    // ResizeObserver sul pad: ricalcola la dimensione dei tasti OGNI VOLTA che lo
+    // spazio reale del pad cambia (apertura overlay, assestamento safe-area iOS,
+    // rotazione, barra browser). Risolve la misurazione "stale" che impediva al
+    // tastierino di riempire tutta l'altezza in standalone. Il pad è flex:1 (la
+    // sua dimensione NON dipende dai tasti), quindi non si creano loop.
+    if(window.ResizeObserver){
+      var ro = new ResizeObserver(function(){ updateLayout(); });
+      OVERLAY_IDS.forEach(function(id){
+        var ovEl = document.getElementById(id);
+        var padEl2 = ovEl && ovEl.querySelector('.g501-pad');
+        if(padEl2) ro.observe(padEl2);
+      });
+    }
     updateLayout();
   });
   // Esporta per uso esterno (gameOverlayOpen)
