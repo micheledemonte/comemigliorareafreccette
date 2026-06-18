@@ -5428,11 +5428,10 @@ function render501SessionsFor(uid, mode){
   const selectOpts='<option value="">— Seleziona sessione —</option>'+
     sessions.map(([k,v])=>{
       const d = new Date(v.__meta.savedAt).toLocaleDateString('it-IT');
-      // Etichette come per l'utente (loadPrev501Sessions): nome torneo / vs avversario / N legs
+      // Etichette come per l'utente (loadPrev501Sessions): solo data + nome torneo / vs avversario
       if(mode==='tournament'){
         const tn = v.__meta?.tourName ? ' — '+v.__meta.tourName : '';
-        const tl = (v.sets||[]).reduce((a,s)=>a+(s.legs||[]).length,0);
-        return `<option value="${k}">${d}${tn} — ${tl} legs</option>`;
+        return `<option value="${k}">${d}${tn}</option>`;
       }
       if(v.__meta?.withOpponent && v.__meta?.opponentName){
         return `<option value="${k}">${d} — vs ${v.__meta.opponentName}</option>`;
@@ -5530,12 +5529,13 @@ function renderAdmin501Panel(uid){
       }).join('');
     }
 
-    function renderLegRowAdm(l, li, keyBase){
+    function renderLegRowAdm(l, li, keyBase, multiSet){
       const won   = isTour ? l.won : true;
       const darts = l.dartsThrown||l.darts||0;
       const avgVal = isTour ? tourAvg(l) : (l.avgPerRound||l.avg||0);
       const dblStr = `${l.doublesHit||0}/${l.doublesThrown||0}`;
-      const legLabelBase = isTour ? `Set ${l.setNum||1} · Leg ${l.legNum||li+1}` : `Leg ${li+1}`;
+      // Se la sessione ha 1 solo set (multiSet=false), nascondi "Set X": solo "Leg Y".
+      const legLabelBase = isTour ? (multiSet ? `Set ${l.setNum||1} · Leg ${l.legNum||li+1}` : `Leg ${l.legNum||li+1}`) : `Leg ${li+1}`;
       const isCrown = won && (l.rounds||0)<=3 && darts<=9;
       const legColor = isCrown ? '#facc15' : (isTour ? (won ? 'var(--green)' : '#f87171') : 'var(--green)');
       const rowClass = isTour ? (won ? 'tour-leg-row won' : 'tour-leg-row lost') : '';
@@ -5610,12 +5610,12 @@ function renderAdmin501Panel(uid){
             <span style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--mu2);letter-spacing:.06em">SESSIONE ${gi+1}</span>
             <span style="font-size:13px;color:var(--light);font-weight:600">${grp.name}</span>
           </div>
-          ${grpLegs.map((l,li)=>renderLegRowAdm(l, globalOffset+li, s.key+'_g'+gi)).join('')}
+          ${grpLegs.map((l,li)=>renderLegRowAdm(l, globalOffset+li, s.key+'_g'+gi, new Set(grpLegs.map(x=>x.setNum||1)).size>1)).join('')}
           ${grpLegs.length ? renderGroupSummaryAdm(grpLegs) : ''}
         </div>`;
       });
     } else {
-      bodyHtml = legs.map((l,li)=>renderLegRowAdm(l,li,s.key)).join('');
+      bodyHtml = legs.map((l,li)=>renderLegRowAdm(l,li,s.key,new Set(legs.map(x=>x.setNum||1)).size>1)).join('');
     }
 
     const summary = calcTourSessSummary(legs, isTour);
@@ -9670,12 +9670,13 @@ function render501SessPanel(){
 
     // ── Helper: colore punteggio nel pannello turni ──────────────────────────
     // ── Helper: rende una singola riga leg ───────────────────────────────────
-    function renderLegRow(l, li, keyBase){
+    function renderLegRow(l, li, keyBase, multiSet){
       const won   = isTour ? l.won : true;
       const darts = l.dartsThrown||l.darts||0;
       const avgVal = isTour ? tourAvg(l) : (l.avgPerRound||l.avg||0);
       const dblStr = `${l.doublesHit||0}/${l.doublesThrown||0}`;
-      const legLabelBase = isTour ? `Set ${l.setNum||1} · Leg ${l.legNum||li+1}` : `Leg ${li+1}`;
+      // Se la sessione ha 1 solo set (multiSet=false), nascondi "Set X": solo "Leg Y".
+      const legLabelBase = isTour ? (multiSet ? `Set ${l.setNum||1} · Leg ${l.legNum||li+1}` : `Leg ${l.legNum||li+1}`) : `Leg ${li+1}`;
 
       // Corona: leg vinto in ≤3 turni (9 frecce)
       const isCrown = won && (l.rounds||0)<=3 && darts<=9;
@@ -9818,14 +9819,14 @@ function render501SessPanel(){
             <button onclick="saveInnerSessName('${s.key}',${grp.si})" style="background:var(--green);border:none;color:#000;font-family:'DM Sans',sans-serif;font-weight:700;font-size:11px;padding:4px 10px;border-radius:5px;cursor:pointer">SALVA</button>
           </div>
           <!-- Leg rows di questo gruppo -->
-          ${grpFiltered.map((l,li)=>renderLegRow(l, globalOffset+li, s.key+'_g'+gi)).join('')}
+          ${grpFiltered.map((l,li)=>renderLegRow(l, globalOffset+li, s.key+'_g'+gi, new Set(grpFiltered.map(x=>x.setNum||1)).size>1)).join('')}
           <!-- Riepilogo di questo gruppo -->
           ${grpFiltered.length ? renderGroupSummary(grpFiltered) : ''}
         </div>`;
       });
     } else {
       // Sessione singola: mostra tutti i leg direttamente
-      bodyHtml = filteredLegs.map((l,li)=>renderLegRow(l,li,s.key)).join('');
+      bodyHtml = filteredLegs.map((l,li)=>renderLegRow(l,li,s.key,new Set(filteredLegs.map(x=>x.setNum||1)).size>1)).join('');
     }
 
     // ── Riepilogo globale sessione ─────────────────────────────────────────────
