@@ -3448,6 +3448,9 @@ function attachAdminSelUserListener(uid){
         const panel=document.getElementById('admin501Panel_'+uid);
         if(panel) panel.innerHTML='';
       }
+      // Aggiorna in tempo reale anche TUTTI i grafici dell'utente nella vista admin
+      const _sc=document.getElementById('adminStatsContainer');
+      if(_sc) renderStats(uid, {container:_sc, idPrefix:'asc'});
     }
   };
   _fbDB.ref('db/userData/'+uid).on('value', fn);
@@ -5076,18 +5079,23 @@ function g501GroupSummary(groupLegs, isTour){
   </div>`;
 }
 
-function renderStats(uid){
+function renderStats(uid, opts){
   if(!uid) uid=CU?.id;
   if(!uid) return;
+  opts = opts || {};
   _statsUID=uid;
   destroyCharts();
   window._pendingCharts={};
-  const container=document.getElementById('statsContainer');
+  // container e prefisso id parametrizzabili: l'admin riusa questa stessa funzione
+  // (stessi grafici dell'utente) con un container e un prefisso diversi ('asc') per
+  // evitare collisioni di id tra la vista admin e la tab Statistiche dell'utente.
+  const container = opts.container || document.getElementById('statsContainer');
   if(!container) return;
 
   let html='';
   let cid=0;
-  const cid_=()=>'sc'+(cid++);
+  const _pfx = opts.idPrefix || 'sc';
+  const cid_=()=>_pfx+(cid++);
 
   html+=buildChartCard(cid_(),'AROUND THE CLOCK (SINGOLE) — Media frecce per settore',uid,(g,gd)=>extractATC_S(g,gd),'#22c55e','Media frecce');
   html+=buildChartCard(cid_(),'AROUND THE CLOCK (DOPPIE) — Media frecce per settore',uid,(g,gd)=>extractATC_D(g,gd),'#4ade80','Media frecce');
@@ -5176,10 +5184,10 @@ function renderStats(uid){
     window._501chartDataPersist[fid]={days,activeFilter:'media'};
   };
   // 501 — SOLITARIO
-  _add501Chart('chart501solo','501 — SOLITARIO',
+  _add501Chart(_pfx+'501solo','501 — SOLITARIO',
     groupByDay4(Object.entries(data).filter(([k,v])=>sess501Mode(v)==='solo').sort(_byDateAsc), _metr501));
   // 501 — CON AVVERSARIO
-  _add501Chart('chart501opp','501 — CON AVVERSARIO',
+  _add501Chart(_pfx+'501opp','501 — CON AVVERSARIO',
     groupByDay4(Object.entries(data).filter(([k,v])=>sess501Mode(v)==='opponent').sort(_byDateAsc), _metr501));
 
   // 501 MODALITÀ TORNEO
@@ -5203,7 +5211,7 @@ function renderStats(uid){
     return {frecce,media,doppie,pct,doppieHit:totH,doppieThrown:totT};
   });
   if(tourDays4.length){
-    const tid='chart501tour';
+    const tid=_pfx+'501tour';
     html+=build501FilterCard(tid,'501 — MODALITÀ TORNEO',tourDays4);
     window._501chartData=window._501chartData||{};
     window._501chartData[tid]={days:tourDays4,activeFilter:'media'};
@@ -5409,7 +5417,7 @@ function selAdmin(uid){
       </div>
       <div id="admin501Sessions">${render501SessionsFor(selAU.id, 'solo')}</div>
     </div>`;
-  renderStatsInto(document.getElementById('adminStatsContainer'), selAU.id);
+  renderStats(selAU.id, {container:document.getElementById('adminStatsContainer'), idPrefix:'asc'});
   attachAdminSelUserListener(selAU.id);
   const ed=document.getElementById('adminEditUser');
   ed.style.display='block';
@@ -5657,7 +5665,8 @@ function renderAdmin501Compare(uid){
   const header=summaries.map(s=>`<th style="padding:5px 8px;font-size:11px;color:var(--light)">${s.date}</th>`).join('');
   const rows=[
     {label:'Turni',key:'avgRounds'},{label:'Frecce',key:'avgDarts'},
-    {label:'Media',key:'avgPts'},{label:'Doppie',key:'totDbl'},{label:'%',key:'avgPct'}
+    {label:'Media',key:'avgPts'},{label:'Doppie',key:'totDbl'},{label:'%',key:'avgPct'},
+    {label:'100+',key:'hundred'}
   ].map(r=>`<tr><td style="padding:4px 8px;font-size:11px;color:var(--muted)">${r.label}</td>${summaries.map(s=>`<td style="padding:4px 8px;font-size:11px;text-align:center;color:var(--light)">${s[r.key]??'—'}</td>`).join('')}</tr>`).join('');
   return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
     <thead><tr><th style="padding:5px 8px;font-size:11px;color:var(--muted);text-align:left">Dato</th>${header}</tr></thead>
@@ -7864,24 +7873,8 @@ function gsRestoreNotifications(){
   });
 }
 
-// Render stats into a specific container element for a given user
-function renderStatsInto(container, uid){
-  destroyCharts();
-  window._pendingCharts={};
-  let html='', cid=0;
-  const cid_=()=>'asc'+(cid++);
-  html+=buildChartCard(cid_(),'AROUND THE CLOCK (SINGOLE)',uid,(g,gd)=>extractATC_S(g,gd),'#22c55e','Media frecce');
-  html+=buildChartCard(cid_(),'AROUND THE CLOCK (DOPPIE)',uid,(g,gd)=>extractATC_D(g,gd),'#4ade80','Media frecce');
-  html+=buildChartCard(cid_(),'TRIPLO — Media punti/turno',uid,(g,gd)=>extractTriplo(g,gd),'#f59e0b','Media punti');
-  html+=buildChartCard(cid_(),'DOPPIO — Totale punti',uid,(g,gd)=>extractDbl(g,gd),'#a855f7','Totale');
-  html+=buildChartCard(cid_(),"IT'S A RECORD! — Miglior risultato",uid,(g,gd)=>extractRecord(g,gd),'#3b82f6','Record');
-  html+=buildChartCard(cid_(),'201 IN 9 FRECCE — Legs vinti',uid,(g,gd)=>extract201(g,gd),'#06b6d4','Legs vinti');
-  html+=buildChartCard(cid_(),'CHECKOUT — Media frecce',uid,(g,gd)=>extractCO(g,gd),'#f97316','Media frecce');
-  html+=buildChartCard(cid_(),'501 CHIUSURE — Totale',uid,(g,gd)=>extract501(g,gd),'#ec4899','Chiusure');
-  if(!html) html='<p style="color:var(--muted);font-size:13px;padding:12px 0">Nessun dato salvato per questo utente.</p>';
-  container.innerHTML=html;
-  setTimeout(initPendingCharts,50);
-}
+// (renderStatsInto rimossa: l'admin ora riusa renderStats(uid, {container, idPrefix:'asc'})
+//  per mostrare ESATTAMENTE gli stessi grafici dell'utente.)
 
 function confirmToggleBlockUser(){
   if(!selAU||selAU.id===CU.id) return;
