@@ -5428,10 +5428,16 @@ function render501SessionsFor(uid, mode){
   const selectOpts='<option value="">— Seleziona sessione —</option>'+
     sessions.map(([k,v])=>{
       const d = new Date(v.__meta.savedAt).toLocaleDateString('it-IT');
-      const count = mode==='training'
-        ? `${(v.legs||[]).length} legs`
-        : `${(v.sets||[]).flatMap(s=>s.legs||[]).length} legs`;
-      return `<option value="${k}">${d} — ${count}</option>`;
+      // Etichette come per l'utente (loadPrev501Sessions): nome torneo / vs avversario / N legs
+      if(mode==='tournament'){
+        const tn = v.__meta?.tourName ? ' — '+v.__meta.tourName : '';
+        const tl = (v.sets||[]).reduce((a,s)=>a+(s.legs||[]).length,0);
+        return `<option value="${k}">${d}${tn} — ${tl} legs</option>`;
+      }
+      if(v.__meta?.withOpponent && v.__meta?.opponentName){
+        return `<option value="${k}">${d} — vs ${v.__meta.opponentName}</option>`;
+      }
+      return `<option value="${k}">${d} — ${(v.legs||[]).length} legs</option>`;
     }).join('');
 
   // Selezione sessione = mostra subito (come per l'utente: select onchange, niente bottone AGGIUNGI)
@@ -5453,9 +5459,26 @@ function addAdmin501Sess(uid){
   if(arr.find(s=>s.key===key)) return;
   const date=new Date(sess.__meta.savedAt).toLocaleDateString('it-IT');
   if(mode==='training'){
-    const _legs = Array.isArray(sess.legs) ? sess.legs : (sess.legs && typeof sess.legs==='object' ? Object.values(sess.legs) : []);
-    if(!_legs.length) return;
-    arr.push({key,date,legs:_legs,isTournament:false});
+    // Stessa logica dell'utente (showPrev501Sess): le sessioni "con avversario"
+    // vengono trattate come torneo (leg colorati vinto/perso, struttura a set).
+    const _withOpp = sess.__meta?.withOpponent || false;
+    const _oppName = sess.__meta?.opponentName || '';
+    if(_withOpp && sess.sets && sess.sets.length){
+      const _setsOpp=Array.isArray(sess.sets)?sess.sets:(sess.sets&&typeof sess.sets==='object'?Object.values(sess.sets):[]);
+      const allLegs=_setsOpp.flatMap(set=>{const ll=set.legs;return Array.isArray(ll)?ll:(ll&&typeof ll==='object'?Object.values(ll):[]); });
+      arr.push({key,date,legs:allLegs,sets:_setsOpp,isTournament:true,tourName:'',opponentName:_oppName,withOpponent:true});
+    } else if(_withOpp){
+      const _rawLegs = sess.legs;
+      const flatLegs = Array.isArray(_rawLegs) ? _rawLegs : (_rawLegs && typeof _rawLegs==='object' ? Object.values(_rawLegs) : []);
+      const setMap = {};
+      flatLegs.forEach(lg=>{ const sn=lg.setNum||1; if(!setMap[sn]) setMap[sn]=[]; setMap[sn].push(lg); });
+      const syntheticSets = Object.keys(setMap).sort((a,b)=>Number(a)-Number(b)).map((sn,i)=>({sessionName:'Sessione '+(i+1), legs:setMap[sn]}));
+      arr.push({key,date,legs:flatLegs,sets:syntheticSets,isTournament:true,tourName:'',opponentName:_oppName,withOpponent:true});
+    } else {
+      const _legs = Array.isArray(sess.legs) ? sess.legs : (sess.legs && typeof sess.legs==='object' ? Object.values(sess.legs) : []);
+      if(!_legs.length) return;
+      arr.push({key,date,legs:_legs,isTournament:false});
+    }
   } else {
     const _sets = Array.isArray(sess.sets) ? sess.sets : (sess.sets && typeof sess.sets==='object' ? Object.values(sess.sets) : []);
     const allLegs=_sets.flatMap(s=>Array.isArray(s.legs)?s.legs:(s.legs&&typeof s.legs==='object'?Object.values(s.legs):[]));
@@ -5475,7 +5498,7 @@ function renderAdmin501Panel(uid){
   // Costruisce il card di una sessione usando lo stesso stile dell'utente
   function adminSessCard(s, idx){
     const legs = s.legs;
-    const isTour = mode === 'tournament';
+    const isTour = s.isTournament;
 
     function dblPct(l){ return (l.doublesThrown||0)>0 ? Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100) : 0; }
     function tourAvg(l){
@@ -5596,10 +5619,9 @@ function renderAdmin501Panel(uid){
     }
 
     const summary = calcTourSessSummary(legs, isTour);
-    const tourName = s.tourName || (s.sets && s.sets[0] && s.sets[0].sessionName) || '';
     return `<div style="background:var(--d3);border-radius:8px;padding:14px;margin-bottom:10px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--light)">📅 ${s.date}${tourName?' — '+tourName:''} — ${legs.length} legs</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--light)">📅 ${s.date}${s.withOpponent&&s.opponentName?' — vs '+s.opponentName:(s.tourName?' — '+s.tourName:(!s.isTournament?' — '+legs.length+' legs':''))}</div>
         <div style="display:flex;gap:5px;flex-shrink:0">
           <button onclick="_adminSelected501['${uid}']['${mode}'].splice(${idx},1);renderAdmin501Panel('${uid}')" style="background:transparent;border:1px solid var(--d5);color:var(--muted);border-radius:4px;padding:4px 10px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:12px;cursor:pointer">✕ NASCONDI</button>
         </div>
@@ -9831,7 +9853,7 @@ function render501SessPanel(){
     return `<div style="background:var(--d3);border-radius:8px;padding:14px;margin-bottom:10px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px">
         <div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--light)">📅 ${s.date}${s.tourName?' — '+s.tourName:''}${s.withOpponent&&s.opponentName?' — vs '+s.opponentName:(!s.isTournament&&!s.withOpponent?' — '+legs.length+' legs':'')}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--light)">📅 ${s.date}${s.withOpponent&&s.opponentName?' — vs '+s.opponentName:(s.tourName?' — '+s.tourName:(!s.isTournament?' — '+legs.length+' legs':''))}</div>
           ${nameField}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
