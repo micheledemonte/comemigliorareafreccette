@@ -5114,9 +5114,8 @@ function renderStats(uid){
   const trainDays4=groupByDay4(trainSessions, sess=>{
     const legs=toArr(sess.legs);
     if(!legs.length) return {frecce:null,media:null,doppie:null,pct:null,doppieHit:null,doppieThrown:null};
-    // Calcola avg per ogni leg: se ha avgPerRound usalo, altrimenti calcola da darts
+    // Media a 3 frecce per ogni leg (allenamento = leg completato): (501/frecce)*3
     const legAvgs=legs.map(l=>{
-      if(l.avgPerRound && l.avgPerRound>0) return l.avgPerRound;
       const d=l.dartsThrown||l.darts||0;
       return d>0?+((501/d)*3).toFixed(1):0;
     }).filter(n=>n>0);
@@ -9464,8 +9463,8 @@ function show501Results(legs){
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;font-size:13px">
         <div><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
         <div><span style="color:var(--muted)">Frecce: </span>${l.dartsThrown||0}</div>
-        <div><span style="color:var(--muted)">Media: </span>${l.avgPerRound||0}</div>
-        <div><span style="color:var(--muted)">Doppie: </span>${l.doublesThrown||0}/${l.doublesHit||0}</div>
+        <div><span style="color:var(--muted)">Media: </span>${(l.dartsThrown||l.darts||0)>0?+((501/(l.dartsThrown||l.darts))*3).toFixed(1):(l.avgPerRound||0)}</div>
+        <div><span style="color:var(--muted)">Doppie: </span>${l.doublesHit||0}/${l.doublesThrown||0}</div>
         <div><span style="color:var(--muted)">%: </span>${(l.doublesThrown||0)>0?Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100):0}%</div>
       </div>
     </div>`).join('');
@@ -9775,7 +9774,11 @@ function calc501SessSummary(legs){
   return {
     avgRounds: avg(legs,'rounds'),
     avgDarts: avg(legs,'dartsThrown'),
-    avgPts: avg(legs,'avgPerRound'),
+    avgPts: +(legs.reduce((s,l)=>{
+      if(l.won===false) return s+(l.avgPerRound||l.avg||0);
+      const d=l.dartsThrown||l.darts||0;
+      return s+(d>0?(501/d)*3:(l.avgPerRound||0));
+    },0)/n).toFixed(1),
     totDbl: totHitT+'/'+totThrownT,
     avgPct, hundred
   };
