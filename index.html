@@ -994,7 +994,7 @@ html.game-active,body.game-active{overscroll-behavior:none;touch-action:none}
   .leg-data-grid .leg-row3{ display:flex !important; align-items:center; gap:6px; flex-wrap:nowrap; white-space:nowrap; }
 }
 /* Prev501 mode filter */
-#prev501ModeTraining.active,#prev501ModeTournament.active{background:var(--green);color:#000}
+#prev501ModeSolo.active,#prev501ModeOpponent.active,#prev501ModeTournament.active{background:var(--green);color:#000}
 /* Tour compare filter */
 .tour-compare-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 
@@ -1956,7 +1956,8 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       <h3>SESSIONI PRECEDENTI</h3>
       <!-- Mode selector -->
       <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-        <button id="prev501ModeTraining" class="co-filter-btn active" onclick="setPrev501Mode('training')">Allenamento</button>
+        <button id="prev501ModeSolo" class="co-filter-btn active" onclick="setPrev501Mode('solo')">Solitario</button>
+        <button id="prev501ModeOpponent" class="co-filter-btn" onclick="setPrev501Mode('opponent')">Con avversario</button>
         <button id="prev501ModeTournament" class="co-filter-btn" onclick="setPrev501Mode('tournament')">Torneo</button>
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
@@ -3441,7 +3442,7 @@ function attachAdminSelUserListener(uid){
     if(selAU && selAU.id===uid){
       const sessEl = document.getElementById('admin501Sessions');
       if(sessEl){
-        const mode = (_admin501Mode && _admin501Mode[uid]) || 'training';
+        const mode = (_admin501Mode && _admin501Mode[uid]) || 'solo';
         if(_adminSelected501[uid]) _adminSelected501[uid][mode]=[];
         sessEl.innerHTML = render501SessionsFor(uid, mode);
         const panel=document.getElementById('admin501Panel_'+uid);
@@ -5148,35 +5149,38 @@ function renderStats(uid){
       }));
   }
 
-  // 501 MODALITÀ ALLENAMENTO
-  const trainSessions=Object.entries(data).filter(([k,v])=>v?.__meta?.type==='501free')
-    .sort((a,b)=>new Date(a[1].__meta.savedAt)-new Date(b[1].__meta.savedAt));
-  const trainDays4=groupByDay4(trainSessions, sess=>{
+  // 501 — metriche per giorno, riusate per SOLITARIO e CON AVVERSARIO
+  const _metr501 = sess=>{
     const legs=toArr(sess.legs);
     if(!legs.length) return {frecce:null,media:null,doppie:null,pct:null,doppieHit:null,doppieThrown:null};
-    // Media a 3 frecce per ogni leg (allenamento = leg completato): (501/frecce)*3
+    // Media a 3 frecce per ogni leg (leg completato): (501/frecce)*3
     const legAvgs=legs.map(l=>{
       const d=l.dartsThrown||l.darts||0;
       return d>0?+((501/d)*3).toFixed(1):0;
     }).filter(n=>n>0);
-    // FRECCE = media frecce per leg VINTO (non somma totale)
-    const wonLegs=legs.filter(l=>l.won);
+    // FRECCE = media frecce per leg completato/vinto (esclude solo i leg torneo persi)
+    const wonLegs=legs.filter(l=>l.won!==false);
     const frecce=wonLegs.length?+(wonLegs.reduce((s,l)=>s+(l.dartsThrown||l.darts||0),0)/wonLegs.length).toFixed(1):null;
     const media=legAvgs.length?+(legAvgs.reduce((a,b)=>a+b,0)/legAvgs.length).toFixed(1):null;
     const totT=legs.reduce((s,l)=>s+(l.doublesThrown||0),0);
     const totH=legs.reduce((s,l)=>s+(l.doublesHit||0),0);
-    const doppie=totH||null;
-    const pct=totT>0?Math.round(totH/totT*100):null;
-    return {frecce,media,doppie,pct,doppieHit:totH,doppieThrown:totT};
-  });
-  if(trainDays4.length){
-    const fid='chart501train';
-    html+=build501FilterCard(fid,'501 — MODALITÀ ALLENAMENTO',trainDays4);
+    return {frecce,media,doppie:totH||null,pct:totT>0?Math.round(totH/totT*100):null,doppieHit:totH,doppieThrown:totT};
+  };
+  const _byDateAsc=(a,b)=>new Date(a[1].__meta.savedAt)-new Date(b[1].__meta.savedAt);
+  const _add501Chart=(fid,title,days)=>{
+    if(!days.length) return;
+    html+=build501FilterCard(fid,title,days);
     window._501chartData=window._501chartData||{};
-    window._501chartData[fid]={days:trainDays4,activeFilter:'media'};
+    window._501chartData[fid]={days,activeFilter:'media'};
     window._501chartDataPersist=window._501chartDataPersist||{};
-    window._501chartDataPersist[fid]={days:trainDays4,activeFilter:'media'};
-  }
+    window._501chartDataPersist[fid]={days,activeFilter:'media'};
+  };
+  // 501 — SOLITARIO
+  _add501Chart('chart501solo','501 — SOLITARIO',
+    groupByDay4(Object.entries(data).filter(([k,v])=>sess501Mode(v)==='solo').sort(_byDateAsc), _metr501));
+  // 501 — CON AVVERSARIO
+  _add501Chart('chart501opp','501 — CON AVVERSARIO',
+    groupByDay4(Object.entries(data).filter(([k,v])=>sess501Mode(v)==='opponent').sort(_byDateAsc), _metr501));
 
   // 501 MODALITÀ TORNEO
   const tourSessions=Object.entries(data).filter(([k,v])=>v?.__meta?.type==='501tournament')
@@ -5390,19 +5394,20 @@ function selAdmin(uid){
   renderAdmin();
   document.getElementById('astTitle').textContent=`STATISTICHE — ${selAU.firstName.toUpperCase()} ${selAU.lastName.toUpperCase()}`;
   // Reset admin 501 session selections for this user
-  if(!_adminSelected501[selAU.id]) _adminSelected501[selAU.id]={training:[], tournament:[]};
+  if(!_adminSelected501[selAU.id]) _adminSelected501[selAU.id]={solo:[], opponent:[], tournament:[]};
   if(!_admin501Mode) _admin501Mode = {};
-  if(!_admin501Mode[selAU.id]) _admin501Mode[selAU.id] = 'training';
+  if(!_admin501Mode[selAU.id]) _admin501Mode[selAU.id] = 'solo';
   // Render full stats + 501 sessions for this user
   document.getElementById('astContent').innerHTML=`
     <div id="adminStatsContainer" style="margin-top:8px"></div>
     <div style="margin-top:8px">
       <h3 style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--green);letter-spacing:.06em;margin-bottom:10px">SESSIONI 501 — ${selAU.firstName} ${selAU.lastName}</h3>
-      <div style="display:flex;gap:8px;margin-bottom:14px">
-        <button id="admin501ModeTraining_${selAU.id}" onclick="setAdmin501Mode('${selAU.id}','training')" style="flex:1;padding:8px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;cursor:pointer;border:1px solid var(--green);background:var(--green);color:#000">ALLENAMENTO</button>
-        <button id="admin501ModeTournament_${selAU.id}" onclick="setAdmin501Mode('${selAU.id}','tournament')" style="flex:1;padding:8px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;cursor:pointer;border:1px solid var(--d5);background:var(--d3);color:var(--mu2)">TORNEO</button>
+      <div style="display:flex;gap:6px;margin-bottom:14px">
+        <button id="admin501ModeSolo_${selAU.id}" onclick="setAdmin501Mode('${selAU.id}','solo')" style="flex:1;padding:8px 4px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.03em;cursor:pointer;border:1px solid var(--green);background:var(--green);color:#000">SOLITARIO</button>
+        <button id="admin501ModeOpponent_${selAU.id}" onclick="setAdmin501Mode('${selAU.id}','opponent')" style="flex:1;padding:8px 4px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.03em;cursor:pointer;border:1px solid var(--d5);background:var(--d3);color:var(--mu2)">CON AVVERSARIO</button>
+        <button id="admin501ModeTournament_${selAU.id}" onclick="setAdmin501Mode('${selAU.id}','tournament')" style="flex:1;padding:8px 4px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.03em;cursor:pointer;border:1px solid var(--d5);background:var(--d3);color:var(--mu2)">TORNEO</button>
       </div>
-      <div id="admin501Sessions">${render501SessionsFor(selAU.id, 'training')}</div>
+      <div id="admin501Sessions">${render501SessionsFor(selAU.id, 'solo')}</div>
     </div>`;
   renderStatsInto(document.getElementById('adminStatsContainer'), selAU.id);
   attachAdminSelUserListener(selAU.id);
@@ -5453,23 +5458,19 @@ let _admin501Mode = {}; // {uid: 'training'|'tournament'}
 function setAdmin501Mode(uid, mode){
   if(!_admin501Mode) _admin501Mode = {};
   _admin501Mode[uid] = mode;
-  // Aggiorna stile bottoni
-  const tBtn = document.getElementById('admin501ModeTraining_'+uid);
-  const rBtn = document.getElementById('admin501ModeTournament_'+uid);
-  if(tBtn){
-    tBtn.style.background = mode==='training' ? 'var(--green)' : 'var(--d3)';
-    tBtn.style.color      = mode==='training' ? '#000' : 'var(--mu2)';
-    tBtn.style.borderColor= mode==='training' ? 'var(--green)' : 'var(--d5)';
-  }
-  if(rBtn){
-    rBtn.style.background = mode==='tournament' ? 'var(--green)' : 'var(--d3)';
-    rBtn.style.color      = mode==='tournament' ? '#000' : 'var(--mu2)';
-    rBtn.style.borderColor= mode==='tournament' ? 'var(--green)' : 'var(--d5)';
-  }
+  // Aggiorna stile dei 3 bottoni (Solitario / Con avversario / Torneo)
+  [['Solo','solo'],['Opponent','opponent'],['Tournament','tournament']].forEach(function(p){
+    const btn = document.getElementById('admin501Mode'+p[0]+'_'+uid);
+    if(!btn) return;
+    const on = (mode===p[1]);
+    btn.style.background  = on ? 'var(--green)' : 'var(--d3)';
+    btn.style.color       = on ? '#000' : 'var(--mu2)';
+    btn.style.borderColor = on ? 'var(--green)' : 'var(--d5)';
+  });
   // Reset selezioni: come per l'utente (setPrev501Mode azzera _selected501Sessions),
   // azzeriamo le sessioni selezionate di questa modalità al cambio, così la stessa
   // sessione può essere riselezionata dal menu e ricompare subito (fix bug "non appare").
-  if(!_adminSelected501[uid]) _adminSelected501[uid] = {training:[], tournament:[]};
+  if(!_adminSelected501[uid]) _adminSelected501[uid] = {solo:[], opponent:[], tournament:[]};
   _adminSelected501[uid][mode] = [];
   const panel = document.getElementById('admin501Panel_'+uid);
   if(panel) panel.innerHTML = '';
@@ -5479,38 +5480,30 @@ function setAdmin501Mode(uid, mode){
 }
 
 function render501SessionsFor(uid, mode){
-  mode = mode || (_admin501Mode && _admin501Mode[uid]) || 'training';
+  mode = mode || (_admin501Mode && _admin501Mode[uid]) || 'solo';
   const data=getUD(uid);
 
-  let sessions;
-  if(mode === 'training'){
-    sessions = Object.entries(data)
-      .filter(([k,v])=>v?.__meta?.type==='501free')
-      .sort((a,b)=>new Date(b[1].__meta.savedAt)-new Date(a[1].__meta.savedAt))
-      .slice(0,2000);
-  } else {
-    sessions = Object.entries(data)
-      .filter(([k,v])=>v?.__meta?.type==='501tournament')
-      .sort((a,b)=>new Date(b[1].__meta.savedAt)-new Date(a[1].__meta.savedAt))
-      .slice(0,2000);
+  // 3 modi: solo | opponent | tournament. Retention a giorni (prune setUD) → niente cap di conteggio.
+  const sessions = Object.entries(data)
+    .filter(([k,v])=>sess501Mode(v)===mode)
+    .sort((a,b)=>new Date(b[1].__meta.savedAt)-new Date(a[1].__meta.savedAt));
+
+  if(!sessions.length){
+    const _lbl = mode==='tournament'?'torneo':(mode==='opponent'?'con avversario':'solitario');
+    return '<p style="color:var(--muted);font-size:13px;padding:8px 0">Nessuna sessione '+_lbl+' registrata.</p>';
   }
 
-  if(!sessions.length) return '<p style="color:var(--muted);font-size:13px;padding:8px 0">Nessuna sessione '+(mode==='training'?'allenamento':'torneo')+' registrata.</p>';
+  if(!_adminSelected501[uid]) _adminSelected501[uid]={solo:[], opponent:[], tournament:[]};
 
-  if(!_adminSelected501[uid]) _adminSelected501[uid]={training:[], tournament:[]};
-  const modeArr = _adminSelected501[uid][mode] || [];
-
-  const selColor = 'var(--green)';
   const selectOpts='<option value="">— Seleziona sessione —</option>'+
     sessions.map(([k,v])=>{
       const d = new Date(v.__meta.savedAt).toLocaleDateString('it-IT');
-      // Etichette come per l'utente (loadPrev501Sessions): solo data + nome torneo / vs avversario
       if(mode==='tournament'){
         const tn = v.__meta?.tourName ? ' — '+v.__meta.tourName : '';
         return `<option value="${k}">${d}${tn}</option>`;
       }
-      if(v.__meta?.withOpponent && v.__meta?.opponentName){
-        return `<option value="${k}">${d} — vs ${v.__meta.opponentName}</option>`;
+      if(mode==='opponent'){
+        return `<option value="${k}">${d} — vs ${v.__meta?.opponentName||'avversario'}</option>`;
       }
       return `<option value="${k}">${d} — ${(v.legs||[]).length} legs</option>`;
     }).join('');
@@ -5528,14 +5521,14 @@ function addAdmin501Sess(uid){
   const key=sel.value; if(!key) return;
   const data=getUD(uid);
   const sess=data[key]; if(!sess) return;
-  if(!_adminSelected501[uid]) _adminSelected501[uid]={training:[], tournament:[]};
-  const mode = (_admin501Mode && _admin501Mode[uid]) || 'training';
+  if(!_adminSelected501[uid]) _adminSelected501[uid]={solo:[], opponent:[], tournament:[]};
+  const mode = (_admin501Mode && _admin501Mode[uid]) || 'solo';
   const arr = _adminSelected501[uid][mode];
   if(arr.find(s=>s.key===key)) return;
   const date=new Date(sess.__meta.savedAt).toLocaleDateString('it-IT');
-  if(mode==='training'){
-    // Stessa logica dell'utente (showPrev501Sess): le sessioni "con avversario"
-    // vengono trattate come torneo (leg colorati vinto/perso, struttura a set).
+  if(mode!=='tournament'){
+    // solo + opponent: stessa logica dell'utente (showPrev501Sess). Le sessioni "con
+    // avversario" vengono trattate come torneo (leg colorati vinto/perso, struttura a set).
     const _withOpp = sess.__meta?.withOpponent || false;
     const _oppName = sess.__meta?.opponentName || '';
     if(_withOpp && sess.sets && sess.sets.length){
@@ -5565,8 +5558,8 @@ function addAdmin501Sess(uid){
 function renderAdmin501Panel(uid){
   const panel=document.getElementById('admin501Panel_'+uid);
   if(!panel) return;
-  if(!_adminSelected501[uid]) _adminSelected501[uid]={training:[], tournament:[]};
-  const mode = (_admin501Mode && _admin501Mode[uid]) || 'training';
+  if(!_adminSelected501[uid]) _adminSelected501[uid]={solo:[], opponent:[], tournament:[]};
+  const mode = (_admin501Mode && _admin501Mode[uid]) || 'solo';
   const selected=_adminSelected501[uid][mode]||[];
   if(!selected.length){panel.innerHTML='';return;}
 
@@ -5655,8 +5648,8 @@ function toggleAdmin501Compare(uid){
 
 
 function renderAdmin501Compare(uid){
-  const mode = (_admin501Mode && _admin501Mode[uid]) || 'training';
-  if(!_adminSelected501[uid]) _adminSelected501[uid]={training:[], tournament:[]};
+  const mode = (_admin501Mode && _admin501Mode[uid]) || 'solo';
+  if(!_adminSelected501[uid]) _adminSelected501[uid]={solo:[], opponent:[], tournament:[]};
   const selected=_adminSelected501[uid][mode]||[];
   // Come per l'utente: sessioni torneo/avversario → calcTourSessSummary (gestisce darts e media),
   // allenamento → calc501SessSummary. (Prima usava sempre calc501SessSummary → Frecce 0 sul torneo.)
@@ -8791,16 +8784,9 @@ function tourFinalize(){
     // Aggiorna titolo pannello risultati con nome avversario
     const _resTitle = document.querySelector('#free501Results h3');
     if(_resTitle) _resTitle.textContent = 'Risultati — vs '+oppName;
-    const freeKeys = Object.keys(data).filter(k=>k.startsWith('free501_')).sort().reverse();
-    freeKeys.slice(30).forEach(k=>delete data[k]);
     setUD(CU.id, data);
     GT.isTrainingMode=false;
-    _prev501Mode = 'training';
-    var trBtn2=document.getElementById('prev501ModeTraining');
-    var tmBtn2=document.getElementById('prev501ModeTournament');
-    if(trBtn2) trBtn2.classList.add('active');
-    if(tmBtn2) tmBtn2.classList.remove('active');
-    loadPrev501Sessions();
+    setPrev501Mode('opponent');
     setTimeout(function(){
       var sel=document.getElementById('prevSessSelect');
       if(sel&&sel.options.length>1){ sel.selectedIndex=1; sel.dispatchEvent(new Event('change')); }
@@ -8818,17 +8804,8 @@ function tourFinalize(){
               tourName: tourAutoName},
     sets: GT.sets,
   };
-  // Keep only 10 most recent tournament sessions
-  const tourKeys = Object.keys(data).filter(k=>k.startsWith('tour501_'))
-    .sort().reverse();
-  tourKeys.slice(10).forEach(k=>delete data[k]);
   setUD(CU.id, data);
-  _prev501Mode = 'tournament';
-  var tmBtn=document.getElementById('prev501ModeTournament');
-  var trBtn=document.getElementById('prev501ModeTraining');
-  if(tmBtn) tmBtn.classList.add('active');
-  if(trBtn) trBtn.classList.remove('active');
-  loadPrev501Sessions();
+  setPrev501Mode('tournament');
   setTimeout(function(){
     var sel=document.getElementById('prevSessSelect');
     if(sel&&sel.options.length>1){ sel.selectedIndex=1; sel.dispatchEvent(new Event('change')); }
@@ -8938,12 +8915,6 @@ function _doMergeTournamentSessions(tourSessions){
     if(_firebaseOK && _fbDB) _fbDB.ref('db/userData/'+CU.id+'/'+s.key).remove();
   });
 
-  // Keep only 10 most recent tournament sessions
-  const tourKeys = Object.keys(data).filter(k=>k.startsWith('tour501_')).sort().reverse();
-  tourKeys.slice(10).forEach(k=>{
-    if(_firebaseOK && _fbDB) _fbDB.ref('db/userData/'+CU.id+'/'+k).remove();
-    delete data[k];
-  });
 
   setUD(CU.id, data);
 
@@ -9015,12 +8986,6 @@ function _doMergeTrainingSessions(trainSess){
     delete data[s.key];
     if(_firebaseOK && _fbDB) _fbDB.ref('db/userData/'+CU.id+'/'+s.key).remove();
   });
-  // Keep only 10 most recent free501 sessions
-  const freeKeys = Object.keys(data).filter(k=>k.startsWith('free501_')).sort().reverse();
-  freeKeys.slice(10).forEach(k=>{
-    if(_firebaseOK && _fbDB) _fbDB.ref('db/userData/'+CU.id+'/'+k).remove();
-    delete data[k];
-  });
   setUD(CU.id, data);
   _selected501Sessions = [];
   document.getElementById('prev501Content').innerHTML = '';
@@ -9028,12 +8993,13 @@ function _doMergeTrainingSessions(trainSess){
 }
 
 // ══ MODE SELECTOR FOR SESSIONI PRECEDENTI ══
-var _prev501Mode = 'training'; // 'training' | 'tournament'
+var _prev501Mode = 'solo'; // 'solo' | 'opponent' | 'tournament'
 var _tourCompareFilter = 'all'; // 'all' | 'won' | 'lost'
 
 function setPrev501Mode(mode){
   _prev501Mode = mode;
-  document.getElementById('prev501ModeTraining').classList.toggle('active', mode==='training');
+  document.getElementById('prev501ModeSolo').classList.toggle('active', mode==='solo');
+  document.getElementById('prev501ModeOpponent').classList.toggle('active', mode==='opponent');
   document.getElementById('prev501ModeTournament').classList.toggle('active', mode==='tournament');
   // Clear current selections
   _selected501Sessions = [];
@@ -9492,16 +9458,8 @@ function finalizeFree501(){
   // Aggiorna titolo pannello risultati
   const resTitle = document.querySelector('#free501Results h3');
   if(resTitle) resTitle.textContent = 'Risultati ultima sessione 501';
-  // Keep only the 10 most recent free501 sessions to avoid bloating the DB
-  const allKeys=Object.entries(data)
-    .filter(([k,v])=>v?.__meta?.type==='501free')
-    .sort((a,b)=>new Date(b[1].__meta.savedAt)-new Date(a[1].__meta.savedAt));
-  if(allKeys.length>10){
-    // Remove oldest beyond 10
-    allKeys.slice(10).forEach(([k])=>delete data[k]);
-  }
   setUD(CU.id,data);
-  loadPrev501Sessions();
+  setPrev501Mode('solo');
   setTimeout(function(){
     var sel=document.getElementById('prevSessSelect');
     if(sel&&sel.options.length>1){ sel.selectedIndex=1; sel.dispatchEvent(new Event('change')); }
@@ -9524,27 +9482,34 @@ function show501Results(legs){
   document.getElementById('free501Results').style.display='block';
 }
 
+// Classifica una sessione 501 nei 3 modi: 'solo' | 'opponent' | 'tournament' (null se non 501).
+function sess501Mode(v){
+  const t = v && v.__meta && v.__meta.type;
+  if(t==='501tournament') return 'tournament';
+  if(t==='501free') return (v.__meta && v.__meta.withOpponent) ? 'opponent' : 'solo';
+  return null;
+}
+
 function loadPrev501Sessions(){
   if(!CU) return;
   const data=getUD(CU.id);
-  const mode = _prev501Mode||'training';
-  const type = mode==='tournament' ? '501tournament' : '501free';
+  const mode = _prev501Mode||'solo';
+  // Retention puramente a giorni: il prune in setUD elimina i dati oltre 2000 giorni,
+  // quindi qui mostriamo TUTTE le sessioni rimaste di quel modo (niente cap di conteggio).
   const sessions=Object.entries(data)
-    .filter(([k,v])=>v?.__meta?.type===type)
-    .sort((a,b)=>new Date(b[1].__meta.savedAt)-new Date(a[1].__meta.savedAt))
-    .slice(0,2000);
+    .filter(([k,v])=>sess501Mode(v)===mode)
+    .sort((a,b)=>new Date(b[1].__meta.savedAt)-new Date(a[1].__meta.savedAt));
   const sel=document.getElementById('prevSessSelect');
   if(!sel) return;
   sel.innerHTML='<option value="">— Scegli una sessione —</option>'+
     sessions.map(([k,v])=>{
       const d=new Date(v.__meta.savedAt).toLocaleDateString('it-IT');
-      if(type==='501tournament'){
-        const totalLegs=(v.sets||[]).reduce((a,s)=>a+(s.legs||[]).length,0);
+      if(mode==='tournament'){
         const tn = v.__meta.tourName ? ' — '+v.__meta.tourName : '';
         return `<option value="${k}">${d}${tn}</option>`;
       }
-      if(v.__meta?.withOpponent && v.__meta?.opponentName){
-        return `<option value="${k}">${d} — vs ${v.__meta.opponentName}</option>`;
+      if(mode==='opponent'){
+        return `<option value="${k}">${d} — vs ${v.__meta?.opponentName||'avversario'}</option>`;
       }
       return `<option value="${k}">${d} — ${(v.legs||[]).length} legs</option>`;
     }).join('');
