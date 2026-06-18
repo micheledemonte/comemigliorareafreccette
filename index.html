@@ -4982,6 +4982,46 @@ function calcCheckout(leg){
   return null;
 }
 
+function g501LegRow(l, li, keyBase, multiSet, isTour, idPrefix){
+  const won   = isTour ? l.won : true;
+  const darts = l.dartsThrown||l.darts||0;
+  const avgVal = isTour ? tourAvg(l) : (l.avgPerRound||l.avg||0);
+  const dblStr = `${l.doublesHit||0}/${l.doublesThrown||0}`;
+  // Se la sessione ha 1 solo set (multiSet=false), nascondi "Set X": solo "Leg Y".
+  const legLabelBase = isTour ? (multiSet ? `Set ${l.setNum||1} · Leg ${l.legNum||li+1}` : `Leg ${l.legNum||li+1}`) : `Leg ${li+1}`;
+  const isCrown = won && (l.rounds||0)<=3 && darts<=9;
+  const legColor = isCrown ? '#facc15' : (isTour ? (won ? 'var(--green)' : '#f87171') : 'var(--green)');
+  const rowClass = isTour ? (won ? 'tour-leg-row won' : 'tour-leg-row lost') : '';
+  const scores = l.legScores || [];
+  const scoresId = `${idPrefix}${keyBase}_${li}`;
+  const scoresHtml = scores.length
+    ? `<div id="${scoresId}" style="display:none;margin-top:6px;padding:5px 8px;background:var(--d2);border-radius:5px;font-size:11px;white-space:nowrap;overflow-x:auto"><span style="color:var(--muted);margin-right:4px">Turni:</span>${scoreSpans(scores,won,l.legDblTurns||null)}</div>` : '';
+  const toggleBtn = scores.length
+    ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Mostra punti per turno" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;vertical-align:middle">🎯${isCrown?'👑':''}</button>` : '';
+  let col7='<div></div>';
+  if(isTour){
+    if(!won){ const r=calcRimasto(l); if(r!=null) col7=`<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${r}</span></div>`; }
+    else    { const c=calcCheckout(l); if(c!=null) col7=`<div><span style="color:var(--muted)">Checkout: </span><span style="color:var(--green);font-weight:600">${c}</span></div>`; }
+  } else {
+    const c=calcCheckout(l); if(c!=null) col7=`<div><span style="color:var(--muted)">Checkout: </span><span style="color:var(--green);font-weight:600">${c}</span></div>`;
+  }
+  return `<div class="${rowClass}" style="${rowClass?'':'padding:6px 0;border-bottom:1px solid var(--d4)'}">
+    <div class="leg-data-grid" style="display:grid;grid-template-columns:2fr repeat(4,1fr) 0.9fr 1.4fr;gap:4px;font-size:12px;align-items:center">
+      <div class="leg-col-title" style="color:${legColor};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${legLabelBase} ${toggleBtn}</div>
+      <div class="leg-col-turni"><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
+      <div class="leg-col-frecce"><span style="color:var(--muted)">Frecce: </span>${darts}</div>
+      <div class="leg-col-media"><span style="color:var(--muted)">Media: </span>${avgVal}</div>
+      <div class="leg-col-doppie"><span style="color:var(--muted)">Doppie: </span>${dblStr}</div>
+      <div class="leg-col-pct"><span style="color:var(--muted)">%: </span>${dblPct(l)}%</div>
+      <div class="leg-col-extra">${col7}</div>
+      <div class="leg-row1" style="display:none;color:${legColor};font-weight:600">${legLabelBase} ${toggleBtn}</div>
+      <div class="leg-row2" style="display:none;font-size:11px"><span style="color:var(--muted)">Turni:</span> ${l.rounds||0} &nbsp;<span style="color:var(--muted)">Frecce:</span> ${darts} &nbsp;<span style="color:var(--muted)">Media:</span> ${avgVal}</div>
+      <div class="leg-row3" style="display:none;font-size:11px"><span style="color:var(--muted)">Doppie:</span> ${dblStr} &nbsp;<span style="color:var(--muted)">%:</span> ${dblPct(l)}% &nbsp;${col7.replace(/<div>/g,'').replace(/<\/div>/g,'')}</div>
+    </div>
+    ${scoresHtml}
+  </div>`;
+}
+
 function g501GroupSummary(groupLegs, isTour){
   const sum = calcTourSessSummary(groupLegs, isTour);
   return `<div style="padding:6px 10px;background:rgba(255,255,255,.04);border-radius:5px;font-size:11px;display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:3px 6px;margin-top:4px;margin-bottom:8px">
@@ -5496,45 +5536,6 @@ function renderAdmin501Panel(uid){
 
 
 
-    function renderLegRowAdm(l, li, keyBase, multiSet){
-      const won   = isTour ? l.won : true;
-      const darts = l.dartsThrown||l.darts||0;
-      const avgVal = isTour ? tourAvg(l) : (l.avgPerRound||l.avg||0);
-      const dblStr = `${l.doublesHit||0}/${l.doublesThrown||0}`;
-      // Se la sessione ha 1 solo set (multiSet=false), nascondi "Set X": solo "Leg Y".
-      const legLabelBase = isTour ? (multiSet ? `Set ${l.setNum||1} · Leg ${l.legNum||li+1}` : `Leg ${l.legNum||li+1}`) : `Leg ${li+1}`;
-      const isCrown = won && (l.rounds||0)<=3 && darts<=9;
-      const legColor = isCrown ? '#facc15' : (isTour ? (won ? 'var(--green)' : '#f87171') : 'var(--green)');
-      const rowClass = isTour ? (won ? 'tour-leg-row won' : 'tour-leg-row lost') : '';
-      const scores = l.legScores || [];
-      const scoresId = `admlegscores_${uid}_${keyBase}_${li}`;
-      const scoresHtml = scores.length
-        ? `<div id="${scoresId}" style="display:none;margin-top:6px;padding:5px 8px;background:var(--d2);border-radius:5px;font-size:11px;white-space:nowrap;overflow-x:auto"><span style="color:var(--muted);margin-right:4px">Turni:</span>${scoreSpans(scores,won,l.legDblTurns||null)}</div>` : '';
-      const toggleBtn = scores.length
-        ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Mostra punti per turno" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;vertical-align:middle">🎯${isCrown?'👑':''}</button>` : '';
-      let col7='<div></div>';
-      if(isTour){
-        if(!won){ const r=calcRimasto(l); if(r!=null) col7=`<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${r}</span></div>`; }
-        else    { const c=calcCheckout(l); if(c!=null) col7=`<div><span style="color:var(--muted)">Checkout: </span><span style="color:var(--green);font-weight:600">${c}</span></div>`; }
-      } else {
-        const c=calcCheckout(l); if(c!=null) col7=`<div><span style="color:var(--muted)">Checkout: </span><span style="color:var(--green);font-weight:600">${c}</span></div>`;
-      }
-      return `<div class="${rowClass}" style="${rowClass?'':'padding:6px 0;border-bottom:1px solid var(--d4)'}">
-        <div class="leg-data-grid" style="display:grid;grid-template-columns:2fr repeat(4,1fr) 0.9fr 1.4fr;gap:4px;font-size:12px;align-items:center">
-          <div class="leg-col-title" style="color:${legColor};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${legLabelBase} ${toggleBtn}</div>
-          <div class="leg-col-turni"><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
-          <div class="leg-col-frecce"><span style="color:var(--muted)">Frecce: </span>${darts}</div>
-          <div class="leg-col-media"><span style="color:var(--muted)">Media: </span>${avgVal}</div>
-          <div class="leg-col-doppie"><span style="color:var(--muted)">Doppie: </span>${dblStr}</div>
-          <div class="leg-col-pct"><span style="color:var(--muted)">%: </span>${dblPct(l)}%</div>
-          <div class="leg-col-extra">${col7}</div>
-          <div class="leg-row1" style="display:none;color:${legColor};font-weight:600">${legLabelBase} ${toggleBtn}</div>
-          <div class="leg-row2" style="display:none;font-size:11px"><span style="color:var(--muted)">Turni:</span> ${l.rounds||0} &nbsp;<span style="color:var(--muted)">Frecce:</span> ${darts} &nbsp;<span style="color:var(--muted)">Media:</span> ${avgVal}</div>
-          <div class="leg-row3" style="display:none;font-size:11px"><span style="color:var(--muted)">Doppie:</span> ${dblStr} &nbsp;<span style="color:var(--muted)">%:</span> ${dblPct(l)}% &nbsp;${col7.replace(/<div>/g,'').replace(/<\/div>/g,'')}</div>
-        </div>
-        ${scoresHtml}
-      </div>`;
-    }
 
 
     let bodyHtml = '';
@@ -5555,12 +5556,12 @@ function renderAdmin501Panel(uid){
             <span style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--mu2);letter-spacing:.06em">SESSIONE ${gi+1}</span>
             <span style="font-size:13px;color:var(--light);font-weight:600">${grp.name}</span>
           </div>
-          ${grpLegs.map((l,li)=>renderLegRowAdm(l, globalOffset+li, s.key+'_g'+gi, new Set(grpLegs.map(x=>x.setNum||1)).size>1)).join('')}
+          ${grpLegs.map((l,li)=>g501LegRow(l, globalOffset+li, s.key+'_g'+gi, new Set(grpLegs.map(x=>x.setNum||1)).size>1, isTour, 'admlegscores_'+uid+'_')).join('')}
           ${grpLegs.length ? g501GroupSummary(grpLegs, isTour) : ''}
         </div>`;
       });
     } else {
-      bodyHtml = legs.map((l,li)=>renderLegRowAdm(l,li,s.key,new Set(legs.map(x=>x.setNum||1)).size>1)).join('');
+      bodyHtml = legs.map((l,li)=>g501LegRow(l,li,s.key,new Set(legs.map(x=>x.setNum||1)).size>1, isTour, 'admlegscores_'+uid+'_')).join('');
     }
 
     const summary = calcTourSessSummary(legs, isTour);
@@ -9574,63 +9575,6 @@ function render501SessPanel(){
 
     // ── Helper: colore punteggio nel pannello turni ──────────────────────────
     // ── Helper: rende una singola riga leg ───────────────────────────────────
-    function renderLegRow(l, li, keyBase, multiSet){
-      const won   = isTour ? l.won : true;
-      const darts = l.dartsThrown||l.darts||0;
-      const avgVal = isTour ? tourAvg(l) : (l.avgPerRound||l.avg||0);
-      const dblStr = `${l.doublesHit||0}/${l.doublesThrown||0}`;
-      // Se la sessione ha 1 solo set (multiSet=false), nascondi "Set X": solo "Leg Y".
-      const legLabelBase = isTour ? (multiSet ? `Set ${l.setNum||1} · Leg ${l.legNum||li+1}` : `Leg ${l.legNum||li+1}`) : `Leg ${li+1}`;
-
-      // Corona: leg vinto in ≤3 turni (9 frecce)
-      const isCrown = won && (l.rounds||0)<=3 && darts<=9;
-      const legColor = isCrown ? '#facc15' : (isTour ? (won ? 'var(--green)' : '#f87171') : 'var(--green)');
-
-      // Sfondo colorato per leg torneo (classe esistente)
-      const rowClass = isTour ? (won ? 'tour-leg-row won' : 'tour-leg-row lost') : '';
-
-      // Punti per turno — colori background riquadro per doppia
-      const scores  = l.legScores || [];
-      const scoresId = `legscores_${keyBase}_${li}`;
-      // Calcola colori riquadri: grigio prima delle doppie, colorati da quando inizia la fase doppia
-      // Colora i riquadri punteggi:
-      // FUTURI (legDblTurns presente): rosso se doppie tirate > 0 in quel turno
-      // STORICI (fallback): rosso solo se punteggio = 0 (doppie mancate certe)
-      // Ultimo turno leg vinto: verde (o giallo se >100)
-      const scoresHtml = scores.length
-        ? `<div id="${scoresId}" style="display:none;margin-top:6px;padding:5px 8px;background:var(--d2);border-radius:5px;font-size:11px;white-space:nowrap;overflow-x:auto">
-            <span style="color:var(--muted);margin-right:4px">Turni:</span>`
-          + scoreSpans(scores, won, l.legDblTurns||null)
-          + `</div>` : '';
-      const toggleBtn = scores.length
-        ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Mostra punti per turno" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;vertical-align:middle">🎯${isCrown?'👑':''}</button>` : '';
-
-      // Colonna 7: rimasto/checkout torneo; checkout allenamento (retroattivo da legScores)
-      let col7 = '<div></div>';
-      if(isTour){
-        if(!won){ const r=calcRimasto(l); if(r!=null) col7=`<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${r}</span></div>`; }
-        else    { const c=calcCheckout(l); if(c!=null) col7=`<div><span style="color:var(--muted)">Checkout: </span><span style="color:var(--green);font-weight:600">${c}</span></div>`; }
-      } else {
-        const c=calcCheckout(l); if(c!=null) col7=`<div><span style="color:var(--muted)">Checkout: </span><span style="color:var(--green);font-weight:600">${c}</span></div>`;
-      }
-
-      return `<div class="${rowClass}" style="${rowClass?'':'padding:6px 0;border-bottom:1px solid var(--d4)'}">
-        <div class="leg-data-grid" style="display:grid;grid-template-columns:2fr repeat(4,1fr) 0.9fr 1.4fr;gap:4px;font-size:12px;align-items:center">
-          <div class="leg-col-title" style="color:${legColor};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${legLabelBase} ${toggleBtn}</div>
-          <div class="leg-col-turni"><span style="color:var(--muted)">Turni: </span>${l.rounds||0}</div>
-          <div class="leg-col-frecce"><span style="color:var(--muted)">Frecce: </span>${darts}</div>
-          <div class="leg-col-media"><span style="color:var(--muted)">Media: </span>${avgVal}</div>
-          <div class="leg-col-doppie"><span style="color:var(--muted)">Doppie: </span>${dblStr}</div>
-          <div class="leg-col-pct"><span style="color:var(--muted)">%: </span>${dblPct(l)}%</div>
-          <div class="leg-col-extra">${col7}</div>
-          <!-- Righe mobile (visibili solo su <600px via CSS) -->
-          <div class="leg-row1" style="display:none;color:${legColor};font-weight:600">${legLabelBase} ${toggleBtn}</div>
-          <div class="leg-row2" style="display:none;font-size:11px"><span style="color:var(--muted)">Turni:</span> ${l.rounds||0} &nbsp;<span style="color:var(--muted)">Frecce:</span> ${darts} &nbsp;<span style="color:var(--muted)">Media:</span> ${avgVal}</div>
-          <div class="leg-row3" style="display:none;font-size:11px"><span style="color:var(--muted)">Doppie:</span> ${dblStr} &nbsp;<span style="color:var(--muted)">%:</span> ${dblPct(l)}% &nbsp;${col7.replace(/<div>/g,'').replace(/<\/div>/g,'')}</div>
-        </div>
-        ${scoresHtml}
-      </div>`;
-    }
 
     // ── Helper: riepilogo per un gruppo di leg ────────────────────────────────
 
@@ -9678,14 +9622,14 @@ function render501SessPanel(){
             <button onclick="saveInnerSessName('${s.key}',${grp.si})" style="background:var(--green);border:none;color:#000;font-family:'DM Sans',sans-serif;font-weight:700;font-size:11px;padding:4px 10px;border-radius:5px;cursor:pointer">SALVA</button>
           </div>
           <!-- Leg rows di questo gruppo -->
-          ${grpFiltered.map((l,li)=>renderLegRow(l, globalOffset+li, s.key+'_g'+gi, new Set(grpFiltered.map(x=>x.setNum||1)).size>1)).join('')}
+          ${grpFiltered.map((l,li)=>g501LegRow(l, globalOffset+li, s.key+'_g'+gi, new Set(grpFiltered.map(x=>x.setNum||1)).size>1, isTour, 'legscores_')).join('')}
           <!-- Riepilogo di questo gruppo -->
           ${grpFiltered.length ? g501GroupSummary(grpFiltered, isTour) : ''}
         </div>`;
       });
     } else {
       // Sessione singola: mostra tutti i leg direttamente
-      bodyHtml = filteredLegs.map((l,li)=>renderLegRow(l,li,s.key,new Set(filteredLegs.map(x=>x.setNum||1)).size>1)).join('');
+      bodyHtml = filteredLegs.map((l,li)=>g501LegRow(l,li,s.key,new Set(filteredLegs.map(x=>x.setNum||1)).size>1, isTour, 'legscores_')).join('');
     }
 
     // ── Riepilogo globale sessione ─────────────────────────────────────────────
