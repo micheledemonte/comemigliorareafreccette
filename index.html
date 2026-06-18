@@ -3411,6 +3411,46 @@ function stopDBListeners(){
     _fbDB.ref('db/users').off('value', _dbUsersListener);
     _dbUsersListener = null;
   }
+  detachAdminSelUserListener();
+}
+
+// Listener real-time sui dati dell'utente SELEZIONATO dall'admin: unioni/modifiche fatte
+// dall'utente si riflettono subito nella vista admin (lista sessioni 501) senza refresh.
+function detachAdminSelUserListener(){
+  if(_dbAdminSelUserListener && _fbDB){
+    try{ _fbDB.ref('db/userData/'+_dbAdminSelUserListener.uid).off('value', _dbAdminSelUserListener.fn); }catch(e){}
+  }
+  _dbAdminSelUserListener = null;
+}
+function attachAdminSelUserListener(uid){
+  detachAdminSelUserListener();
+  if(!_firebaseOK || !_fbDB || !uid) return;
+  // Sui propri dati il listener principale (userData/CU.id) è già attivo.
+  if(CU && uid===CU.id) return;
+  let first = true;
+  const fn = snap=>{
+    if(!_dbCache) return;
+    if(!_dbCache.userData) _dbCache.userData={};
+    const val = snap.val();
+    const existing = _dbCache.userData[uid] || {};
+    const devices = (existing && existing.__devices) || (val && val.__devices);
+    _dbCache.userData[uid] = (val && typeof val==='object') ? val : {};
+    if(devices) _dbCache.userData[uid].__devices = devices;
+    if(first){ first=false; return; } // primo snapshot: già renderizzato da selAdmin
+    // Aggiorna la lista sessioni 501 admin se questo utente è ancora selezionato
+    if(selAU && selAU.id===uid){
+      const sessEl = document.getElementById('admin501Sessions');
+      if(sessEl){
+        const mode = (_admin501Mode && _admin501Mode[uid]) || 'training';
+        if(_adminSelected501[uid]) _adminSelected501[uid][mode]=[];
+        sessEl.innerHTML = render501SessionsFor(uid, mode);
+        const panel=document.getElementById('admin501Panel_'+uid);
+        if(panel) panel.innerHTML='';
+      }
+    }
+  };
+  _fbDB.ref('db/userData/'+uid).on('value', fn);
+  _dbAdminSelUserListener = {uid, fn};
 }
 
 function autoLoadNextSession(){
@@ -5365,6 +5405,7 @@ function selAdmin(uid){
       <div id="admin501Sessions">${render501SessionsFor(selAU.id, 'training')}</div>
     </div>`;
   renderStatsInto(document.getElementById('adminStatsContainer'), selAU.id);
+  attachAdminSelUserListener(selAU.id);
   const ed=document.getElementById('adminEditUser');
   ed.style.display='block';
   document.getElementById('aeTitle').textContent=`MODIFICA — ${selAU.firstName.toUpperCase()} ${selAU.lastName.toUpperCase()}`;
@@ -6347,9 +6388,13 @@ function userExportICS(btn){
     +'T'+pad(dEnd.getHours())+pad(dEnd.getMinutes())+'00';
   const uid    = 'cmaf-'+dt.replace(/[^0-9]/g,'')+'-'+Math.random().toString(36).slice(2,8);
   const CRLF   = '\r\n';
+  // DTSTAMP (UTC) è obbligatorio per RFC 5545: senza, Google Calendar Android rifiuta
+  // l'evento ("Impossibile avviare evento").
+  const _now    = new Date();
+  const dtstamp = _now.getUTCFullYear()+pad(_now.getUTCMonth()+1)+pad(_now.getUTCDate())+'T'+pad(_now.getUTCHours())+pad(_now.getUTCMinutes())+pad(_now.getUTCSeconds())+'Z';
   const ics = [
-    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//CMAF//Freccette//IT',
-    'BEGIN:VEVENT','UID:'+uid,'DTSTART:'+dtStr,'DTEND:'+dtEnd,
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//CMAF//Freccette//IT','CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    'BEGIN:VEVENT','UID:'+uid,'DTSTAMP:'+dtstamp,'DTSTART:'+dtStr,'DTEND:'+dtEnd,
     'SUMMARY:'+title.replace(/,/g,'\\,'),
     'DESCRIPTION:Lezione freccette - Centro Darts Lab',
     'BEGIN:VALARM','TRIGGER:-PT60M','ACTION:DISPLAY','DESCRIPTION:Promemoria lezione tra 1 ora','END:VALARM',
@@ -6416,6 +6461,7 @@ let _reqSearchUid = null;      // uid filtro ricerca | null = tutti
 let _reqListener  = null;   // Firebase .on listener
 let _dbUserDataListener = null; // listener real-time su userData/uid
 let _dbUsersListener    = null; // listener real-time su users (admin)
+let _dbAdminSelUserListener = null; // listener real-time sull'utente selezionato dall'admin
 let _reqTyping    = {};     // { reqId: { adminId: timestamp } } — chi sta rispondendo
 let _reqTypingListener = null; // listener Firebase per typing
 let _reqCache     = {};     // reqId → oggetto request (aggiornato live)
@@ -7682,13 +7728,18 @@ function calExportICS(btn){
     +'T'+pad(dEnd.getHours())+pad(dEnd.getMinutes())+'00';
   const uid    = 'cmaf-'+dt.replace(/[^0-9]/g,'')+'-'+Math.random().toString(36).slice(2,8);
   const CRLF   = '\r\n';
+  const _now    = new Date();
+  const dtstamp = _now.getUTCFullYear()+pad(_now.getUTCMonth()+1)+pad(_now.getUTCDate())+'T'+pad(_now.getUTCHours())+pad(_now.getUTCMinutes())+pad(_now.getUTCSeconds())+'Z';
 
   const ics = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//CMAF//Freccette//IT',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
     'BEGIN:VEVENT',
     'UID:'+uid,
+    'DTSTAMP:'+dtstamp,
     'DTSTART:'+dtStr,
     'DTEND:'+dtEnd,
     'SUMMARY:'+title.replace(/,/g,'\\,'),
