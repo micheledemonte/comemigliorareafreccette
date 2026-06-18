@@ -4982,6 +4982,18 @@ function calcCheckout(leg){
   return null;
 }
 
+function g501GroupSummary(groupLegs, isTour){
+  const sum = calcTourSessSummary(groupLegs, isTour);
+  return `<div style="padding:6px 10px;background:rgba(255,255,255,.04);border-radius:5px;font-size:11px;display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:3px 6px;margin-top:4px;margin-bottom:8px">
+    <div><span style="color:var(--muted)">Turni avg: </span>${sum.avgRounds}</div>
+    <div><span style="color:var(--muted)">Frecce avg: </span>${sum.avgDarts}</div>
+    <div><span style="color:var(--muted)">Media avg: </span>${sum.avgPts}</div>
+    <div><span style="color:var(--muted)">Doppie tot: </span>${sum.totDbl}</div>
+    <div><span style="color:var(--muted)">%: </span>${sum.avgPct}%</div>
+    <div><span style="color:var(--muted)">100+: </span><span style="color:var(--green);font-weight:600">${sum.hundred||0}</span></div>
+  </div>`;
+}
+
 function renderStats(uid){
   if(!uid) uid=CU?.id;
   if(!uid) return;
@@ -5524,17 +5536,6 @@ function renderAdmin501Panel(uid){
       </div>`;
     }
 
-    function renderGroupSummaryAdm(groupLegs){
-      const sum = calcTourSessSummary(groupLegs, isTour);
-      return `<div style="padding:6px 10px;background:rgba(255,255,255,.04);border-radius:5px;font-size:11px;display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:3px 6px;margin-top:4px;margin-bottom:8px">
-        <div><span style="color:var(--muted)">Turni avg: </span>${sum.avgRounds}</div>
-        <div><span style="color:var(--muted)">Frecce avg: </span>${sum.avgDarts}</div>
-        <div><span style="color:var(--muted)">Media avg: </span>${sum.avgPts}</div>
-        <div><span style="color:var(--muted)">Doppie tot: </span>${sum.totDbl}</div>
-        <div><span style="color:var(--muted)">%: </span>${sum.avgPct}%</div>
-        <div><span style="color:var(--muted)">100+: </span><span style="color:var(--green);font-weight:600">${sum.hundred||0}</span></div>
-      </div>`;
-    }
 
     let bodyHtml = '';
     if(isTour && s.sets && s.sets.length > 1){
@@ -5555,7 +5556,7 @@ function renderAdmin501Panel(uid){
             <span style="font-size:13px;color:var(--light);font-weight:600">${grp.name}</span>
           </div>
           ${grpLegs.map((l,li)=>renderLegRowAdm(l, globalOffset+li, s.key+'_g'+gi, new Set(grpLegs.map(x=>x.setNum||1)).size>1)).join('')}
-          ${grpLegs.length ? renderGroupSummaryAdm(grpLegs) : ''}
+          ${grpLegs.length ? g501GroupSummary(grpLegs, isTour) : ''}
         </div>`;
       });
     } else {
@@ -9632,17 +9633,6 @@ function render501SessPanel(){
     }
 
     // ── Helper: riepilogo per un gruppo di leg ────────────────────────────────
-    function renderGroupSummary(groupLegs){
-      const sum = calcTourSessSummary(groupLegs, isTour);
-      return `<div style="padding:6px 10px;background:rgba(255,255,255,.04);border-radius:5px;font-size:11px;display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:3px 6px;margin-top:4px;margin-bottom:8px">
-        <div><span style="color:var(--muted)">Turni avg: </span>${sum.avgRounds}</div>
-        <div><span style="color:var(--muted)">Frecce avg: </span>${sum.avgDarts}</div>
-        <div><span style="color:var(--muted)">Media avg: </span>${sum.avgPts}</div>
-        <div><span style="color:var(--muted)">Doppie tot: </span>${sum.totDbl}</div>
-        <div><span style="color:var(--muted)">%: </span>${sum.avgPct}%</div>
-        <div><span style="color:var(--muted)">100+: </span><span style="color:var(--green);font-weight:600">${sum.hundred||0}</span></div>
-      </div>`;
-    }
 
     // ── Costruisce il corpo principale ────────────────────────────────────────
     let bodyHtml = '';
@@ -9690,7 +9680,7 @@ function render501SessPanel(){
           <!-- Leg rows di questo gruppo -->
           ${grpFiltered.map((l,li)=>renderLegRow(l, globalOffset+li, s.key+'_g'+gi, new Set(grpFiltered.map(x=>x.setNum||1)).size>1)).join('')}
           <!-- Riepilogo di questo gruppo -->
-          ${grpFiltered.length ? renderGroupSummary(grpFiltered) : ''}
+          ${grpFiltered.length ? g501GroupSummary(grpFiltered, isTour) : ''}
         </div>`;
       });
     } else {
