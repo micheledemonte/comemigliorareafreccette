@@ -4985,7 +4985,8 @@ function calcCheckout(leg){
 function g501LegRow(l, li, keyBase, multiSet, isTour, idPrefix){
   const won   = isTour ? l.won : true;
   const darts = l.dartsThrown||l.darts||0;
-  const avgVal = isTour ? tourAvg(l) : (l.avgPerRound||l.avg||0);
+  // Media a 3 frecce: allenamento (leg sempre completato) → (501/frecce)*3, come il torneo vinto.
+  const avgVal = isTour ? tourAvg(l) : (darts>0 ? +((501/darts)*3).toFixed(1) : (l.avgPerRound||l.avg||0));
   const dblStr = `${l.doublesHit||0}/${l.doublesThrown||0}`;
   // Se la sessione ha 1 solo set (multiSet=false), nascondi "Set X": solo "Leg Y".
   const legLabelBase = isTour ? (multiSet ? `Set ${l.setNum||1} · Leg ${l.legNum||li+1}` : `Leg ${l.legNum||li+1}`) : `Leg ${li+1}`;
@@ -9799,7 +9800,9 @@ function calcTourSessSummary(legs, isTour){
       const d=l.darts||l.dartsThrown||0;
       return d>0?+((501/d)*3):0;
     }
-    return l.avgPerRound||0;
+    // Allenamento: leg sempre completato → media a 3 frecce (non più per turno)
+    const d=l.darts||l.dartsThrown||0;
+    return d>0?+((501/d)*3):(l.avgPerRound||0);
   });
   const avgPts = +(perLegAvg.reduce((a,v)=>a+v,0)/n).toFixed(1);
   // Doppie tot: colpite_tot / tirate_tot
