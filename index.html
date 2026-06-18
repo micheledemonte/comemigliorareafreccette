@@ -5617,12 +5617,14 @@ function renderAdmin501Compare(uid){
   const mode = (_admin501Mode && _admin501Mode[uid]) || 'training';
   if(!_adminSelected501[uid]) _adminSelected501[uid]={training:[], tournament:[]};
   const selected=_adminSelected501[uid][mode]||[];
-  const summaries=selected.map(s=>({date:s.date,...calc501SessSummary(s.legs)}));
+  // Come per l'utente: sessioni torneo/avversario → calcTourSessSummary (gestisce darts e media),
+  // allenamento → calc501SessSummary. (Prima usava sempre calc501SessSummary → Frecce 0 sul torneo.)
+  const summaries=selected.map(s=>({date:s.date,...(s.isTournament?calcTourSessSummary(s.legs,true):calc501SessSummary(s.legs))}));
   const header=summaries.map(s=>`<th style="padding:5px 8px;font-size:11px;color:var(--light)">${s.date}</th>`).join('');
   const rows=[
     {label:'Turni',key:'avgRounds'},{label:'Frecce',key:'avgDarts'},
-    {label:'Media',key:'avgPts'},{label:'Doppie',key:'avgDbl'},{label:'%',key:'avgPct'}
-  ].map(r=>`<tr><td style="padding:4px 8px;font-size:11px;color:var(--muted)">${r.label}</td>${summaries.map(s=>`<td style="padding:4px 8px;font-size:11px;text-align:center;color:var(--light)">${s[r.key]}</td>`).join('')}</tr>`).join('');
+    {label:'Media',key:'avgPts'},{label:'Doppie',key:'totDbl'},{label:'%',key:'avgPct'}
+  ].map(r=>`<tr><td style="padding:4px 8px;font-size:11px;color:var(--muted)">${r.label}</td>${summaries.map(s=>`<td style="padding:4px 8px;font-size:11px;text-align:center;color:var(--light)">${s[r.key]??'—'}</td>`).join('')}</tr>`).join('');
   return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
     <thead><tr><th style="padding:5px 8px;font-size:11px;color:var(--muted);text-align:left">Dato</th>${header}</tr></thead>
     <tbody>${rows}</tbody></table></div>`;
@@ -9773,7 +9775,7 @@ function calc501SessSummary(legs){
   const hundred = legs.reduce((s,l)=>s+(l.legScores||[]).filter(v=>v>=100).length,0);
   return {
     avgRounds: avg(legs,'rounds'),
-    avgDarts: avg(legs,'dartsThrown'),
+    avgDarts: +(legs.reduce((s,l)=>s+(l.dartsThrown||l.darts||0),0)/n).toFixed(1),
     avgPts: +(legs.reduce((s,l)=>{
       if(l.won===false) return s+(l.avgPerRound||l.avg||0);
       const d=l.dartsThrown||l.darts||0;
