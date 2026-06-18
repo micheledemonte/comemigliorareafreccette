@@ -2852,9 +2852,7 @@ function setUD(uid,d){
   saveDBToCloud();
 }
 
-function showSetupModal(){ document.getElementById('setupModal').style.display='flex'; }
 function hideSetupModal(){ document.getElementById('setupModal').style.display='none'; }
-function initUsers(){ /* no-op */ }
 
 async function bootApp(){
   // Check if URL contains a Firebase action code (e.g. password reset link)
@@ -2924,7 +2922,6 @@ async function completePasswordReset(){
   }
 }
 
-function initApp(){ /* no-op */ }
 
 // ══════════════════════════════════════════════════
 // AUTH
@@ -3156,40 +3153,8 @@ function checkAndRegisterDevice(uid){
 }
 
 // ── Admin: aggiunge un dispositivo dalla richiesta nel dettaglio messaggio ────
-function adminAddDeviceFromRequest(uid, fp, name){
-  const devs  = getDevices(uid);
-  const count = Object.keys(devs).length;
-  const user  = getUsers().find(u=>u.id===uid);
-  const uName = user ? user.firstName+' '+user.lastName : uid;
-  if(devs[fp]){
-    showConfirmPopup('Già registrato','Questo dispositivo è già nella lista di '+uName+'.',null,{okLabel:'OK',okBg:'var(--green)',okColor:'#000'});
-    return;
-  }
-  if(count >= MAX_DEVICES){
-    showConfirmPopup('Limite raggiunto',uName+' ha già '+MAX_DEVICES+' dispositivi. Rimuovine uno prima di aggiungerne un altro.',null,{okLabel:'OK',okBg:'#dc2626',okColor:'#fff'});
-    return;
-  }
-  devs[fp]={name:name||'Dispositivo sconosciuto',firstSeen:Date.now(),lastSeen:Date.now()};
-  saveDevices(uid,devs);
-  showConfirmPopup('Dispositivo aggiunto','Il dispositivo è stato aggiunto. '+uName+' avrà accesso normale al prossimo login.',null,{okLabel:'OK',okBg:'var(--green)',okColor:'#000'});
-  reqCloseDetail();
-}
 
 // Admin: rimuove un dispositivo dalla lista di un utente
-function adminRemoveDevice(uid, fp){
-  showConfirmPopup(
-    'Rimuovi dispositivo',
-    'Vuoi rimuovere questo dispositivo dalla lista? Al prossimo accesso da quel dispositivo conterà come nuovo.',
-    ()=>{
-      const devs = getDevices(uid);
-      delete devs[fp];
-      saveDevices(uid, devs);
-      const el = document.getElementById('aeDevicesPanel');
-      if(el) el.innerHTML = renderDeviceList(uid);
-    },
-    {okLabel:'RIMUOVI', okBg:'#dc2626', okColor:'#fff'}
-  );
-}
 
 // Admin: rimuove tutti i dispositivi di un utente (reset completo)
 function adminResetDevices(uid){
@@ -4861,12 +4826,6 @@ function extractFin41(g,gd){
   const vals=Object.values(gd).map(v=>parseFloat(v)).filter(n=>!isNaN(n)&&n>=1);
   return vals.length?+(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):null;
 }
-function extractFin41Comp(g,gd){
-  if(g.t!=='fin41') return null;
-  // Count of completed variants (value >=1)
-  const comp=Object.values(gd).filter(v=>parseFloat(v)>=1).length;
-  return comp>0?comp:null;
-}
 function extractPressure(g,gd){
   if(g.t!=='pressure') return null;
   const vals=Object.values(gd).map(v=>parseFloat(v)).filter(n=>!isNaN(n)&&n>=0);
@@ -5020,24 +4979,6 @@ function renderStats(uid){
   const data=getUD(uid);
 
   // Helper: group sessions by date, return [{label, avg, pct}]
-  function groupByDay(sessions, avgFn, pctFn){
-    const byDate={};
-    for(const [,sess] of sessions){
-      const d=new Date(sess.__meta.savedAt);
-      const dk=d.toLocaleDateString('it-IT');
-      if(!byDate[dk]) byDate[dk]={avgs:[],pcts:[],d};
-      const a=avgFn(sess); if(a!==null) byDate[dk].avgs.push(a);
-      const p=pctFn(sess); if(p!==null) byDate[dk].pcts.push(p);
-    }
-    return Object.entries(byDate)
-      .sort((a,b)=>a[1].d-b[1].d)
-      .map(([dk,{avgs,pcts}])=>({
-        label:dk,
-        avg:avgs.length?+(avgs.reduce((a,b)=>a+b,0)/avgs.length).toFixed(1):null,
-        pct:pcts.length?+(pcts.reduce((a,b)=>a+b,0)/pcts.length).toFixed(1):null
-      }))
-      .filter(p=>p.avg!==null);
-  }
 
   // ── helpers per calcoli per giorno con 4 metriche ──
   // Helper: normalizza array da Firebase (può arrivare come oggetto {0:...,1:...})
@@ -5666,28 +5607,6 @@ function toggleAdmin501Compare(uid){
   }
 }
 
-function deleteAdmin501Sess(uid, key){
-  showConfirmPopup(
-    'Elimina sessione',
-    'Vuoi eliminare definitivamente questa sessione di gioco? I dati non potranno essere recuperati.',
-    ()=>{
-      const data=getUD(uid);
-      delete data[key];
-      setUD(uid,data);
-      // Elimina direttamente su Firebase (setUD/saveDBToCloud non cancella campi)
-      if(_firebaseOK && _fbDB){
-        _fbDB.ref('db/userData/'+uid+'/'+key).remove();
-      }
-      if(_adminSelected501[uid]){
-        const mode = (_admin501Mode && _admin501Mode[uid]) || 'training';
-        const arr = _adminSelected501[uid][mode] || [];
-        const idx=arr.findIndex(s=>s.key===key);
-        if(idx>=0) arr.splice(idx,1);
-      }
-      renderAdmin501Panel(uid);
-    }
-  );
-}
 
 function renderAdmin501Compare(uid){
   const mode = (_admin501Mode && _admin501Mode[uid]) || 'training';
@@ -7853,19 +7772,6 @@ function gsScheduleNotifications(uid, idx, dt, note, studentUser){
 }
 
 // ── Elimina tutte le richieste (admin only, uso una-tantum) ─────────────────
-async function reqDeleteAllRequests(){
-  if(!CU || CU.role!=='admin') return;
-  if(!_firebaseOK || !_fbDB) return;
-  try {
-    await _fbDB.ref('db/requests').remove();
-    _reqCache = {};
-    reqRenderList();
-    reqUpdateDot();
-    console.log('✓ Tutte le richieste eliminate da Firebase');
-  } catch(e){
-    console.error('Errore eliminazione richieste:', e);
-  }
-}
 
 // ── Persistenza stato "SALVATO" pillola ICS ─────────────────────────────────
 function calSaveIcsSaved(){
@@ -10583,17 +10489,7 @@ function atUpdateTimeline(view){
   if(time) time.textContent=atFmtTime(vid.currentTime);
 }
 
-function atDrawCurrentFrame(view){
-  const vid    = document.getElementById('atVideo'+cap(view));
-  const canvas = document.getElementById('atCanvas'+cap(view));
-  const ctx    = canvas.getContext('2d');
-  canvas.width  = vid.videoWidth  || canvas.width;
-  canvas.height = vid.videoHeight || canvas.height;
-  ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
-  if(AT.poses[view]) atDrawPose(view, AT.poses[view]);
-}
 
-function atPlayPause(view){ atMainBtn(view); }
 
 // ══════════════════════
 // REPORT: Punti di Forza / Punti Deboli
@@ -10860,29 +10756,12 @@ function atQualitativeReport(ang){
   return {strengths, weaknesses};
 }
 
-function atComputeAndShowResults(){
-  // No-op during analysis: report built at end
-}
 
 function atUpdateResultsBox(){
   if(!AT.poses.front&&!AT.poses.side)
     document.getElementById('atResultsBox').classList.remove('show');
 }
 
-function atSaveSnapshot(view){
-  // During playback user can take a snapshot of the current annotated frame
-  if(!AT.annotFrames[view].length) return;
-  const url = AT.annotFrames[view][AT.playIdx[view]];
-  const snaps = AT.snapshots[view];
-  if(snaps.length>=8) snaps.shift();
-  snaps.push({url,view});
-  const strip=document.getElementById('atSnapshots'+cap(view));
-  strip.innerHTML=snaps.map((s,i)=>
-    `<img class="at-snapshot ${i===snaps.length-1?'sel':''}" src="${s.url}" onclick="atSelectSnapshot('${view}',${i})">`).join('');
-  AT.allSnapshots.push({url,view});
-  const all=document.getElementById('atAllSnapshots');
-  if(all) all.innerHTML=AT.allSnapshots.slice(-12).map(s=>`<img class="at-snapshot" src="${s.url}">`).join('');
-}
 
 function atSelectSnapshot(view,idx){
   const canvas=document.getElementById('atCanvas'+cap(view));
@@ -11143,95 +11022,6 @@ function atAngleClass(key, val){
 
 // ── Compute angles & show results ──
 // ── Technical report generator ──
-function atGenerateReport(ang){
-  const items = [];
-
-  // Elbow
-  if(ang.elbow !== null){
-    const v=ang.elbow;
-    if(v>=85&&v<=105){
-      items.push({icon:'✅',title:'Angolo di gomito ottimale',text:`${Math.round(v)}° — ottima piega del gomito che favorisce una spinta lineare e potente verso il bersaglio. Continua così.`});
-    } else if(v<75){
-      items.push({icon:'⚠️',title:'Gomito troppo chiuso',text:`${Math.round(v)}° — il gomito è eccessivamente piegato. Questo riduce la lunghezza della spinta e limita la precisione. Prova ad aprire leggermente il gomito in fase di preparazione.`});
-    } else if(v>115){
-      items.push({icon:'⚠️',title:'Gomito troppo aperto',text:`${Math.round(v)}° — il braccio è quasi disteso prima del lancio. Perdi potenza ed è più difficile controllare la traiettoria. Piega maggiormente il gomito nella fase di caricamento.`});
-    } else {
-      items.push({icon:'👍',title:'Angolo di gomito buono',text:`${Math.round(v)}° — nella norma, ma può essere affinato verso il range 85–105° per massimizzare la linearità della spinta.`});
-    }
-  }
-
-  // Wrist
-  if(ang.wristFlex !== null){
-    const v=ang.wristFlex;
-    if(v>=160&&v<=180){
-      items.push({icon:'✅',title:'Polso in posizione ideale',text:`${Math.round(v)}° — il polso è ben esteso nella fase di rilascio. Questo garantisce una freccetta stabile e una traiettoria prevedibile.`});
-    } else if(v<145){
-      items.push({icon:'🔴',title:'Polso troppo flesso',text:`${Math.round(v)}° — il polso è eccessivamente piegato a fine lancio. Questo crea variabilità nella direzione e spesso porta a lanci troppo alti o troppo bassi. Esercitati a estendere il polso completamente verso il bersaglio nel finale del gesto.`});
-    } else {
-      items.push({icon:'⚠️',title:'Polso migliorabile',text:`${Math.round(v)}° — il polso è quasi corretto ma non completamente esteso. Lavora sulla finitura del gesto per portarlo a 160° o più.`});
-    }
-  }
-
-  // Shoulder elevation
-  if(ang.shoulder !== null){
-    const v=ang.shoulder;
-    if(v>=30&&v<=60){
-      items.push({icon:'✅',title:'Elevazione di spalla corretta',text:`${Math.round(v)}° — la spalla è all'altezza giusta. Questo ti permette di mirare in modo naturale senza dover compensare con la testa o il busto.`});
-    } else if(v<20){
-      items.push({icon:'⚠️',title:'Spalla troppo bassa',text:`${Math.round(v)}° — il braccio è tenuto troppo basso. Rischi di colpire il bordo inferiore del bersaglio e di affaticare il polso nel tentativo di alzare la freccetta. Alza leggermente il punto di mira.`});
-    } else {
-      items.push({icon:'⚠️',title:'Spalla troppo alta',text:`${Math.round(v)}° — il braccio è alzato oltre il necessario. Questo crea tensione muscolare e riduce la stabilità del gesto. Abbassa il punto di mira e rilassa le spalle.`});
-    }
-  }
-
-  // Body lean
-  if(ang.bodyLean !== null){
-    const v=ang.bodyLean;
-    if(v>=5&&v<=20){
-      items.push({icon:'✅',title:'Inclinazione del busto corretta',text:`${Math.round(v)}° — l'inclinazione in avanti è naturale e funzionale. Ti avvicina al bersaglio senza sbilanciare il centro di gravità.`});
-    } else if(v>30){
-      items.push({icon:'⚠️',title:'Busto troppo inclinato',text:`${Math.round(v)}° — ti sporgi eccessivamente in avanti. Questo può causare instabilità nella postura e affaticamento. Cerca di stare più eretto mantenendo una leggera inclinazione.`});
-    } else if(v<5){
-      items.push({icon:'💡',title:'Busto quasi verticale',text:`${Math.round(v)}° — il busto è molto eretto. Una lieve inclinazione in avanti (5–15°) aiuta a mantenere l'occhio allineato con la freccetta e il bersaglio.`});
-    }
-  }
-
-  // Shoulder alignment (front view)
-  if(ang.shoulderH !== null){
-    const v=ang.shoulderH;
-    if(v<=10){
-      items.push({icon:'✅',title:'Spalle allineate orizzontalmente',text:`Differenza di ${Math.round(v)}° — ottima simmetria. Le spalle non ruotano, il che è ideale per la stabilità del tiro.`});
-    } else if(v>18){
-      items.push({icon:'⚠️',title:'Rotazione delle spalle',text:`${Math.round(v)}° di dislivello tra le spalle. Una leggera rotazione è normale, ma eccessiva può portare a lanci instabili. Prova a tenere la spalla opposta leggermente più bassa e ferma.`});
-    }
-  }
-
-  // Forearm vertical
-  if(ang.forearmV !== null){
-    const v=ang.forearmV;
-    if(v>=70&&v<=90){
-      items.push({icon:'✅',title:'Avambraccio verticale ottimale',text:`${Math.round(v)}° — l'avambraccio è quasi perfettamente verticale nella fase di caricamento. Questa posizione massimizza la precisione della spinta.`});
-    } else if(v<55){
-      items.push({icon:'⚠️',title:'Avambraccio troppo orizzontale',text:`${Math.round(v)}° — l'avambraccio è troppo basso nella fase di preparazione. Questo limita la lunghezza utile del gesto di spinta. Porta il gomito più in alto.`});
-    }
-  }
-
-  // Hip alignment
-  if(ang.hipAlign !== null){
-    const v=ang.hipAlign;
-    if(v<=15){
-      items.push({icon:'✅',title:'Fianchi in posizione stabile',text:`${Math.round(v)}° — i fianchi sono praticamente orizzontali, segno di una base stabile e bilanciata.`});
-    } else if(v>25){
-      items.push({icon:'💡',title:'Sbilanciamento dei fianchi',text:`${Math.round(v)}° — un certo dislivello dei fianchi può indicare distribuzione del peso non uniforme. Lavora sulla stabilità della base d'appoggio.`});
-    }
-  }
-
-  if(!items.length){
-    items.push({icon:'🔍',title:'Analisi insufficiente',text:'Carica un video con buona illuminazione e inquadratura completa del corpo per ottenere il resoconto tecnico.'});
-  }
-
-  return items;
-}
 
 // ── Drag & drop ──
 function atDragOver(e, view){ e.preventDefault(); document.getElementById('atDrop'+cap(view)).classList.add('drag'); }
@@ -11494,7 +11284,6 @@ if(document.readyState==='loading'){
   var OVERLAY_IDS = ['g501overlay','g201overlay','pgOverlay'];
   var PAD_IDS     = ['g501pad'];
 
-  function getOverlays(){ return OVERLAY_IDS.map(function(id){ return document.getElementById(id); }).filter(Boolean); }
 
   window._gameUpdateLayout = null; // sarà assegnata sotto
   function updateLayout(){
