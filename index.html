@@ -4940,6 +4940,48 @@ function build501FilterCard(id, title, days){
   </div>`;
 }
 
+/* ─── Helper condivisi per il rendering delle sessioni 501 (utente + admin) ───
+   Erano duplicati identici dentro sessCard e adminSessCard; ora una sola copia. */
+function dblPct(l){ return (l.doublesThrown||0)>0 ? Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100) : 0; }
+function tourAvg(l){
+  if(!l.won) return l.avgPerRound||l.avg||0;
+  const d = l.darts||l.dartsThrown||0;
+  return d>0 ? +((501/d)*3).toFixed(1) : 0;
+}
+function scoreSpans(scores, won, dblTurns){
+  const n = scores.length;
+  if(!n) return '';
+  const hasFuture = dblTurns && dblTurns.length === n;
+  return scores.map((v, i) => {
+    const isLast = (i === n - 1);
+    const inDbl = hasFuture ? (dblTurns[i] !== 0) : (v === 0);
+    let bg, textColor;
+    if(isLast && won){
+      bg = v > 100 ? 'rgba(250,204,21,.25)' : 'rgba(34,197,94,.22)';
+      textColor = v > 100 ? '#facc15' : 'var(--green)';
+    } else if(inDbl){
+      bg = 'rgba(239,68,68,.22)';
+      textColor = v===0 ? 'rgba(248,113,113,.5)' : '#f87171';
+    } else {
+      const isSpecial = v===180||v===177||v===174||v===171||v===170;
+      bg = 'var(--d3)';
+      textColor = isSpecial ? '#facc15' : v===0 ? 'var(--muted)' : v>=100 ? 'var(--green)' : 'var(--light)';
+    }
+    return `<span style="display:inline-block;min-width:26px;text-align:center;margin:0 2px;padding:1px 4px;border-radius:4px;background:${bg};color:${textColor}">${v}</span>`;
+  }).join('');
+}
+function calcRimasto(leg){
+  if(leg.remainingScore!=null && leg.remainingScore > 0) return leg.remainingScore;
+  const sc=leg.legScores||[]; if(!sc.length) return null;
+  const r=501-sc.reduce((a,b)=>a+b,0); return (r>0&&r<501)?r:null;
+}
+function calcCheckout(leg){
+  if(leg.checkoutScore > 0) return leg.checkoutScore;
+  const sc=leg.legScores||[];
+  for(let i=sc.length-1;i>=0;i--){ if(sc[i]>0) return sc[i]; }
+  return null;
+}
+
 function renderStats(uid){
   if(!uid) uid=CU?.id;
   if(!uid) return;
@@ -5440,35 +5482,7 @@ function renderAdmin501Panel(uid){
     const legs = s.legs;
     const isTour = s.isTournament;
 
-    function dblPct(l){ return (l.doublesThrown||0)>0 ? Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100) : 0; }
-    function tourAvg(l){
-      if(!l.won) return l.avgPerRound||l.avg||0;
-      const d = l.darts||l.dartsThrown||0;
-      return d>0 ? +((501/d)*3).toFixed(1) : 0;
-    }
 
-    function scoreSpans(scores, won, dblTurns){
-      const n = scores.length;
-      if(!n) return '';
-      const hasFuture = dblTurns && dblTurns.length === n;
-      return scores.map((v, i) => {
-        const isLast = (i === n - 1);
-        const inDbl = hasFuture ? (dblTurns[i] !== 0) : (v === 0);
-        let bg, textColor;
-        if(isLast && won){
-          bg = v > 100 ? 'rgba(250,204,21,.25)' : 'rgba(34,197,94,.22)';
-          textColor = v > 100 ? '#facc15' : 'var(--green)';
-        } else if(inDbl){
-          bg = 'rgba(239,68,68,.22)';
-          textColor = v===0 ? 'rgba(248,113,113,.5)' : '#f87171';
-        } else {
-          const isSpecial = v===180||v===177||v===174||v===171||v===170;
-          bg = 'var(--d3)';
-          textColor = isSpecial ? '#facc15' : v===0 ? 'var(--muted)' : v>=100 ? 'var(--green)' : 'var(--light)';
-        }
-        return `<span style="display:inline-block;min-width:26px;text-align:center;margin:0 2px;padding:1px 4px;border-radius:4px;background:${bg};color:${textColor}">${v}</span>`;
-      }).join('');
-    }
 
     function renderLegRowAdm(l, li, keyBase, multiSet){
       const won   = isTour ? l.won : true;
@@ -5486,17 +5500,6 @@ function renderAdmin501Panel(uid){
         ? `<div id="${scoresId}" style="display:none;margin-top:6px;padding:5px 8px;background:var(--d2);border-radius:5px;font-size:11px;white-space:nowrap;overflow-x:auto"><span style="color:var(--muted);margin-right:4px">Turni:</span>${scoreSpans(scores,won,l.legDblTurns||null)}</div>` : '';
       const toggleBtn = scores.length
         ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Mostra punti per turno" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;vertical-align:middle">🎯${isCrown?'👑':''}</button>` : '';
-      function calcRimasto(leg){
-        if(leg.remainingScore!=null&&leg.remainingScore>0) return leg.remainingScore;
-        const sc=leg.legScores||[]; if(!sc.length) return null;
-        const r=501-sc.reduce((a,b)=>a+b,0); return (r>0&&r<501)?r:null;
-      }
-      function calcCheckout(leg){
-        if(leg.checkoutScore>0) return leg.checkoutScore;
-        const sc=leg.legScores||[];
-        for(let i=sc.length-1;i>=0;i--){ if(sc[i]>0) return sc[i]; }
-        return null;
-      }
       let col7='<div></div>';
       if(isTour){
         if(!won){ const r=calcRimasto(l); if(r!=null) col7=`<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${r}</span></div>`; }
@@ -9567,12 +9570,6 @@ function render501SessPanel(){
     const legs  = s.legs;
     const isTour = s.isTournament;
 
-    function dblPct(l){ return (l.doublesThrown||0)>0 ? Math.round((l.doublesHit||0)/(l.doublesThrown||1)*100) : 0; }
-    function tourAvg(l){
-      if(!l.won) return l.avgPerRound||l.avg||0;
-      const d = l.darts||l.dartsThrown||0;
-      return d>0 ? +((501/d)*3).toFixed(1) : 0;
-    }
 
     // ── Helper: colore punteggio nel pannello turni ──────────────────────────
     // ── Helper: rende una singola riga leg ───────────────────────────────────
@@ -9599,29 +9596,6 @@ function render501SessPanel(){
       // FUTURI (legDblTurns presente): rosso se doppie tirate > 0 in quel turno
       // STORICI (fallback): rosso solo se punteggio = 0 (doppie mancate certe)
       // Ultimo turno leg vinto: verde (o giallo se >100)
-      function scoreSpans(scores, won, dblTurns){
-        const n = scores.length;
-        if(!n) return '';
-        const hasFuture = dblTurns && dblTurns.length === n;
-        return scores.map((v, i) => {
-          const isLast = (i === n - 1);
-          // inDbl: true se doppie tirate (>0) o bust (-1); false se normale (0) o dati storici non-zero
-          const inDbl = hasFuture ? (dblTurns[i] !== 0) : (v === 0);
-          let bg, textColor;
-          if(isLast && won){
-            bg = v > 100 ? 'rgba(250,204,21,.25)' : 'rgba(34,197,94,.22)';
-            textColor = v > 100 ? '#facc15' : 'var(--green)';
-          } else if(inDbl){
-            bg = 'rgba(239,68,68,.22)';
-            textColor = v===0 ? 'rgba(248,113,113,.5)' : '#f87171';
-          } else {
-            const isSpecial = v===180||v===177||v===174||v===171||v===170;
-            bg = 'var(--d3)';
-            textColor = isSpecial ? '#facc15' : v===0 ? 'var(--muted)' : v>=100 ? 'var(--green)' : 'var(--light)';
-          }
-          return `<span style="display:inline-block;min-width:26px;text-align:center;margin:0 2px;padding:1px 4px;border-radius:4px;background:${bg};color:${textColor}">${v}</span>`;
-        }).join('');
-      }
       const scoresHtml = scores.length
         ? `<div id="${scoresId}" style="display:none;margin-top:6px;padding:5px 8px;background:var(--d2);border-radius:5px;font-size:11px;white-space:nowrap;overflow-x:auto">
             <span style="color:var(--muted);margin-right:4px">Turni:</span>`
@@ -9631,17 +9605,6 @@ function render501SessPanel(){
         ? `<button onclick="var el=document.getElementById('${scoresId}');el.style.display=el.style.display==='none'?'block':'none'" title="Mostra punti per turno" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;vertical-align:middle">🎯${isCrown?'👑':''}</button>` : '';
 
       // Colonna 7: rimasto/checkout torneo; checkout allenamento (retroattivo da legScores)
-      function calcRimasto(leg){
-        if(leg.remainingScore!=null && leg.remainingScore > 0) return leg.remainingScore;
-        const sc=leg.legScores||[]; if(!sc.length) return null;
-        const r=501-sc.reduce((a,b)=>a+b,0); return (r>0&&r<501)?r:null;
-      }
-      function calcCheckout(leg){
-        if(leg.checkoutScore > 0) return leg.checkoutScore;
-        const sc=leg.legScores||[];
-        for(let i=sc.length-1;i>=0;i--){ if(sc[i]>0) return sc[i]; }
-        return null;
-      }
       let col7 = '<div></div>';
       if(isTour){
         if(!won){ const r=calcRimasto(l); if(r!=null) col7=`<div><span style="color:var(--muted)">Rimasto: </span><span style="color:#f87171;font-weight:600">${r}</span></div>`; }
@@ -10763,12 +10726,6 @@ function atUpdateResultsBox(){
 }
 
 
-function atSelectSnapshot(view,idx){
-  const canvas=document.getElementById('atCanvas'+cap(view));
-  const img=new Image();
-  img.onload=()=>{canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;canvas.getContext('2d').drawImage(img,0,0);};
-  img.src=AT.snapshots[view][idx].url;
-}
 
 // ── Draw skeleton + overlays on canvas ──
 // lm = MediaPipe poseLandmarks (normalized 0–1 coords)
