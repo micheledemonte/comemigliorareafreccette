@@ -203,7 +203,7 @@ body.in-app #landing{display:none}
 .l-section-sub{font-size:14px;color:var(--mu2);text-align:center;max-width:540px;margin:0 auto 56px;line-height:1.85}
 
 /* ─── FAQ ─── */
-.l-faq-section{padding:96px 24px;background:var(--d2);border-top:1px solid var(--d4)}
+.l-faq-section{padding:96px 24px;background:var(--dark);border-top:1px solid var(--d4)}
 .l-faq-inner{max-width:700px;margin:0 auto}
 .l-faq-list{display:flex;flex-direction:column;gap:0;margin-top:8px}
 .l-faq-item{border-bottom:1px solid var(--d4)}
@@ -217,7 +217,7 @@ body.in-app #landing{display:none}
 .l-faq-item.open .l-faq-a{max-height:360px;opacity:1;padding-bottom:24px}
 
 /* ─── BOTTOM CTA ─── */
-.l-bot{padding:96px 24px 80px;text-align:center;background:#000;border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
+.l-bot{padding:96px 24px 80px;text-align:center;background:var(--d2);border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
 .l-bot-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:clamp(28px,7vw,52px);color:var(--light);margin-bottom:20px;letter-spacing:-.02em;line-height:1.05}
 .l-bot p{font-size:15px;color:var(--muted);max-width:520px;margin:0 auto 40px;line-height:1.9}
 .l-foot{padding:24px 24px;text-align:center;font-size:12px;color:var(--muted);border-top:1px solid var(--d4)}
@@ -1395,19 +1395,43 @@ body.in-app #lProgress{display:none}
 .l-step:not(.active) .l-step-label{color:var(--muted)}
 .l-step-connector{display:none}
 .l-step-line{justify-content:flex-start}
-/* journey pinnata: blocca lo scroll finché non arrivi all'ultimo passo */
-.l-jwrap{position:relative;height:320vh}
-@media(max-width:600px){.l-jwrap{height:300vh}}
+/* journey pinnata: rail neon verticale + un passo alla volta (pallino sincronizzato) */
+.l-jwrap{position:relative;height:300vh;background:var(--d2);
+  border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
+@media(max-width:600px){.l-jwrap{height:280vh}}
 .l-jw-sticky{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;
-  display:flex;flex-direction:column;align-items:center;padding:46px 24px 30px}
+  display:flex;flex-direction:column;align-items:center;padding:46px 22px 34px}
 .l-jw-sticky .l-journey-title{margin-bottom:8px}
-.l-jw-sticky .l-journey-sub{margin-bottom:18px}
-.l-jviewport{position:relative;width:100%;max-width:620px;flex:1;overflow:hidden;
-  -webkit-mask-image:linear-gradient(to bottom,transparent,#000 9%,#000 90%,transparent);
-  mask-image:linear-gradient(to bottom,transparent,#000 9%,#000 90%,transparent)}
-.l-jviewport .l-journey-steps{position:relative;padding:8px 0;will-change:transform}
-.l-step{transition:opacity .45s}
-.l-step:not(.active){opacity:.5}
+.l-jw-sticky .l-journey-sub{margin-bottom:8px}
+.l-jstage{position:relative;flex:1;min-height:0;width:100%;max-width:660px;margin:0 auto;
+  display:flex;align-items:stretch;gap:22px;padding:18px 6px}
+.l-jrail2{position:relative;width:58px;flex-shrink:0}
+.l-jrail2-line{position:absolute;top:26px;bottom:26px;left:50%;transform:translateX(-50%);
+  width:2px;border-radius:2px;background:linear-gradient(to bottom,var(--d4),var(--d3))}
+.l-jrail2-fill{position:absolute;top:26px;left:50%;transform:translateX(-50%);width:3px;height:0;
+  border-radius:3px;background:linear-gradient(to bottom,#86efac,#22c55e);
+  box-shadow:0 0 14px 2px #22c55eaa,0 0 32px 5px #22c55e4d}
+.l-jmarks{position:absolute;top:26px;bottom:26px;left:50%;transform:translateX(-50%);width:0;z-index:1}
+.l-jmark{position:absolute;left:50%;transform:translate(-50%,-50%);width:11px;height:11px;border-radius:50%;
+  background:var(--d4);border:1px solid var(--d5);transition:background .4s,border-color .4s,box-shadow .4s,transform .4s}
+.l-jmark.passed{background:var(--green);border-color:#86efac;box-shadow:0 0 9px #22c55eaa}
+.l-jmark.active{transform:translate(-50%,-50%) scale(1.25)}
+.l-jcomet{position:absolute;left:50%;top:26px;transform:translate(-50%,-50%);
+  width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;
+  background:var(--gdim);border:2px solid var(--green);
+  box-shadow:0 0 16px 4px #22c55e,0 0 34px 9px #22c55e66;z-index:3}
+.l-jpanels{position:relative;flex:1;min-width:0;align-self:stretch;overflow:hidden}
+.l-jp-ic{display:none}
+.l-jpanel{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
+  opacity:0;transition:opacity .5s,transform .5s;pointer-events:none;will-change:transform,opacity}
+.l-jp-label{font-size:12px;text-transform:uppercase;letter-spacing:.16em;color:var(--green);margin-bottom:7px}
+.l-jp-head{font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,4.4vw,30px);color:var(--light);letter-spacing:.04em;margin-bottom:12px;line-height:1.05}
+.l-jp-text{font-size:14px;color:var(--mu2);line-height:1.85}
+@media(min-width:721px){
+  .l-jstage{gap:34px;max-width:720px}
+  .l-jrail2{width:64px}
+  .l-jp-text{font-size:15px}
+}
 
 /* ── CAROUSEL: coverflow 3D ── */
 .l-carousel-outer{overflow:visible!important;perspective:1500px;cursor:grab}
@@ -1416,6 +1440,13 @@ body.in-app #lProgress{display:none}
 .l-card{position:absolute!important;top:50%;left:50%;margin:0!important;flex:none!important;
   width:min(82vw,360px);backface-visibility:hidden;will-change:transform,opacity;
   transition:transform .6s cubic-bezier(.2,.7,.2,1),opacity .6s cubic-bezier(.2,.7,.2,1),border-color .3s,box-shadow .3s}
+@media(min-width:721px){
+  .l-card{width:540px;min-height:720px;padding:56px 40px 50px}  /* +50% width e height su desktop */
+  .l-card .l-card-icon img{width:200px!important;height:200px!important}
+  .l-card-title{font-size:30px}
+  .l-card-desc{font-size:15px}
+  .l-card-num{font-size:16px;margin-bottom:30px}
+}
 .l-card.active-card{box-shadow:0 18px 60px #00000066,0 0 40px #22c55e22;border-color:#22c55e}
 .l-dot.on{box-shadow:0 0 12px #22c55e99}
 /* carosello pinnato: lo scroll guida i riquadri fino all'ultimo */
@@ -1434,7 +1465,7 @@ body.in-app #lProgress{display:none}
 .l-manifesto-divider.in{width:64px}
 
 /* ── MANIFESTO X (ex chi siamo): tante animazioni ── */
-.l-manifesto-x{position:relative;overflow:hidden;background:var(--d2);
+.l-manifesto-x{position:relative;overflow:hidden;background:var(--dark);
   border-top:1px solid var(--d4);border-bottom:1px solid var(--d4)}
 .l-manifesto-glow{position:absolute;inset:0;pointer-events:none;z-index:0;
   background:
@@ -1442,10 +1473,6 @@ body.in-app #lProgress{display:none}
     radial-gradient(ellipse 40% 30% at 75% 70%,#16a34a1f,transparent 70%);
   animation:mGlow 7s ease-in-out infinite}
 @keyframes mGlow{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.14)}}
-.l-mq-mark{position:absolute;top:-18px;left:50%;transform:translateX(-50%);z-index:0;pointer-events:none;
-  font-family:'Bebas Neue',serif;font-size:clamp(160px,30vw,300px);line-height:1;color:#22c55e;
-  opacity:.06;animation:mMarkFloat 9s ease-in-out infinite}
-@keyframes mMarkFloat{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(14px)}}
 .l-manifesto-x .l-manifesto-inner{position:relative;z-index:1}
 .l-manifesto-x .l-manifesto-quote{opacity:1}
 .l-manifesto-x .mq-line{display:block;overflow:hidden;padding-bottom:.05em}
@@ -1456,11 +1483,11 @@ body.in-app #lProgress{display:none}
 .l-manifesto-x .mq-line:nth-child(2)>span{transition-delay:.18s}
 .l-manifesto-x .mq-line:nth-child(3)>span{transition-delay:.31s}
 .l-manifesto-x .mq-line:nth-child(4)>span{transition-delay:.44s}
-.l-manifesto-x .l-manifesto-quote em{color:var(--green);font-style:normal;
-  animation:mEmPulse 2.8s ease-in-out infinite}
-@keyframes mEmPulse{0%,100%{text-shadow:0 0 14px #22c55e55}50%{text-shadow:0 0 30px #22c55ecc,0 0 50px #22c55e66}}
+.l-manifesto-x .l-manifesto-quote em{color:var(--green);font-style:normal}
 .l-manifesto-x .l-manifesto-divider{height:3px;background:linear-gradient(90deg,#16a34a,#22c55e,#86efac);
   box-shadow:0 0 16px #22c55e88;opacity:1}
+.l-mq-numbers{margin-top:50px}
+@media(max-width:600px){.l-mq-numbers{margin-top:36px}}
 
 /* ── PROBLEMA: circolo vizioso pinnato ── */
 .l-problem-grid{display:none}
@@ -1471,13 +1498,15 @@ body.in-app #lProgress{display:none}
 .l-circle{position:relative;width:min(80vw,420px);aspect-ratio:1/1}
 @media(min-width:721px){.l-circle{width:min(840px,86vw,calc(92vh - 200px))}}
 .l-circle-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.vc-ring-base{fill:none;stroke:#3a1414;stroke-width:2;vector-effect:non-scaling-stroke}
-.vc-ring-prog{fill:none;stroke:#ef4444;stroke-width:3;stroke-linecap:round;vector-effect:non-scaling-stroke;
+.vc-ring-base{display:none}  /* niente anello di base: la linea la traccia solo il pallino */
+.vc-ring-prog{fill:none;stroke:#ff3b3b;stroke-width:2;stroke-linecap:round;vector-effect:non-scaling-stroke;
   stroke-dasharray:251.327;stroke-dashoffset:251.327;
-  filter:drop-shadow(0 0 3px #ef4444) drop-shadow(0 0 7px #ef4444) drop-shadow(0 0 14px #ef4444aa)}
-.vc-dot{fill:#fff5f5;stroke:#ef4444;stroke-width:.5;
-  filter:drop-shadow(0 0 4px #ef4444) drop-shadow(0 0 9px #ef4444) drop-shadow(0 0 18px #ef4444cc) drop-shadow(0 0 26px #ef444488)}
-@media(min-width:721px){.vc-dot{r:1.6}}
+  filter:drop-shadow(0 0 1.5px #ff5252) drop-shadow(0 0 3px #ef4444) drop-shadow(0 0 7px #ef4444)}
+/* pallino: elemento HTML a dimensione fissa piccola (uguale su desktop e mobile), rosso neon */
+.vc-dot2{position:absolute;left:50%;top:10%;width:16px;height:16px;border-radius:50%;
+  transform:translate(-50%,-50%);pointer-events:none;z-index:3;
+  background:radial-gradient(circle at 50% 42%,#ffd0d0 0%,#ff4040 45%,#e01b1b 100%);
+  box-shadow:0 0 5px 1px #ff5252,0 0 12px 3px #ef4444,0 0 22px 6px #ef444488}
 .l-vhub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;
   font-family:'Bebas Neue',sans-serif;letter-spacing:.12em;line-height:1.02;color:#ef4444;
   font-size:clamp(20px,5.4vw,34px);opacity:.9;text-shadow:0 0 16px #ef444455;pointer-events:none}
@@ -1502,15 +1531,22 @@ body.in-app #lProgress{display:none}
 .l-vdetail.active{opacity:1;transform:none}
 .vd-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;color:#fca5a5;margin-bottom:8px}
 .vd-text{font-size:13px;color:var(--mu2);line-height:1.7;max-width:480px;margin:0 auto}
+.l-vcenter{display:none}
 @media(min-width:721px){
   .l-vicious-stage{max-width:900px;gap:26px}
-  .l-vnode{width:30%;max-width:190px}
+  .l-vnode{width:24%;max-width:180px}
   .l-vnode .vn-ic{width:62px;height:62px;font-size:29px}
   .l-vnode .vn-t{font-size:14px}
-  .l-vhub{font-size:clamp(34px,3.6vw,58px)}
-  .l-vdetails{min-height:130px}
-  .vd-title{font-size:19px}
-  .vd-text{font-size:15px;max-width:560px}
+  /* su desktop: dettaglio dentro il cerchio, niente hub né testo sotto */
+  .l-vhub{display:none}
+  .l-vdetails{display:none}
+  .l-vcenter{display:block;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:48%;max-width:330px;text-align:center}
+  .l-vcenter .l-vdetail{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
+    text-align:center;opacity:0;transform:translateY(12px);transition:opacity .4s,transform .4s;pointer-events:none}
+  .l-vcenter .l-vdetail.active{opacity:1;transform:none}
+  .l-vcenter .vd-title{font-size:19px}
+  .l-vcenter .vd-text{font-size:14px;max-width:none}
 }
 
 /* ── SOLUZIONE: righe feature alternate ── */
@@ -1552,11 +1588,13 @@ body.in-app #lProgress{display:none}
 /* righe soluzione: bordo flow su sfondo d3, niente barretta laterale */
 .l-sol-row.flow-border{--fb-bg:var(--d3)}
 .l-sol-row.flow-border::before{display:none}
+/* senso alternato: dispari orario, pari antiorario (soluzione + accesso) */
+.flow-border:nth-child(even){animation-direction:reverse}
 
 /* ── prefers-reduced-motion ── */
 @media (prefers-reduced-motion:reduce){
   [data-reveal]{opacity:1!important;transform:none!important;filter:none!important;transition:none!important}
-  .l-aurora,.l-cta::after,.l-logo img,.l-manifesto-glow,.l-mq-mark,.l-manifesto-x .l-manifesto-quote em,
+  .l-aurora,.l-cta::after,.l-logo img,.l-manifesto-glow,
   .l-head .lh-line>span,.l-sub,.l-scroll-hint,.flow-border{animation:none!important}
   .l-head .lh-line>span,.l-manifesto-x .mq-line>span{transform:none!important}
   .l-manifesto-x .mq-line>span{transition:none!important}
@@ -1587,28 +1625,6 @@ body.in-app #lProgress{display:none}
     <div class="l-scroll-hint">↓ &nbsp; Scopri di più &nbsp; ↓</div>
   </div>
 
-  <!-- NUMERI -->
-  <div class="l-numbers">
-    <div class="l-numbers-grid">
-      <div class="l-num-item" data-reveal="zoom">
-        <div class="l-num-val" data-count="40">0</div>
-        <div class="l-num-label">Sessioni di allenamento<br>progressivo</div>
-      </div>
-      <div class="l-num-item" data-reveal="zoom">
-        <div class="l-num-val" data-count="170">0</div>
-        <div class="l-num-label">Guida ai checkout<br>per chiudere ogni leg</div>
-      </div>
-      <div class="l-num-item" data-reveal="zoom">
-        <div class="l-num-val" data-count="501">0</div>
-        <div class="l-num-label">Con statistiche,<br>avversario e torneo</div>
-      </div>
-      <div class="l-num-item" data-reveal="zoom">
-        <div class="l-num-val">IA</div>
-        <div class="l-num-label">Analisi biomeccanica<br>del tiro in tempo reale</div>
-      </div>
-    </div>
-  </div>
-
   <!-- PROBLEMA -->
   <div class="l-problem-section">
     <div class="l-problem-inner">
@@ -1623,11 +1639,17 @@ body.in-app #lProgress{display:none}
         <div class="l-vicious-stage">
           <div class="l-circle" id="viciousCircle">
             <svg class="l-circle-svg" viewBox="0 0 100 100" aria-hidden="true">
-              <circle class="vc-ring-base" cx="50" cy="50" r="40"></circle>
               <circle class="vc-ring-prog" id="viciousArc" cx="50" cy="50" r="40" transform="rotate(-90 50 50)"></circle>
-              <circle class="vc-dot" id="viciousDot" cx="50" cy="10" r="2.7"></circle>
             </svg>
+            <div class="vc-dot2" id="viciousDot"></div>
             <div class="l-vhub"><span>CIRCOLO</span><span>VIZIOSO</span></div>
+            <!-- dettaglio al centro (solo desktop) -->
+            <div class="l-vcenter" id="viciousCenter">
+              <div class="l-vdetail active" data-i="0"><div class="vd-title">Ripeti sempre gli stessi gesti</div><div class="vd-text">Senza un programma strutturato, consolidi il livello che hai già. Non lo superi. Il tiro migliora solo quando viene messo in discussione con esercizi che ti portano fuori dalla zona di comfort.</div></div>
+              <div class="l-vdetail" data-i="1"><div class="vd-title">Non misuri nulla</div><div class="vd-text">Senza dati non sai se stai crescendo o stai solo passando il tempo. La tua media per turno al 501 è migliorata? La percentuale alle doppie? Se non lo sai, non puoi lavorarci.</div></div>
+              <div class="l-vdetail" data-i="2"><div class="vd-title">L'allenamento è troppo comodo</div><div class="vd-text">Il miglioramento avviene sotto pressione. Se ti alleni sempre nelle condizioni più facili, in gara cadi esattamente nei momenti che non hai mai simulato: il checkout, la doppia decisiva, il recupero dopo una leg persa.</div></div>
+              <div class="l-vdetail" data-i="3"><div class="vd-title">Non sai cosa correggere</div><div class="vd-text">Il tiro alle freccette è un gesto tecnico preciso. Angolo di gomito, posizione della spalla, rilascio del polso: basta un millimetro fuori posto per perdere tiri che dovresti fare ad occhi chiusi. Senza analisi, lavori alla cieca.</div></div>
+            </div>
             <div class="l-vnode n0" data-i="0"><span class="vn-ic">🔁</span><span class="vn-t">Ripeti gli stessi gesti</span></div>
             <div class="l-vnode n1" data-i="1"><span class="vn-ic">📉</span><span class="vn-t">Non misuri nulla</span></div>
             <div class="l-vnode n2" data-i="2"><span class="vn-ic">😤</span><span class="vn-t">Allenamento troppo comodo</span></div>
@@ -1776,13 +1798,12 @@ body.in-app #lProgress{display:none}
   <!-- MANIFESTO (spostato qui, ex sezione "chi siamo") -->
   <div class="l-manifesto l-manifesto-x">
     <div class="l-manifesto-glow" aria-hidden="true"></div>
-    <div class="l-mq-mark" aria-hidden="true">”</div>
     <div class="l-manifesto-inner">
       <div class="l-manifesto-quote" data-reveal>
-        <span class="mq-line"><span>"LA DIFFERENZA TRA</span></span>
+        <span class="mq-line"><span>LA DIFFERENZA TRA</span></span>
         <span class="mq-line"><span>CHI MIGLIORA E CHI NO</span></span>
         <span class="mq-line"><span>NON È IL <em>TALENTO</em></span></span>
-        <span class="mq-line"><span>È IL <em>METODO</em>"</span></span>
+        <span class="mq-line"><span>È IL <em>METODO</em></span></span>
       </div>
       <div class="l-manifesto-divider" data-reveal></div>
       <p class="l-manifesto-body" data-reveal="up">
@@ -1791,118 +1812,100 @@ body.in-app #lProgress{display:none}
       <p class="l-manifesto-body" data-reveal="up" style="margin-top:18px">
         Il Centro Darts Lab nasce per cambiare questo. È un luogo, fisico e digitale, dove ogni sessione ha uno scopo preciso, ogni risultato viene misurato, e ogni giocatore sa sempre esattamente dove si trova nel suo percorso di crescita.
       </p>
+      <div class="l-numbers-grid l-mq-numbers">
+        <div class="l-num-item" data-reveal="zoom">
+          <div class="l-num-val" data-count="40">0</div>
+          <div class="l-num-label">Sessioni di allenamento<br>progressivo</div>
+        </div>
+        <div class="l-num-item" data-reveal="zoom">
+          <div class="l-num-val" data-count="170">0</div>
+          <div class="l-num-label">Guida ai checkout<br>per chiudere ogni leg</div>
+        </div>
+        <div class="l-num-item" data-reveal="zoom">
+          <div class="l-num-val" data-count="501">0</div>
+          <div class="l-num-label">Con statistiche,<br>avversario e torneo</div>
+        </div>
+        <div class="l-num-item" data-reveal="zoom">
+          <div class="l-num-val">IA</div>
+          <div class="l-num-label">Analisi biomeccanica<br>del tiro in tempo reale</div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- COME FUNZIONA — JOURNEY (sezione pinnata: blocca lo scroll, pallino tra i passi) -->
+  <!-- COME FUNZIONA — JOURNEY (pinnata: pallino neon sincronizzato, un passo alla volta) -->
   <div class="l-jwrap" id="journeyWrap">
     <div class="l-jw-sticky">
-    <div class="l-journey-title">COME FUNZIONA</div>
-    <div class="l-journey-sub">Il percorso di ogni atleta del Centro Darts Lab, passo dopo passo</div>
-
-    <div class="l-jviewport" id="journeyViewport">
-    <div class="l-journey-steps" id="journeySteps">
-    <div class="l-jrail"><div class="l-jrail-fill" id="jrailFill"></div></div>
-
-    <div class="l-step">
-      <div class="l-step-line">
-        <div class="l-step-dot">🔑</div>
-        <div class="l-step-connector"></div>
-      </div>
-      <div class="l-step-body">
-        <div class="l-step-label">Passo 1</div>
-        <div class="l-step-heading">ACCESSO SU INVITO</div>
-        <div class="l-step-text">L'accesso all'app è riservato agli atleti del Centro Darts Lab. Il responsabile crea il tuo account e ti fornisce le credenziali iniziali. Al primo accesso imposti una password personale. Da quel momento in poi, l'app è tua.</div>
-      </div>
-    </div>
-
-    <div class="l-step">
-      <div class="l-step-line">
-        <div class="l-step-dot">📍</div>
-        <div class="l-step-connector"></div>
-      </div>
-      <div class="l-step-body">
-        <div class="l-step-label">Passo 2</div>
-        <div class="l-step-heading">L'APP SA DOVE SEI RIMASTO</div>
-        <div class="l-step-text">Al login l'app apre automaticamente l'ultima sessione ancora incompleta. Non devi ricordarti nulla: il programma sa esattamente dove sei nel percorso e ti porta lì. Se hai salvato a metà, riprendi da dove ti eri fermato.</div>
-      </div>
-    </div>
-
-    <div class="l-step">
-      <div class="l-step-line">
-        <div class="l-step-dot">🏋️</div>
-        <div class="l-step-connector"></div>
-      </div>
-      <div class="l-step-body">
-        <div class="l-step-label">Passo 3</div>
-        <div class="l-step-heading">ALLENATI CON ESERCIZI MIRATI</div>
-        <div class="l-step-text">Ogni sessione contiene 7–9 esercizi progressivi: Tripli, Around the Clock, Pressure Game, partite a 501 con regole speciali, Shanghai e molto altro. Il gioco interattivo integrato registra i risultati esercizio per esercizio, in tempo reale.</div>
-      </div>
-    </div>
-
-    <div class="l-step">
-      <div class="l-step-line">
-        <div class="l-step-dot">💾</div>
-        <div class="l-step-connector"></div>
-      </div>
-      <div class="l-step-body">
-        <div class="l-step-label">Passo 4</div>
-        <div class="l-step-heading">SALVA IN UN SECONDO</div>
-        <div class="l-step-text">Clicca "Salva sessione" al termine. I dati vengono sincronizzati nel cloud in meno di un secondo e diventano immediatamente visibili nei grafici delle statistiche. Da qualsiasi dispositivo tu voglia consultarli.</div>
-      </div>
-    </div>
-
-    <div class="l-step">
-      <div class="l-step-line">
-        <div class="l-step-dot">📈</div>
-        <div class="l-step-connector"></div>
-      </div>
-      <div class="l-step-body">
-        <div class="l-step-label">Passo 5</div>
-        <div class="l-step-heading">LEGGI I TUOI PROGRESSI</div>
-        <div class="l-step-text">La sezione Statistiche mostra grafici temporali per ogni tipo di esercizio, il numero di corone (risultati perfetti) per sessione, e le tendenze del tuo 501. Vedi in un colpo d'occhio dove stai crescendo, dove sei fermo, e dove devi concentrarti di più.</div>
-      </div>
-    </div>
-
-    <div class="l-step">
-      <div class="l-step-line">
-        <div class="l-step-dot">🎥</div>
-        <div class="l-step-connector"></div>
-      </div>
-      <div class="l-step-body">
-        <div class="l-step-label">Passo 6</div>
-        <div class="l-step-heading">ANALIZZA IL TIRO CON L'IA</div>
-        <div class="l-step-text">Quando vuoi andare più in profondo, carica un video del tuo tiro nella sezione Analisi. L'intelligenza artificiale misura angoli e postura frame per frame e genera un report diagnostico che ti mostra esattamente cosa stai facendo bene e cosa correggere. Il tutto senza inviare nulla a server esterni: il video resta sul tuo dispositivo.</div>
+      <div class="l-journey-title">COME FUNZIONA</div>
+      <div class="l-journey-sub">Il percorso di ogni atleta del Centro Darts Lab, passo dopo passo</div>
+      <div class="l-jstage">
+        <div class="l-jrail2">
+          <div class="l-jrail2-line"></div>
+          <div class="l-jrail2-fill" id="jrail2Fill"></div>
+          <div class="l-jmarks" id="journeyMarks">
+            <div class="l-jmark" data-i="0" style="top:0%"></div>
+            <div class="l-jmark" data-i="1" style="top:14.286%"></div>
+            <div class="l-jmark" data-i="2" style="top:28.571%"></div>
+            <div class="l-jmark" data-i="3" style="top:42.857%"></div>
+            <div class="l-jmark" data-i="4" style="top:57.143%"></div>
+            <div class="l-jmark" data-i="5" style="top:71.429%"></div>
+            <div class="l-jmark" data-i="6" style="top:85.714%"></div>
+            <div class="l-jmark" data-i="7" style="top:100%"></div>
+          </div>
+          <div class="l-jcomet" id="jComet">🔑</div>
+        </div>
+        <div class="l-jpanels" id="journeyPanels">
+          <div class="l-jpanel active" data-i="0" data-emoji="🔑">
+            <div class="l-jp-ic">🔑</div>
+            <div class="l-jp-label">Passo 1</div>
+            <div class="l-jp-head">ACCESSO SU INVITO</div>
+            <div class="l-jp-text">L'accesso all'app è riservato agli atleti del Centro Darts Lab. Il responsabile crea il tuo account e ti fornisce le credenziali iniziali. Al primo accesso imposti una password personale. Da quel momento in poi, l'app è tua.</div>
+          </div>
+          <div class="l-jpanel" data-i="1" data-emoji="📍">
+            <div class="l-jp-ic">📍</div>
+            <div class="l-jp-label">Passo 2</div>
+            <div class="l-jp-head">L'APP SA DOVE SEI RIMASTO</div>
+            <div class="l-jp-text">Al login l'app apre automaticamente l'ultima sessione ancora incompleta. Non devi ricordarti nulla: il programma sa esattamente dove sei nel percorso e ti porta lì. Se hai salvato a metà, riprendi da dove ti eri fermato.</div>
+          </div>
+          <div class="l-jpanel" data-i="2" data-emoji="🏋️">
+            <div class="l-jp-ic">🏋️</div>
+            <div class="l-jp-label">Passo 3</div>
+            <div class="l-jp-head">ALLENATI CON ESERCIZI MIRATI</div>
+            <div class="l-jp-text">Ogni sessione contiene 7–9 esercizi progressivi: Tripli, Around the Clock, Pressure Game, partite a 501 con regole speciali, Shanghai e molto altro. Il gioco interattivo integrato registra i risultati esercizio per esercizio, in tempo reale.</div>
+          </div>
+          <div class="l-jpanel" data-i="3" data-emoji="💾">
+            <div class="l-jp-ic">💾</div>
+            <div class="l-jp-label">Passo 4</div>
+            <div class="l-jp-head">SALVA IN UN SECONDO</div>
+            <div class="l-jp-text">Clicca "Salva sessione" al termine. I dati vengono sincronizzati nel cloud in meno di un secondo e diventano immediatamente visibili nei grafici delle statistiche. Da qualsiasi dispositivo tu voglia consultarli.</div>
+          </div>
+          <div class="l-jpanel" data-i="4" data-emoji="📈">
+            <div class="l-jp-ic">📈</div>
+            <div class="l-jp-label">Passo 5</div>
+            <div class="l-jp-head">LEGGI I TUOI PROGRESSI</div>
+            <div class="l-jp-text">La sezione Statistiche mostra grafici temporali per ogni tipo di esercizio, il numero di corone (risultati perfetti) per sessione, e le tendenze del tuo 501. Vedi in un colpo d'occhio dove stai crescendo, dove sei fermo, e dove devi concentrarti di più.</div>
+          </div>
+          <div class="l-jpanel" data-i="5" data-emoji="🎥">
+            <div class="l-jp-ic">🎥</div>
+            <div class="l-jp-label">Passo 6</div>
+            <div class="l-jp-head">ANALIZZA IL TIRO CON L'IA</div>
+            <div class="l-jp-text">Quando vuoi andare più in profondo, carica un video del tuo tiro nella sezione Analisi. L'intelligenza artificiale misura angoli e postura frame per frame e genera un report diagnostico che ti mostra esattamente cosa stai facendo bene e cosa correggere. Il tutto senza inviare nulla a server esterni: il video resta sul tuo dispositivo.</div>
+          </div>
+          <div class="l-jpanel" data-i="6" data-emoji="⚔️">
+            <div class="l-jp-ic">⚔️</div>
+            <div class="l-jp-label">Passo 7</div>
+            <div class="l-jp-head">GIOCA, SFIDA, MIGLIORA</div>
+            <div class="l-jp-text">Oltre al programma strutturato, gioca partite a 501 da solo, con un avversario o in torneo con sets, legs e best-of personalizzabili. Statistiche complete per ogni partita: media per turno, percentuale alle doppie, checkout riusciti, grafico storico e registro vinto/perso.</div>
+          </div>
+          <div class="l-jpanel" data-i="7" data-emoji="🔄">
+            <div class="l-jp-ic">🔄</div>
+            <div class="l-jp-label">Passo 8</div>
+            <div class="l-jp-head">COMPLETA E RICOMINCIA PIÙ FORTE</div>
+            <div class="l-jp-text">Dopo gli 8 allenamenti il ciclo si azzera e ricomincia. I dati di tutti i cicli precedenti rimangono nelle statistiche. Confronti i progressi, misuri la crescita ciclo su ciclo, e riparti da un livello più alto di quello in cui hai iniziato.</div>
+          </div>
+        </div>
       </div>
     </div>
-
-    <div class="l-step">
-      <div class="l-step-line">
-        <div class="l-step-dot">⚔️</div>
-        <div class="l-step-connector"></div>
-      </div>
-      <div class="l-step-body">
-        <div class="l-step-label">Passo 7</div>
-        <div class="l-step-heading">GIOCA, SFIDA, MIGLIORA</div>
-        <div class="l-step-text">Oltre al programma strutturato, gioca partite a 501 da solo, con un avversario o in torneo con sets, legs e best-of personalizzabili. Statistiche complete per ogni partita: media per turno, percentuale alle doppie, checkout riusciti, grafico storico e registro vinto/perso.</div>
-      </div>
-    </div>
-
-    <div class="l-step">
-      <div class="l-step-line">
-        <div class="l-step-dot">🔄</div>
-      </div>
-      <div class="l-step-body">
-        <div class="l-step-label">Passo 8</div>
-        <div class="l-step-heading">COMPLETA E RICOMINCIA PIÙ FORTE</div>
-        <div class="l-step-text">Dopo gli 8 allenamenti il ciclo si azzera e ricomincia. I dati di tutti i cicli precedenti rimangono nelle statistiche. Confronti i progressi, misuri la crescita ciclo su ciclo, e riparti da un livello più alto di quello in cui hai iniziato.</div>
-      </div>
-    </div>
-
-    </div>
-    </div>
-    </div>
-
   </div>
 
   <!-- ACCESSO E CONDIZIONI -->
@@ -11221,11 +11224,11 @@ function atFmtTime(s){
     cs.forEach(function(c,i){
       var p = i - pos, ap = Math.abs(p);
       var vis = ap <= 1.12;              // solo precedente, principale, successivo
-      var tx = p * (cw * 0.60);
-      var tz = -ap * 120;
-      var ry = -p * 30;                  // rotazione morbida: niente deformazione
-      var sc = 1 - Math.min(ap, 1.2) * 0.16;
-      var op = ap > 1.08 ? 0 : (1 - ap * 0.5);
+      var tx = p * (cw * 0.82);          // più separazione: i riquadri restano distinti
+      var tz = -ap * 220;                // vicini spinti indietro: niente collasso
+      var ry = -p * 32;
+      var sc = 1 - Math.min(ap, 1.2) * 0.2;
+      var op = ap > 1.06 ? 0 : (1 - ap * 0.55);
       c.style.transform = 'translate(calc(-50% + ' + tx + 'px), -50%) translateZ(' + tz + 'px) rotateY(' + ry + 'deg) scale(' + sc + ')';
       c.style.opacity = op;
       c.style.zIndex = String(50 - Math.round(ap * 10));
@@ -11389,23 +11392,36 @@ function atFmtTime(s){
         var max = de.scrollHeight - de.clientHeight;
         bar.style.width = (max > 0 ? (de.scrollTop / max) * 100 : 0) + '%';
       }
-      // ── Journey pinnata: traduce i passi, il pallino neon scorre tra un passo e l'altro ──
+      // ── Journey pinnata: rail neon + un passo alla volta, pallino sincronizzato ──
       var jwrap = document.getElementById('journeyWrap');
-      var jsteps = document.getElementById('journeySteps');
-      var jview = document.getElementById('journeyViewport');
-      var jfill = document.getElementById('jrailFill');
-      if(jwrap && jsteps && jview){
+      var jrail2 = document.querySelector('#journeyWrap .l-jrail2');
+      var jfill = document.getElementById('jrail2Fill');
+      var jcomet = document.getElementById('jComet');
+      var jpanels = document.getElementById('journeyPanels');
+      if(jwrap && jrail2 && jpanels){
         var jspan = jwrap.offsetHeight - window.innerHeight;
         var jp = jspan > 0 ? Math.max(0, Math.min(1, -jwrap.getBoundingClientRect().top / jspan)) : 0;
-        var travel = Math.max(0, jsteps.scrollHeight - jview.clientHeight);
-        jsteps.style.transform = 'translateY(' + (-(jp * travel)).toFixed(1) + 'px)';
-        var jrail = jsteps.querySelector('.l-jrail');
-        var railH = jrail ? jrail.clientHeight : 0;
-        if(jfill) jfill.style.height = (jp * railH).toFixed(1) + 'px';
-        var jsteparr = jsteps.querySelectorAll('.l-step');
-        var jlast = jsteparr.length - 1;
-        jsteparr.forEach(function(st, k){
-          st.classList.toggle('active', jp * jlast >= k - 0.001);
+        var panels = jpanels.querySelectorAll('.l-jpanel');
+        var jlast = panels.length - 1;                       // 7
+        var lineH = Math.max(0, jrail2.clientHeight - 52);   // 26px in alto + 26px in basso
+        if(jfill) jfill.style.height = (jp * lineH).toFixed(1) + 'px';
+        if(jcomet) jcomet.style.top = (26 + jp * lineH).toFixed(1) + 'px';
+        var jact = Math.max(0, Math.min(jlast, Math.round(jp * jlast)));
+        var jEmoji = '';
+        // pannelli: attivo al centro, precedente/successivo intravisti in dissolvenza
+        panels.forEach(function(pn, k){
+          var d = k - jact, ad = Math.abs(d);
+          pn.classList.toggle('active', d === 0);
+          pn.style.transform = 'translateY(calc(-50% + ' + (d * 168) + 'px))';
+          pn.style.opacity = d === 0 ? '1' : (ad === 1 ? '0.22' : '0');
+          pn.style.pointerEvents = d === 0 ? 'auto' : 'none';
+          if(d === 0) jEmoji = pn.getAttribute('data-emoji') || '';
+        });
+        if(jcomet && jEmoji) jcomet.textContent = jEmoji;
+        // punti sulla linea: accesi quando raggiunti dal pallino
+        document.querySelectorAll('#journeyMarks .l-jmark').forEach(function(m, k){
+          m.classList.toggle('passed', k <= jact);
+          m.classList.toggle('active', k === jact);
         });
       }
       // ── Circolo vizioso: pallino rosso guidato dallo scroll (sezione pinnata) ──
@@ -11420,14 +11436,14 @@ function atFmtTime(s){
         var vdot = document.getElementById('viciousDot');
         if(vdot){
           var th = prog * 2 * Math.PI;
-          vdot.setAttribute('cx', (50 + 40 * Math.sin(th)).toFixed(2));
-          vdot.setAttribute('cy', (50 - 40 * Math.cos(th)).toFixed(2));
+          vdot.style.left = (50 + 40 * Math.sin(th)).toFixed(2) + '%';
+          vdot.style.top  = (50 - 40 * Math.cos(th)).toFixed(2) + '%';
         }
         var aIdx = Math.min(3, Math.floor(prog * 4));
         document.querySelectorAll('#viciousCircle .l-vnode').forEach(function(n){
           n.classList.toggle('on', prog * 4 >= parseInt(n.getAttribute('data-i'), 10));
         });
-        document.querySelectorAll('#viciousDetails .l-vdetail').forEach(function(d){
+        document.querySelectorAll('.l-vdetail').forEach(function(d){
           d.classList.toggle('active', parseInt(d.getAttribute('data-i'), 10) === aIdx);
         });
       }
