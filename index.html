@@ -1298,6 +1298,214 @@ input[type="text"],input[type="password"],input[type="number"],input[type="email
 select,input[type="text"],input[type="password"],input[type="number"],input[type="email"],textarea{border-radius:12px!important;}
 .l-card{border-radius:28px!important;}
 .pc{border-radius:20px!important;}
+
+/* ═══════════════════════════════════════════════════════════
+   LANDING FX v223 — layer animazioni (vince in cascade)
+   Hero aurora, reveal scroll, journey neon rail, coverflow 3D.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Scroll progress bar ── */
+#lProgress{position:fixed;top:0;left:0;height:3px;width:0;z-index:150;
+  background:linear-gradient(90deg,#0e7a39,#22c55e,#86efac);
+  box-shadow:0 0 14px #22c55eaa;transition:width .08s linear;pointer-events:none}
+body.in-app #lProgress{display:none}
+
+/* ── Reveal universale ── */
+[data-reveal]{opacity:0;will-change:opacity,transform,filter;
+  transition:opacity .85s cubic-bezier(.16,.84,.44,1),transform .85s cubic-bezier(.16,.84,.44,1),filter .85s cubic-bezier(.16,.84,.44,1)}
+[data-reveal="up"]{transform:translateY(46px)}
+[data-reveal="down"]{transform:translateY(-34px)}
+[data-reveal="left"]{transform:translateX(-54px)}
+[data-reveal="right"]{transform:translateX(54px)}
+[data-reveal="zoom"]{transform:scale(.84)}
+[data-reveal="blur"]{filter:blur(16px);opacity:0}
+[data-reveal].in{opacity:1;transform:none;filter:none}
+
+/* ── HERO: aurora + particelle ── */
+.lhero{overflow:hidden}
+.l-aurora{position:absolute;inset:-25% -15% 0;z-index:0;pointer-events:none;overflow:hidden}
+.l-aurora b{position:absolute;display:block;border-radius:50%;filter:blur(64px);opacity:.55;mix-blend-mode:screen}
+.l-aurora .a1{width:48vw;height:48vw;max-width:620px;max-height:620px;background:radial-gradient(circle,#15803d 0%,transparent 68%);top:-12%;left:4%;animation:aur1 17s ease-in-out infinite}
+.l-aurora .a2{width:40vw;height:40vw;max-width:520px;max-height:520px;background:radial-gradient(circle,#16a34a 0%,transparent 68%);top:14%;right:0%;animation:aur2 21s ease-in-out infinite}
+.l-aurora .a3{width:34vw;height:34vw;max-width:440px;max-height:440px;background:radial-gradient(circle,#0e7a39 0%,transparent 70%);bottom:-10%;left:36%;animation:aur3 19s ease-in-out infinite}
+@keyframes aur1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(7%,6%) scale(1.18)}}
+@keyframes aur2{0%,100%{transform:translate(0,0) scale(1.05)}50%{transform:translate(-6%,4%) scale(.9)}}
+@keyframes aur3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(4%,-7%) scale(1.2)}}
+/* ── HERO: titolo a righe che salgono ── */
+.l-head .lh-line{display:block;overflow:hidden;padding-bottom:.04em}
+.l-head .lh-line>span{display:inline-block;transform:translateY(112%);color:var(--light);
+  animation:lhUp 1s cubic-bezier(.16,.84,.44,1) both}
+.l-head .lh-line:nth-child(1)>span{animation-delay:.20s}
+.l-head .lh-line:nth-child(2)>span{animation-delay:.34s}
+.l-head .lh-line:nth-child(3)>span{animation-delay:.48s}
+.l-head .lh-line:nth-child(4)>span{animation-delay:.62s}
+.l-head .lh-line>span.g{color:var(--green)}
+@keyframes lhUp{to{transform:translateY(0)}}
+.lhero .l-sub,.lhero .l-cta{animation:fadeRise .9s ease both}
+.lhero .l-sub{animation-delay:.85s}
+.lhero .l-cta{animation-delay:1s}
+.l-scroll-hint{opacity:0;animation:fadeRise .6s ease 1.15s forwards,bounce 2s 1.75s infinite}
+@keyframes fadeRise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── HERO: logo float + CTA glow/riflesso ── */
+.l-logo img{animation:logoFloat 6s ease-in-out infinite}
+@keyframes logoFloat{0%,100%{transform:translateY(0);filter:drop-shadow(0 0 26px rgba(35,197,94,.42))}
+  50%{transform:translateY(-9px);filter:drop-shadow(0 0 42px rgba(35,197,94,.72))}}
+.l-cta{position:relative;overflow:hidden}
+.l-cta::after{content:'';position:absolute;top:-20%;left:-130%;width:55%;height:140%;z-index:1;pointer-events:none;
+  background:linear-gradient(120deg,transparent,rgba(255,255,255,.45),transparent);
+  transform:skewX(-22deg);animation:ctaShine 3.6s ease-in-out infinite}
+@keyframes ctaShine{0%{left:-130%}58%,100%{left:150%}}
+
+/* ── NUMERI: glow on reveal ── */
+.l-num-item{position:relative;overflow:hidden}
+.l-num-item::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 120%,#22c55e1f,transparent 70%);opacity:0;transition:opacity .6s}
+.l-num-item.in::after{opacity:1}
+
+/* ── Hover tilt/lift su card (desktop) ── */
+@media(hover:hover) and (min-width:769px){
+  .l-solution-item,.l-access-card,.l-chi-fact{transition:transform .35s cubic-bezier(.2,.7,.2,1),border-color .35s,box-shadow .35s,opacity .65s}
+  .l-solution-item:hover,.l-access-card:hover{transform:translateY(-6px);border-color:var(--green);box-shadow:0 14px 40px #22c55e22}
+  .l-chi-fact:hover{transform:translateX(6px);border-color:#166534}
+  .l-problem-card{transition:opacity .7s,transform .7s,border-color .35s,box-shadow .35s}
+  .l-problem-card.revealed:hover{transform:translateY(-6px)!important;box-shadow:0 14px 40px #ef444422}
+}
+
+/* ── JOURNEY: rail neon che si riempie con lo scroll ── */
+.l-journey-steps{position:relative}
+.l-jrail{position:absolute;top:8px;bottom:34px;left:21px;width:2px;border-radius:2px;
+  background:linear-gradient(to bottom,var(--d4),var(--d3));z-index:0}
+.l-jrail-fill{position:absolute;top:0;left:50%;transform:translateX(-50%);width:3px;height:0;
+  border-radius:3px;background:linear-gradient(to bottom,#86efac,#22c55e);
+  box-shadow:0 0 14px 2px #22c55eaa,0 0 32px 5px #22c55e4d;
+  transition:height .12s linear}
+.l-jrail-fill::after{content:'';position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);
+  width:13px;height:13px;border-radius:50%;background:#dcfce7;
+  box-shadow:0 0 16px 5px #22c55e,0 0 28px 9px #22c55e66}
+.l-step{display:flex;gap:20px;position:relative;z-index:1;margin-bottom:0}
+.l-step-dot{width:44px;height:44px;border-radius:50%;background:var(--d3);border:2px solid var(--d5);
+  display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;
+  transition:background .4s,border-color .4s,box-shadow .4s,transform .4s;filter:grayscale(.65) brightness(.8)}
+.l-step.active .l-step-dot{background:var(--gdim);border-color:var(--green);
+  box-shadow:0 0 20px #22c55e88;transform:scale(1.1);filter:none}
+.l-step-body{padding:2px 0 38px;transition:opacity .45s,transform .45s}
+.l-step:not(.active) .l-step-body{opacity:.42;transform:translateX(8px)}
+.l-step.active .l-step-body{opacity:1;transform:none}
+.l-step-label{transition:color .4s}
+.l-step:not(.active) .l-step-label{color:var(--muted)}
+.l-step-connector{display:none}
+.l-step-line{justify-content:flex-start}
+
+/* ── CAROUSEL: coverflow 3D ── */
+.l-carousel-outer{overflow:visible!important;perspective:1500px;cursor:grab}
+.l-carousel-outer.dragging{cursor:grabbing}
+.l-carousel-track{display:block;position:relative;height:540px;transform-style:preserve-3d;transition:none}
+.l-card{position:absolute!important;top:50%;left:50%;margin:0!important;flex:none!important;
+  width:min(82vw,360px);backface-visibility:hidden;will-change:transform,opacity;
+  transition:transform .6s cubic-bezier(.2,.7,.2,1),opacity .6s cubic-bezier(.2,.7,.2,1),border-color .3s,box-shadow .3s}
+.l-card.active-card{box-shadow:0 18px 60px #00000066,0 0 40px #22c55e22;border-color:#22c55e}
+.l-dot.on{box-shadow:0 0 12px #22c55e99}
+
+/* ── SWIPE hint con linee neon ── */
+.l-swipe-hint::before{content:'';display:inline-block;width:18px;height:1px;background:var(--green);
+  vertical-align:middle;margin-right:8px;box-shadow:0 0 8px #22c55e}
+.l-swipe-hint::after{content:'';display:inline-block;width:18px;height:1px;background:var(--green);
+  vertical-align:middle;margin-left:8px;box-shadow:0 0 8px #22c55e}
+
+/* ── FAQ: accent quando aperta ── */
+.l-faq-item{transition:background .3s}
+.l-faq-item.open{background:linear-gradient(90deg,#22c55e0a,transparent)}
+
+/* ── Manifesto: divider che cresce ── */
+.l-manifesto-divider{width:0;transition:width 1s cubic-bezier(.16,.84,.44,1) .2s}
+.l-manifesto-divider.in{width:64px}
+
+/* ── PROBLEMA: circolo vizioso pinnato ── */
+.l-problem-grid{display:none}
+.l-vicious{position:relative;height:260vh}
+@media(max-width:600px){.l-vicious{height:230vh}}
+.l-vicious-sticky{position:sticky;top:0;height:100vh;height:100svh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.l-vicious-stage{width:100%;max-width:560px;margin:0 auto;padding:0 20px;display:flex;flex-direction:column;align-items:center;gap:20px}
+.l-circle{position:relative;width:min(80vw,420px);aspect-ratio:1/1}
+.l-circle-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.vc-ring-base{fill:none;stroke:#3a1414;stroke-width:1.1}
+.vc-ring-prog{fill:none;stroke:#ef4444;stroke-width:1.5;stroke-linecap:round;
+  stroke-dasharray:251.327;stroke-dashoffset:251.327;
+  filter:drop-shadow(0 0 1.5px #ef4444) drop-shadow(0 0 4px #ef444488)}
+.vc-dot{fill:#fff5f5;stroke:#ef4444;stroke-width:.5;
+  filter:drop-shadow(0 0 3px #ef4444) drop-shadow(0 0 7px #ef4444) drop-shadow(0 0 12px #ef4444aa)}
+.l-vhub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;
+  font-family:'Bebas Neue',sans-serif;letter-spacing:.12em;line-height:1.02;color:#ef4444;
+  font-size:clamp(20px,5.4vw,34px);opacity:.9;text-shadow:0 0 16px #ef444455;pointer-events:none}
+.l-vhub span{display:block}
+.l-vnode{position:absolute;transform:translate(-50%,-50%);width:34%;max-width:128px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;transition:transform .45s}
+.l-vnode .vn-ic{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:22px;background:var(--d3);border:2px solid var(--d5);transition:all .45s;filter:grayscale(.7) brightness(.85)}
+.l-vnode .vn-t{font-family:'DM Sans',sans-serif;font-weight:700;font-size:11.5px;line-height:1.22;
+  text-align:center;color:var(--muted);transition:color .45s}
+.l-vnode.n0{left:50%;top:10%}
+.l-vnode.n1{left:90%;top:50%}
+.l-vnode.n2{left:50%;top:90%}
+.l-vnode.n3{left:10%;top:50%}
+.l-vnode.on .vn-ic{background:#2a0f0f;border-color:#ef4444;box-shadow:0 0 18px #ef444466;filter:none}
+.l-vnode.on{transform:translate(-50%,-50%) scale(1.06)}
+.l-vnode.on .vn-t{color:#fca5a5}
+.l-vdetails{position:relative;width:100%;min-height:160px}
+@media(max-width:600px){.l-vdetails{min-height:210px}}
+.l-vdetail{position:absolute;inset:0;text-align:center;opacity:0;transform:translateY(12px);
+  transition:opacity .4s,transform .4s;pointer-events:none}
+.l-vdetail.active{opacity:1;transform:none}
+.vd-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:16px;color:#fca5a5;margin-bottom:8px}
+.vd-text{font-size:13px;color:var(--mu2);line-height:1.7;max-width:480px;margin:0 auto}
+
+/* ── SOLUZIONE: righe feature alternate ── */
+.l-sol-list{display:flex;flex-direction:column;gap:22px;max-width:820px;margin:0 auto}
+.l-sol-row{display:flex;align-items:center;gap:26px;background:var(--d3);border:1px solid var(--d4);
+  border-radius:18px;padding:24px 26px;position:relative;overflow:hidden}
+.l-sol-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:linear-gradient(to bottom,#86efac,#22c55e,transparent);box-shadow:0 0 12px #22c55e88}
+.l-sol-vis{flex-shrink:0;width:104px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.l-sol-num{font-family:'Bebas Neue',sans-serif;font-size:30px;color:#1f7a43;line-height:1;letter-spacing:.05em}
+.l-sol-ic{font-size:46px;line-height:1;filter:drop-shadow(0 5px 14px #00000066)}
+.l-sol-body{flex:1;min-width:0}
+.l-sol-t{font-family:'DM Sans',sans-serif;font-weight:700;font-size:17px;color:var(--light);margin-bottom:8px}
+.l-sol-x{font-size:13.5px;color:var(--mu2);line-height:1.8}
+@media(min-width:721px){
+  .l-sol-row:nth-child(even){flex-direction:row-reverse}
+  .l-sol-row:nth-child(even)::before{left:auto;right:0;background:linear-gradient(to top,#86efac,#22c55e,transparent)}
+  .l-sol-row:nth-child(even) .l-sol-body{text-align:right}
+}
+@media(max-width:720px){
+  .l-sol-row{gap:16px;padding:20px 18px}
+  .l-sol-vis{width:60px}
+  .l-sol-ic{font-size:34px}
+  .l-sol-num{font-size:22px}
+}
+@media(hover:hover) and (min-width:769px){
+  .l-sol-row{transition:transform .35s cubic-bezier(.2,.7,.2,1),border-color .35s,box-shadow .35s}
+  .l-sol-row:hover{transform:translateY(-4px);border-color:#166534;box-shadow:0 14px 40px #22c55e1f}
+}
+
+/* ── FLOW BORDER: bordo verde rotante (accesso) ── */
+@property --flowang{syntax:'<angle>';inherits:false;initial-value:0deg}
+.flow-border{border:1.5px solid transparent!important;
+  background:
+    linear-gradient(var(--d2),var(--d2)) padding-box,
+    conic-gradient(from var(--flowang),transparent 0deg,transparent 215deg,#166534 250deg,#22c55e 300deg,#86efac 330deg,transparent 360deg) border-box;
+  animation:flowSpin 4.2s linear infinite}
+@keyframes flowSpin{to{--flowang:360deg}}
+
+/* ── prefers-reduced-motion ── */
+@media (prefers-reduced-motion:reduce){
+  [data-reveal]{opacity:1!important;transform:none!important;filter:none!important;transition:none!important}
+  .l-aurora,.l-cta::after,.l-logo img,
+  .l-head .lh-line>span,.l-sub,.l-scroll-hint,.flow-border{animation:none!important}
+  .l-head .lh-line>span{transform:none!important}
+  .l-manifesto-divider{width:64px!important;transition:none!important}
+  .flow-border{background:var(--d2)!important;border-color:#166534!important}
+  #lProgress{transition:none!important}
+}
 </style>
 </head>
 <body>
@@ -1305,14 +1513,17 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 <!-- ═══════════════════════ LANDING ═══════════════════════ -->
 <div id="landing">
 
+  <div id="lProgress"></div>
+
   <!-- HERO -->
   <div class="lhero">
+    <div class="l-aurora"><b class="a1"></b><b class="a2"></b><b class="a3"></b></div>
     <div class="l-logo">
       <img src="/Centro_Darts_Lab_Logo_2.svg" alt="Centro Darts Lab" style="height:clamp(88px,18vw,160px);max-width:480px;object-fit:contain;filter:drop-shadow(0 0 28px rgba(35,197,94,.4))">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(11px,1.8vw,14px);color:var(--muted);letter-spacing:.28em;text-transform:uppercase;margin-top:8px">L'APP UFFICIALE PER MIGLIORARE A FRECCETTE</div>
     </div>
     <div style="height:clamp(36px,7vw,64px)"></div>
-    <h1 class="l-head">SMETTI DI<br><span>TIRARE A CASO.</span><br>INIZIA AD<br><span>ALLENARTI DAVVERO.</span></h1>
+    <h1 class="l-head"><span class="lh-line"><span>SMETTI DI</span></span><span class="lh-line"><span class="g">TIRARE A CASO.</span></span><span class="lh-line"><span>INIZIA AD</span></span><span class="lh-line"><span class="g">ALLENARTI DAVVERO</span></span></h1>
     <p class="l-sub">Il <strong style="color:var(--green)">Centro Darts Lab</strong> è il primo centro italiano dedicato al miglioramento tecnico alle freccette. Non una palestra generica, non un club del giovedì sera: un percorso strutturato, con dati reali, esercizi progressivi e analisi biomeccanica del tiro con intelligenza artificiale.</p>
     <button class="l-cta" onclick="openLogin()">ACCEDI ALL'APP</button>
     <div class="l-scroll-hint">↓ &nbsp; Scopri di più &nbsp; ↓</div>
@@ -1321,15 +1532,15 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   <!-- MANIFESTO -->
   <div class="l-manifesto">
     <div class="l-manifesto-inner">
-      <div class="l-manifesto-quote">
-        "LA DIFFERENZA TRA CHI MIGLIORA E CHI NO<br>NON È IL <em>TALENTO</em>.<br>È IL <em>METODO</em>."
+      <div class="l-manifesto-quote" data-reveal="up">
+        "LA DIFFERENZA TRA<br>CHI MIGLIORA E CHI NO<br>NON È IL <em>TALENTO</em><br>È IL <em>METODO</em>"
       </div>
-      <div class="l-manifesto-divider"></div>
-      <p class="l-manifesto-body">
-        Nella maggior parte dei club, l'allenamento alle freccette funziona così: si va al campo, si tirano frecce per un'ora, si chiacchiera, si va a casa. Settimana dopo settimana, anno dopo anno. Il livello rimane lo stesso perché nessuno sa esattamente su cosa lavorare, in quale ordine, con quale intensità.
+      <div class="l-manifesto-divider" data-reveal></div>
+      <p class="l-manifesto-body" data-reveal="up">
+        Nella maggior parte dei casi, l'allenamento a freccette funziona così: si va al locale di gioco, si tirano frecce per un'ora, si chiacchiera, si va a casa. Settimana dopo settimana, anno dopo anno. Il livello rimane lo stesso perché nessuno sa esattamente su cosa lavorare, in quale ordine, con quale intensità.
       </p>
-      <p class="l-manifesto-body" style="margin-top:18px">
-        Il Centro Darts Lab nasce per cambiare questo. È un luogo — fisico e digitale — dove ogni sessione ha uno scopo preciso, ogni risultato viene misurato, e ogni atleta sa sempre esattamente dove si trova nel suo percorso di crescita.
+      <p class="l-manifesto-body" data-reveal="up" style="margin-top:18px">
+        Il Centro Darts Lab nasce per cambiare questo. È un luogo, fisico e digitale, dove ogni sessione ha uno scopo preciso, ogni risultato viene misurato, e ogni giocatore sa sempre esattamente dove si trova nel suo percorso di crescita.
       </p>
     </div>
   </div>
@@ -1337,19 +1548,19 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   <!-- NUMERI -->
   <div class="l-numbers">
     <div class="l-numbers-grid">
-      <div class="l-num-item">
-        <div class="l-num-val">40</div>
+      <div class="l-num-item" data-reveal="zoom">
+        <div class="l-num-val" data-count="40">0</div>
         <div class="l-num-label">Sessioni di allenamento<br>progressivo</div>
       </div>
-      <div class="l-num-item">
-        <div class="l-num-val">8</div>
-        <div class="l-num-label">Allenamenti strutturati<br>in sequenza</div>
+      <div class="l-num-item" data-reveal="zoom">
+        <div class="l-num-val" data-count="170">0</div>
+        <div class="l-num-label">Guida ai checkout<br>per chiudere ogni leg</div>
       </div>
-      <div class="l-num-item">
-        <div class="l-num-val">501</div>
+      <div class="l-num-item" data-reveal="zoom">
+        <div class="l-num-val" data-count="501">0</div>
         <div class="l-num-label">Con statistiche,<br>avversario e torneo</div>
       </div>
-      <div class="l-num-item">
+      <div class="l-num-item" data-reveal="zoom">
         <div class="l-num-val">IA</div>
         <div class="l-num-label">Analisi biomeccanica<br>del tiro in tempo reale</div>
       </div>
@@ -1359,33 +1570,33 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   <!-- PROBLEMA -->
   <div class="l-problem-section">
     <div class="l-problem-inner">
-      <div class="l-section-label">Il problema</div>
-      <h2 class="l-section-title">PERCHÉ NON MIGLIORI,<br>ANCHE SE TI ALLENI?</h2>
-      <p class="l-section-sub">Vai al campo ogni settimana. Tiri frecce. Eppure il livello sembra sempre uguale. Non è colpa della tua coordinazione. È il metodo che manca.</p>
-      <div class="l-problem-grid">
-        <div class="l-problem-card from-left">
-          <div class="l-problem-card-glow"></div>
-          <div class="l-problem-icon">🔁</div>
-          <div class="l-problem-title">Ripeti sempre gli stessi gesti</div>
-          <div class="l-problem-text">Senza un programma strutturato, consolidi il livello che hai già. Non lo superi. Il tiro migliora solo quando viene messo in discussione con esercizi che ti portano fuori dalla zona di comfort.</div>
-        </div>
-        <div class="l-problem-card from-right">
-          <div class="l-problem-card-glow"></div>
-          <div class="l-problem-icon">📉</div>
-          <div class="l-problem-title">Non misuri nulla</div>
-          <div class="l-problem-text">Senza dati non sai se stai crescendo o stai solo passando il tempo. La tua media per turno al 501 è migliorata? La percentuale alle doppie? Se non lo sai, non puoi lavorarci.</div>
-        </div>
-        <div class="l-problem-card from-left">
-          <div class="l-problem-card-glow"></div>
-          <div class="l-problem-icon">😤</div>
-          <div class="l-problem-title">L'allenamento è troppo comodo</div>
-          <div class="l-problem-text">Il miglioramento avviene sotto pressione. Se ti alleni sempre nelle condizioni più facili, in gara cadi esattamente nei momenti che non hai mai simulato: il checkout, la doppia decisiva, il recupero dopo una leg persa.</div>
-        </div>
-        <div class="l-problem-card from-right">
-          <div class="l-problem-card-glow"></div>
-          <div class="l-problem-icon">🎯</div>
-          <div class="l-problem-title">Non sai cosa correggere</div>
-          <div class="l-problem-text">Il tiro alle freccette è un gesto tecnico preciso. Angolo di gomito, posizione della spalla, rilascio del polso: basta un millimetro fuori posto per perdere tiri che dovresti fare ad occhi chiusi. Senza analisi, lavori alla cieca.</div>
+      <div class="l-section-label" data-reveal="up">Il problema</div>
+      <h2 class="l-section-title" data-reveal="up">PERCHÉ NON MIGLIORI,<br>ANCHE SE TI ALLENI?</h2>
+      <p class="l-section-sub" data-reveal="up">Vai al campo ogni settimana. Tiri frecce. Eppure il livello sembra sempre uguale. Non è colpa della tua coordinazione. È il metodo che manca.</p>
+    </div>
+
+    <!-- CIRCOLO VIZIOSO — cerchio pinnato, pallino rosso guidato dallo scroll -->
+    <div class="l-vicious" id="viciousWrap">
+      <div class="l-vicious-sticky">
+        <div class="l-vicious-stage">
+          <div class="l-circle" id="viciousCircle">
+            <svg class="l-circle-svg" viewBox="0 0 100 100" aria-hidden="true">
+              <circle class="vc-ring-base" cx="50" cy="50" r="40"></circle>
+              <circle class="vc-ring-prog" id="viciousArc" cx="50" cy="50" r="40" transform="rotate(-90 50 50)"></circle>
+              <circle class="vc-dot" id="viciousDot" cx="50" cy="10" r="2.7"></circle>
+            </svg>
+            <div class="l-vhub"><span>CIRCOLO</span><span>VIZIOSO</span></div>
+            <div class="l-vnode n0" data-i="0"><span class="vn-ic">🔁</span><span class="vn-t">Ripeti gli stessi gesti</span></div>
+            <div class="l-vnode n1" data-i="1"><span class="vn-ic">📉</span><span class="vn-t">Non misuri nulla</span></div>
+            <div class="l-vnode n2" data-i="2"><span class="vn-ic">😤</span><span class="vn-t">Allenamento troppo comodo</span></div>
+            <div class="l-vnode n3" data-i="3"><span class="vn-ic">🎯</span><span class="vn-t">Non sai cosa correggere</span></div>
+          </div>
+          <div class="l-vdetails" id="viciousDetails">
+            <div class="l-vdetail active" data-i="0"><div class="vd-title">Ripeti sempre gli stessi gesti</div><div class="vd-text">Senza un programma strutturato, consolidi il livello che hai già. Non lo superi. Il tiro migliora solo quando viene messo in discussione con esercizi che ti portano fuori dalla zona di comfort.</div></div>
+            <div class="l-vdetail" data-i="1"><div class="vd-title">Non misuri nulla</div><div class="vd-text">Senza dati non sai se stai crescendo o stai solo passando il tempo. La tua media per turno al 501 è migliorata? La percentuale alle doppie? Se non lo sai, non puoi lavorarci.</div></div>
+            <div class="l-vdetail" data-i="2"><div class="vd-title">L'allenamento è troppo comodo</div><div class="vd-text">Il miglioramento avviene sotto pressione. Se ti alleni sempre nelle condizioni più facili, in gara cadi esattamente nei momenti che non hai mai simulato: il checkout, la doppia decisiva, il recupero dopo una leg persa.</div></div>
+            <div class="l-vdetail" data-i="3"><div class="vd-title">Non sai cosa correggere</div><div class="vd-text">Il tiro alle freccette è un gesto tecnico preciso. Angolo di gomito, posizione della spalla, rilascio del polso: basta un millimetro fuori posto per perdere tiri che dovresti fare ad occhi chiusi. Senza analisi, lavori alla cieca.</div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1394,50 +1605,38 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   <!-- SOLUZIONE -->
   <div class="l-solution-section">
     <div class="l-solution-inner">
-      <div class="l-section-label" style="color:var(--green)">La soluzione</div>
-      <h2 class="l-section-title">UN SISTEMA COMPLETO<br>PER <span style="color:var(--green)">CRESCERE SUL SERIO</span></h2>
-      <p class="l-section-sub">Non si tratta di tirare più frecce. Si tratta di sapere sempre cosa stai facendo, perché lo stai facendo, e quanto stai migliorando.</p>
-      <div class="l-solution-grid">
-        <div class="l-solution-item">
-          <div class="l-solution-item-glow"></div>
-          <div class="l-solution-icon">📋</div>
-          <div class="l-solution-title">Programma progressivo in 8 tappe</div>
-          <div class="l-solution-text">40 sessioni divise in 8 allenamenti progressivi. Ogni settimana il livello sale: gli esercizi aumentano di specificità e intensità, esattamente come in un percorso sportivo strutturato. Nessun salto casuale, nessuna ripetizione inutile.</div>
+      <div class="l-section-label" data-reveal="up" style="color:var(--green)">La soluzione</div>
+      <h2 class="l-section-title" data-reveal="up">UN SISTEMA COMPLETO<br>PER <span style="color:var(--green)">CRESCERE SUL SERIO</span></h2>
+      <p class="l-section-sub" data-reveal="up">Non si tratta di tirare più frecce. Si tratta di sapere sempre cosa stai facendo, perché lo stai facendo, e quanto stai migliorando.</p>
+      <div class="l-sol-list">
+        <div class="l-sol-row" data-reveal="left">
+          <div class="l-sol-vis"><span class="l-sol-num">01</span><span class="l-sol-ic">📋</span></div>
+          <div class="l-sol-body"><div class="l-sol-t">Programma progressivo in 8 tappe</div><div class="l-sol-x">40 sessioni divise in 8 allenamenti progressivi. Ogni settimana il livello sale: gli esercizi aumentano di specificità e intensità, esattamente come in un percorso sportivo strutturato. Nessun salto casuale, nessuna ripetizione inutile.</div></div>
         </div>
-        <div class="l-solution-item">
-          <div class="l-solution-item-glow"></div>
-          <div class="l-solution-icon">📊</div>
-          <div class="l-solution-title">Statistiche che parlano chiaro</div>
-          <div class="l-solution-text">Ogni risultato viene salvato e trasformato in grafici temporali interattivi. Vedi la tua curva di miglioramento su Tripli, Doppie, Pressure Game e 501. I numeri non mentono: se migliori, lo vedi. Se stai fermo, lo vedi lo stesso.</div>
+        <div class="l-sol-row" data-reveal="right">
+          <div class="l-sol-vis"><span class="l-sol-num">02</span><span class="l-sol-ic">📊</span></div>
+          <div class="l-sol-body"><div class="l-sol-t">Statistiche che parlano chiaro</div><div class="l-sol-x">Ogni risultato viene salvato e trasformato in grafici temporali interattivi. Vedi la tua curva di miglioramento su Tripli, Doppie, Pressure Game e 501. I numeri non mentono: se migliori, lo vedi. Se stai fermo, lo vedi lo stesso.</div></div>
         </div>
-        <div class="l-solution-item">
-          <div class="l-solution-item-glow"></div>
-          <div class="l-solution-icon">💥</div>
-          <div class="l-solution-title">Allenamento sotto pressione reale</div>
-          <div class="l-solution-text">Il Pressure Game simula i momenti decisivi di gara. Hai un numero definito di frecce per colpire bersagli specifici sotto pressione crescente. Non puoi bluffare con te stesso: o colpisci, o no. È lì che si costruisce la testa del giocatore.</div>
+        <div class="l-sol-row" data-reveal="left">
+          <div class="l-sol-vis"><span class="l-sol-num">03</span><span class="l-sol-ic">💥</span></div>
+          <div class="l-sol-body"><div class="l-sol-t">Allenamento sotto pressione reale</div><div class="l-sol-x">Il Pressure Game simula i momenti decisivi di gara. Hai un numero definito di frecce per colpire bersagli specifici sotto pressione crescente. Non puoi bluffare con te stesso: o colpisci, o no. È lì che si costruisce la testa del giocatore.</div></div>
         </div>
-        <div class="l-solution-item">
-          <div class="l-solution-item-glow"></div>
-          <div class="l-solution-icon">🤖</div>
-          <div class="l-solution-title">Analisi biomeccanica con IA</div>
-          <div class="l-solution-text">Carica un video del tuo tiro. L'intelligenza artificiale (MediaPipe Pose) analizza angoli di gomito, polso, spalla e postura frame per frame, senza inviare nulla a server esterni. Ottieni un report diagnostico preciso che ti mostra esattamente cosa correggere.</div>
+        <div class="l-sol-row" data-reveal="right">
+          <div class="l-sol-vis"><span class="l-sol-num">04</span><span class="l-sol-ic">🤖</span></div>
+          <div class="l-sol-body"><div class="l-sol-t">Analisi biomeccanica con IA</div><div class="l-sol-x">Carica un video del tuo tiro. L'intelligenza artificiale (MediaPipe Pose) analizza angoli di gomito, polso, spalla e postura frame per frame, senza inviare nulla a server esterni. Ottieni un report diagnostico preciso che ti mostra esattamente cosa correggere.</div></div>
         </div>
-        <div class="l-solution-item">
-          <div class="l-solution-item-glow"></div>
-          <div class="l-solution-icon">🎮</div>
-          <div class="l-solution-title">501 completo: solo, con avversario o in torneo</div>
-          <div class="l-solution-text">Segnapunti 501 con suggerimenti checkout automatici, doppie tentate e colpite, media per turno e storico sessioni con grafici. Tre modalità: allenamento libero, partita con avversario (nome, sets e legs configurabili), torneo con best-of. Ogni leg conta.</div>
+        <div class="l-sol-row" data-reveal="left">
+          <div class="l-sol-vis"><span class="l-sol-num">05</span><span class="l-sol-ic">🎮</span></div>
+          <div class="l-sol-body"><div class="l-sol-t">501 completo: solo, con avversario o in torneo</div><div class="l-sol-x">Segnapunti 501 con suggerimenti checkout automatici, doppie tentate e colpite, media per turno e storico sessioni con grafici. Tre modalità: allenamento libero, partita con avversario (nome, sets e legs configurabili), torneo con best-of. Ogni leg conta.</div></div>
         </div>
-        <div class="l-solution-item">
-          <div class="l-solution-item-glow"></div>
-          <div class="l-solution-icon">☁️</div>
-          <div class="l-solution-title">Sincronizzazione istantanea</div>
-          <div class="l-solution-text">I dati si aggiornano in tempo reale su tutti i tuoi dispositivi. Salvi dal telefono al campo e controlli i grafici dal computer a casa. Nessuna app da installare: funziona direttamente dal browser, ovunque tu sia.</div>
+        <div class="l-sol-row" data-reveal="right">
+          <div class="l-sol-vis"><span class="l-sol-num">06</span><span class="l-sol-ic">☁️</span></div>
+          <div class="l-sol-body"><div class="l-sol-t">Sincronizzazione istantanea</div><div class="l-sol-x">I dati si aggiornano in tempo reale su tutti i tuoi dispositivi. Salvi dal telefono al campo e controlli i grafici dal computer a casa. Nessuna app da installare: funziona direttamente dal browser, ovunque tu sia.</div></div>
         </div>
       </div>
       <div class="l-solution-cta">
         <button class="l-cta" onclick="openLogin()">ACCEDI ALL'APP</button>
-        <div style="margin-top:16px;font-size:12px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase">Accesso su invito — Centro Darts Lab</div>
+        <div style="margin-top:16px;font-size:12px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase">Accesso su invito, Centro Darts Lab</div>
       </div>
     </div>
   </div>
@@ -1445,8 +1644,8 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   <!-- CAROUSEL FUNZIONALITÀ -->
   <div class="l-carousel-section">
     <div class="l-carousel-header">
-      <div class="l-carousel-title">LE FUNZIONALITÀ</div>
-      <div class="l-carousel-sub">Tutto quello che trovi dentro l'app</div>
+      <div class="l-carousel-title" data-reveal="up">LE FUNZIONALITÀ</div>
+      <div class="l-carousel-sub" data-reveal="up">Tutto quello che trovi dentro l'app</div>
     </div>
     <div class="l-carousel-outer" id="carouselOuter">
       <div class="l-carousel-track" id="carouselTrack">
@@ -1533,26 +1732,26 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   <!-- CHI SIAMO -->
   <div class="l-chi">
     <div class="l-chi-inner">
-      <div class="l-chi-text">
+      <div class="l-chi-text" data-reveal="left">
         <h2>IL CENTRO DARTS LAB NON È<br><span>UNA PALESTRA.</span><br>È UN POSTO CON<br><span>UN METODO PRECISO.</span></h2>
         <p>Il Centro Darts Lab nasce dalla convinzione che le freccette siano uno sport tecnico vero, che merita di essere allenato con la stessa serietà di qualsiasi altra disciplina. Non ci interessa fare numeri. Ci interessa che ogni atleta che entra qui esca con una comprensione più profonda del proprio gesto tecnico e con dati concreti che dimostrano che sta crescendo.</p>
-        <p>L'app è lo strumento digitale che accompagna ogni sessione in sala: registra i risultati, traccia i progressi, analizza il tiro. Ma il luogo fisico, i target, il bancone e il silenzio tra un tiro e l'altro — quello è il Centro Darts Lab.</p>
+        <p>L'app è lo strumento digitale che accompagna ogni sessione in sala: registra i risultati, traccia i progressi, analizza il tiro. Ma il luogo fisico, i target, il bancone e il silenzio tra un tiro e l'altro, quello è il Centro Darts Lab.</p>
         <p>L'accesso è su invito. Non per fare i preziosi, ma perché vogliamo seguire ogni atleta con la giusta attenzione. Un gruppo piccolo, un lavoro serio.</p>
       </div>
       <div class="l-chi-facts">
-        <div class="l-chi-fact">
+        <div class="l-chi-fact" data-reveal="right">
           <div class="l-chi-fact-num">8 ×5</div>
           <div class="l-chi-fact-label">Allenamenti progressivi<br>per ogni ciclo completo</div>
         </div>
-        <div class="l-chi-fact">
+        <div class="l-chi-fact" data-reveal="right">
           <div class="l-chi-fact-num">100%</div>
           <div class="l-chi-fact-label">Analisi video elaborata<br>nel browser, nessun dato inviato</div>
         </div>
-        <div class="l-chi-fact">
+        <div class="l-chi-fact" data-reveal="right">
           <div class="l-chi-fact-num">0 app</div>
-          <div class="l-chi-fact-label">Da installare — funziona<br>dal browser su qualsiasi dispositivo</div>
+          <div class="l-chi-fact-label">Da installare, funziona<br>dal browser su qualsiasi dispositivo</div>
         </div>
-        <div class="l-chi-fact">
+        <div class="l-chi-fact" data-reveal="right">
           <div class="l-chi-fact-num">∞</div>
           <div class="l-chi-fact-label">Cicli di allenamento<br>con storico dati conservato</div>
         </div>
@@ -1562,10 +1761,13 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
 
   <!-- COME FUNZIONA — JOURNEY -->
   <div class="l-journey">
-    <div class="l-journey-title">COME FUNZIONA</div>
-    <div class="l-journey-sub">Il percorso di ogni atleta del Centro Darts Lab, passo dopo passo</div>
+    <div class="l-journey-title" data-reveal="up">COME FUNZIONA</div>
+    <div class="l-journey-sub" data-reveal="up">Il percorso di ogni atleta del Centro Darts Lab, passo dopo passo</div>
 
-    <div class="l-step active">
+    <div class="l-journey-steps" id="journeySteps">
+    <div class="l-jrail"><div class="l-jrail-fill" id="jrailFill"></div></div>
+
+    <div class="l-step">
       <div class="l-step-line">
         <div class="l-step-dot">🔑</div>
         <div class="l-step-connector"></div>
@@ -1577,7 +1779,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       </div>
     </div>
 
-    <div class="l-step active">
+    <div class="l-step">
       <div class="l-step-line">
         <div class="l-step-dot">📍</div>
         <div class="l-step-connector"></div>
@@ -1589,7 +1791,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       </div>
     </div>
 
-    <div class="l-step active">
+    <div class="l-step">
       <div class="l-step-line">
         <div class="l-step-dot">🏋️</div>
         <div class="l-step-connector"></div>
@@ -1601,7 +1803,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       </div>
     </div>
 
-    <div class="l-step active">
+    <div class="l-step">
       <div class="l-step-line">
         <div class="l-step-dot">💾</div>
         <div class="l-step-connector"></div>
@@ -1613,7 +1815,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       </div>
     </div>
 
-    <div class="l-step active">
+    <div class="l-step">
       <div class="l-step-line">
         <div class="l-step-dot">📈</div>
         <div class="l-step-connector"></div>
@@ -1625,7 +1827,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       </div>
     </div>
 
-    <div class="l-step active">
+    <div class="l-step">
       <div class="l-step-line">
         <div class="l-step-dot">🎥</div>
         <div class="l-step-connector"></div>
@@ -1637,7 +1839,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       </div>
     </div>
 
-    <div class="l-step active">
+    <div class="l-step">
       <div class="l-step-line">
         <div class="l-step-dot">⚔️</div>
         <div class="l-step-connector"></div>
@@ -1649,7 +1851,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       </div>
     </div>
 
-    <div class="l-step active">
+    <div class="l-step">
       <div class="l-step-line">
         <div class="l-step-dot">🔄</div>
       </div>
@@ -1660,26 +1862,28 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
       </div>
     </div>
 
+    </div>
+
   </div>
 
   <!-- ACCESSO E CONDIZIONI -->
   <div class="l-access">
     <div class="l-access-inner">
-      <div class="l-section-label">Come si accede</div>
-      <h2 class="l-section-title">UN PROGETTO<br>PER CHI FA SUL SERIO</h2>
-      <p class="l-section-sub">Il Centro Darts Lab non è aperto a tutti. È un ambiente selezionato, dove si lavora con concentrazione e con un obiettivo chiaro: migliorare.</p>
+      <div class="l-section-label" data-reveal="up">Come si accede</div>
+      <h2 class="l-section-title" data-reveal="up">UN PROGETTO<br>PER CHI FA SUL SERIO</h2>
+      <p class="l-section-sub" data-reveal="up">Il Centro Darts Lab non è aperto a tutti. È un ambiente selezionato, dove si lavora con concentrazione e con un obiettivo chiaro: migliorare.</p>
       <div class="l-access-grid">
-        <div class="l-access-card">
+        <div class="l-access-card flow-border" data-reveal="up">
           <div class="l-access-icon">🤝</div>
           <div class="l-access-title">Solo su invito</div>
           <div class="l-access-text">L'accesso all'app è riservato agli atleti del CDL. Il responsabile crea il profilo e fornisce le credenziali iniziali. Nessuna registrazione pubblica.</div>
         </div>
-        <div class="l-access-card">
+        <div class="l-access-card flow-border" data-reveal="up">
           <div class="l-access-icon">📱</div>
           <div class="l-access-title">Nessuna app da installare</div>
           <div class="l-access-text">Funziona direttamente dal browser su telefono, tablet e computer. Vai su questo indirizzo, accedi con le tue credenziali, e sei dentro.</div>
         </div>
-        <div class="l-access-card">
+        <div class="l-access-card flow-border" data-reveal="up">
           <div class="l-access-icon">🔒</div>
           <div class="l-access-title">Dati protetti e privati</div>
           <div class="l-access-text">I tuoi dati sono su Firebase con autenticazione sicura. Solo tu e il responsabile del tuo profilo potete accedere ai tuoi risultati.</div>
@@ -1691,19 +1895,19 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
   <!-- BOTTOM CTA -->
   <div class="l-bot">
     <img src="/Centro_Darts_Lab_Logo_2.svg" alt="Centro Darts Lab" style="height:clamp(60px,12vw,100px);max-width:320px;object-fit:contain;filter:drop-shadow(0 0 22px rgba(35,197,94,.35));margin-bottom:32px">
-    <div class="l-bot-title">HAI UN METODO.<br>O HAI SOLO UN'ABITUDINE?</div>
-    <p>Chi migliora davvero a freccette non tira di più — tira meglio. Il <strong style="color:var(--green)">Centro Darts Lab</strong> ti dà un programma strutturato, dati reali su ogni sessione, analisi biomeccanica con intelligenza artificiale e partite a 501 complete in tutte le modalità. Smetti di allenarti alla cieca.</p>
+    <div class="l-bot-title" data-reveal="up">HAI UN METODO.<br>O HAI SOLO UN'ABITUDINE?</div>
+    <p data-reveal="up">Chi migliora davvero a freccette non tira di più, tira meglio. Il <strong style="color:var(--green)">Centro Darts Lab</strong> ti dà un programma strutturato, dati reali su ogni sessione, analisi biomeccanica con intelligenza artificiale e partite a 501 complete in tutte le modalità. Smetti di allenarti alla cieca.</p>
     <button class="l-cta" onclick="openLogin()">ACCEDI ALL'APP</button>
   </div>
 
   <!-- FAQ -->
   <div class="l-faq-section">
     <div class="l-faq-inner">
-      <div class="l-section-label">Domande frequenti</div>
-      <h2 class="l-section-title">HAI DEI DUBBI?<br>LI CAPIAMO.</h2>
+      <div class="l-section-label" data-reveal="up">Domande frequenti</div>
+      <h2 class="l-section-title" data-reveal="up">HAI DEI DUBBI?<br>LI CAPIAMO.</h2>
       <div class="l-faq-list">
 
-        <div class="l-faq-item">
+        <div class="l-faq-item" data-reveal="up">
           <button class="l-faq-q" onclick="faqToggle(this)" aria-expanded="false">
             <span>Funziona anche se sono un principiante assoluto?</span>
             <span class="l-faq-arrow">▼</span>
@@ -1711,7 +1915,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
           <div class="l-faq-a">Sì. Il programma parte dai fondamentali e scala gradualmente. I primi allenamenti costruiscono le basi tecniche del gesto, per poi aumentare di specificità e difficoltà assieme al tuo livello. Non è richiesta nessuna esperienza precedente alle freccette.</div>
         </div>
 
-        <div class="l-faq-item">
+        <div class="l-faq-item" data-reveal="up">
           <button class="l-faq-q" onclick="faqToggle(this)" aria-expanded="false">
             <span>Quanto tempo richiede ogni sessione di allenamento?</span>
             <span class="l-faq-arrow">▼</span>
@@ -1719,7 +1923,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
           <div class="l-faq-a">Mediamente 45–60 minuti per completare una sessione intera. Puoi però salvare a metà e riprendere in un altro momento: l'app ricorda esattamente dove ti eri fermato e ci torna automaticamente al login successivo.</div>
         </div>
 
-        <div class="l-faq-item">
+        <div class="l-faq-item" data-reveal="up">
           <button class="l-faq-q" onclick="faqToggle(this)" aria-expanded="false">
             <span>Come accedo all'app? Devo installarla?</span>
             <span class="l-faq-arrow">▼</span>
@@ -1727,7 +1931,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
           <div class="l-faq-a">Nessuna installazione: funziona direttamente dal browser su qualsiasi dispositivo. L'accesso è su invito: il responsabile crea il tuo profilo e ti fornisce le credenziali iniziali. Al primo login imposterai una password personale. Da quel momento puoi usare l'app ovunque.</div>
         </div>
 
-        <div class="l-faq-item">
+        <div class="l-faq-item" data-reveal="up">
           <button class="l-faq-q" onclick="faqToggle(this)" aria-expanded="false">
             <span>I miei dati di allenamento sono al sicuro?</span>
             <span class="l-faq-arrow">▼</span>
@@ -1735,7 +1939,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
           <div class="l-faq-a">Tutti i dati sono salvati su Firebase di Google (server in Europa) con autenticazione sicura e comunicazioni crittografate. Solo tu e il responsabile del tuo profilo potete accedere ai tuoi risultati. I video della funzione Analisi Tiro vengono elaborati interamente nel browser e non vengono mai inviati a server esterni.</div>
         </div>
 
-        <div class="l-faq-item">
+        <div class="l-faq-item" data-reveal="up">
           <button class="l-faq-q" onclick="faqToggle(this)" aria-expanded="false">
             <span>Come funziona l'analisi del tiro con l'intelligenza artificiale?</span>
             <span class="l-faq-arrow">▼</span>
@@ -1743,7 +1947,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
           <div class="l-faq-a">Carichi un video del tuo tiro registrato da smartphone (frontale, laterale, o entrambi). La libreria MediaPipe Pose rileva i punti chiave del corpo e calcola angoli di gomito, polso, spalla e postura frame per frame, direttamente nel browser del tuo dispositivo. Il risultato è un report diagnostico dettagliato. Nessun video viene inviato fuori dal tuo dispositivo.</div>
         </div>
 
-        <div class="l-faq-item">
+        <div class="l-faq-item" data-reveal="up">
           <button class="l-faq-q" onclick="faqToggle(this)" aria-expanded="false">
             <span>Posso usare il segnapunti 501 con un avversario o durante tornei?</span>
             <span class="l-faq-arrow">▼</span>
@@ -1751,15 +1955,15 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
           <div class="l-faq-a">Assolutamente sì. Il 501 funziona in tre modalità: solitario, partita con avversario (nome libero, sets e legs configurabili) e torneo con best-of. L'app suggerisce i checkout automaticamente, tiene traccia di doppie e medie per turno e salva tutto nelle statistiche con grafico vinto/perso. Per non perdere il ritmo, fatti aiutare da un amico nel turno avversario.</div>
         </div>
 
-        <div class="l-faq-item">
+        <div class="l-faq-item" data-reveal="up">
           <button class="l-faq-q" onclick="faqToggle(this)" aria-expanded="false">
             <span>Cosa significa "aggiornamento in tempo reale"?</span>
             <span class="l-faq-arrow">▼</span>
           </button>
-          <div class="l-faq-a">L'app è collegata al database Firebase in modo persistente. Quando un dato cambia — un appuntamento aggiunto, una sessione salvata, un messaggio ricevuto — si aggiorna automaticamente su tutti i dispositivi connessi senza bisogno di ricaricare la pagina. Se sei al campo con il telefono e il responsabile aggiorna il calendario dal computer, lo vedi comparire in pochi secondi.</div>
+          <div class="l-faq-a">L'app è collegata al database Firebase in modo persistente. Quando un dato cambia, ad esempio un appuntamento aggiunto, una sessione salvata o un messaggio ricevuto, si aggiorna automaticamente su tutti i dispositivi connessi senza bisogno di ricaricare la pagina. Se sei al campo con il telefono e il responsabile aggiorna il calendario dal computer, lo vedi comparire in pochi secondi.</div>
         </div>
 
-        <div class="l-faq-item">
+        <div class="l-faq-item" data-reveal="up">
           <button class="l-faq-q" onclick="faqToggle(this)" aria-expanded="false">
             <span>Cosa succede quando completo tutti gli 8 allenamenti?</span>
             <span class="l-faq-arrow">▼</span>
@@ -1771,7 +1975,7 @@ select,input[type="text"],input[type="password"],input[type="number"],input[type
     </div>
   </div>
 
-  <div class="l-foot">© 2026 Centro Darts Lab — Tutti i diritti riservati &nbsp;·&nbsp; <a href="#" onclick="openLegal('privacy');return false;" style="color:var(--muted);text-decoration:none" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color='var(--muted)'">Privacy Policy</a> &nbsp;·&nbsp; <a href="#" onclick="openLegal('terms');return false;" style="color:var(--muted);text-decoration:none" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color='var(--muted)'">Termini e Condizioni</a> &nbsp;·&nbsp; <a href="#" onclick="openLegal('cookie');return false;" style="color:var(--muted);text-decoration:none" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color='var(--muted)'">Cookie Policy</a></div>
+  <div class="l-foot">© 2026 Centro Darts Lab &nbsp;·&nbsp; Tutti i diritti riservati &nbsp;·&nbsp; <a href="#" onclick="openLegal('privacy');return false;" style="color:var(--muted);text-decoration:none" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color='var(--muted)'">Privacy Policy</a> &nbsp;·&nbsp; <a href="#" onclick="openLegal('terms');return false;" style="color:var(--muted);text-decoration:none" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color='var(--muted)'">Termini e Condizioni</a> &nbsp;·&nbsp; <a href="#" onclick="openLegal('cookie');return false;" style="color:var(--muted);text-decoration:none" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color='var(--muted)'">Cookie Policy</a></div>
 </div>
 </div>
 
@@ -10958,130 +11162,115 @@ function atFmtTime(s){
 // Dots are also clickable for navigation
 // ══════════════════════════════════════════════════
 (function(){
-  const CARDS = 7;
-  let curIdx = 0;
-  let startX = 0, startTranslate = 0, isDragging = false, hasDragged = false;
+  // COVERFLOW 3D — solo manuale (drag/swipe + frecce/dots), prev+main+next, wrap-around
+  const N = 7;
+  let idx = 0;
+  let dragging = false, startX = 0, dx = 0, moved = false;
 
-  function getOuter(){ return document.getElementById('carouselOuter'); }
-  function getTrack(){ return document.getElementById('carouselTrack'); }
-  function isMobileView(){ return window.innerWidth <= 768; }
+  function track(){ return document.getElementById('carouselTrack'); }
+  function outer(){ return document.getElementById('carouselOuter'); }
+  function cards(){ var t = track(); return t ? [].slice.call(t.querySelectorAll('.l-card')) : []; }
 
-  function centerOffset(idx){
-    const outer = getOuter();
-    const cards = document.querySelectorAll('.l-card');
-    if(!outer || !cards.length) return 0;
-    const ow = outer.offsetWidth;
-    const cw = cards[0].offsetWidth;
-    const gap = 20;
-    if(isMobileView()){
-      // Left-aligned: card starts with a small left margin to show a peek of prev
-      // First card: flush left with padding; subsequent: show peek of prev (40px)
-      const peekLeft = 16; // left padding/margin on mobile
-      return peekLeft - idx*(cw+gap);
-    }
-    // Desktop: centred
-    return ow/2 - cw/2 - idx*(cw+gap);
-  }
-
-  function updateVisuals(idx){
-    document.querySelectorAll('.l-card').forEach(function(c,i){
-      var dist = Math.abs(i-idx);
-      c.classList.toggle('active-card', i===idx);
-      c.style.transform = i===idx ? 'scale(1)' : 'scale('+Math.max(0.88,1-dist*0.05)+')';
-      c.style.opacity   = i===idx ? '1' : String(Math.max(0.38,1-dist*0.22));
+  function layout(animate){
+    var t = track(); if(!t) return;
+    var cs = cards(); if(!cs.length) return;
+    var cw = cs[0].offsetWidth || 320;
+    var maxH = 0;
+    cs.forEach(function(c){ if(c.offsetHeight > maxH) maxH = c.offsetHeight; });
+    if(maxH) t.style.height = maxH + 'px';
+    cs.forEach(function(c,i){
+      var p = i - idx, ap = Math.abs(p);
+      var vis = ap <= 1;                 // solo precedente, principale, successivo
+      var tx = p * (cw * 0.60);
+      var tz = -ap * 120;
+      var ry = -p * 30;                  // rotazione più morbida: niente deformazione
+      var sc = 1 - ap * 0.16;
+      var op = vis ? (1 - ap * 0.45) : 0;
+      c.style.transition = (animate === false) ? 'none' : '';
+      c.style.transform = 'translate(calc(-50% + ' + tx + 'px), -50%) translateZ(' + tz + 'px) rotateY(' + ry + 'deg) scale(' + sc + ')';
+      c.style.opacity = op;
+      c.style.zIndex = String(50 - ap * 10 + (p === 0 ? 5 : 0));
+      c.style.pointerEvents = (p === 0) ? 'auto' : 'none';
+      c.style.visibility = vis ? 'visible' : 'hidden';
+      c.classList.toggle('active-card', i === idx);
     });
-    document.querySelectorAll('#carouselDots .l-dot')
-      .forEach(function(d,i){ d.classList.toggle('on', i===idx); });
+    document.querySelectorAll('#carouselDots .l-dot').forEach(function(d,i){
+      d.classList.toggle('on', i === idx);
+    });
   }
 
-  window.goToCard = function(idx, animated){
-    idx = Math.max(0, Math.min(CARDS-1, idx));
-    curIdx = idx;
-    window._carouselIdx = curIdx; // expose for arrow buttons
-    var track = getTrack();
-    if(!track) return;
-    if(animated !== false){
-      track.classList.remove('no-transition');
-    } else {
-      track.classList.add('no-transition');
-    }
-    track.style.transform = 'translateX('+centerOffset(idx)+'px)';
-    updateVisuals(idx);
+  window.goToCard = function(i, animate){
+    idx = ((i % N) + N) % N;
+    window._carouselIdx = idx; // esposto per le frecce
+    layout(animate);
   };
+  function adv(step){ window.goToCard(idx + step); }
 
-  // ── Pointer/Mouse drag ──
-  function onPointerDown(e){
-    if(e.touches) return;
-    isDragging = true; hasDragged = false;
-    startX = e.clientX;
-    var track = getTrack();
-    startTranslate = centerOffset(curIdx);
-    track.classList.add('no-transition');
-    getOuter().classList.add('dragging');
-    e.preventDefault();
+  // ── drag: feedback parallax sullo stage ──
+  function dragStart(x){
+    dragging = true; moved = false; startX = x; dx = 0;
+    var t = track(); if(t) t.style.transition = 'none';
+    var o = outer(); if(o) o.classList.add('dragging');
   }
-  function onPointerMove(e){
-    if(!isDragging || e.touches) return;
-    var dx = e.clientX - startX;
-    if(Math.abs(dx) > 4) hasDragged = true;
-    getTrack().style.transform = 'translateX('+(startTranslate+dx)+'px)';
+  function dragMove(x){
+    if(!dragging) return;
+    dx = x - startX;
+    if(Math.abs(dx) > 4) moved = true;
+    var t = track(); if(t) t.style.transform = 'translateX(' + (dx * 0.22) + 'px)';
   }
-  function onPointerUp(e){
-    if(!isDragging || e.touches) return;
-    isDragging = false;
-    getOuter().classList.remove('dragging');
-    var dx = e.clientX - startX;
-    var threshold = 50;
-    var next = curIdx;
-    if(dx < -threshold) next = Math.min(CARDS-1, curIdx+1);
-    else if(dx > threshold) next = Math.max(0, curIdx-1);
-    window.goToCard(next);
+  function resetStage(){ var t = track(); if(t){ t.style.transition = ''; t.style.transform = ''; } }
+  function dragEnd(){
+    if(!dragging) return;
+    dragging = false;
+    var o = outer(); if(o) o.classList.remove('dragging');
+    resetStage();
+    var th = 45;
+    if(dx < -th) adv(1);
+    else if(dx > th) adv(-1);
+    else layout();
   }
 
-  // ── Touch swipe ──
-  var touchStartX = 0, touchStartY = 0, touchDx = 0;
-  function onTouchStart(e){
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    touchDx = 0;
-    startTranslate = centerOffset(curIdx);
-    getTrack().classList.add('no-transition');
-  }
+  function onMouseDown(e){ if(e.button !== 0) return; dragStart(e.clientX); e.preventDefault(); }
+  function onMouseMove(e){ dragMove(e.clientX); }
+  function onMouseUp(){ dragEnd(); }
+
+  var tY = 0, horiz = false;
+  function onTouchStart(e){ var t = e.touches[0]; tY = t.clientY; horiz = false; dragStart(t.clientX); }
   function onTouchMove(e){
-    touchDx = e.touches[0].clientX - touchStartX;
-    var dy = e.touches[0].clientY - touchStartY;
-    if(Math.abs(touchDx) > Math.abs(dy) && Math.abs(touchDx) > 5){
-      e.preventDefault();
-      getTrack().style.transform = 'translateX('+(startTranslate+touchDx)+'px)';
-    }
+    if(!dragging) return;
+    var t = e.touches[0];
+    var ddx = t.clientX - startX, ddy = t.clientY - tY;
+    if(!horiz && Math.abs(ddx) > Math.abs(ddy) && Math.abs(ddx) > 6) horiz = true;
+    if(horiz){ e.preventDefault(); dragMove(t.clientX); }
   }
   function onTouchEnd(){
-    var threshold = 50;
-    var next = curIdx;
-    if(touchDx < -threshold) next = Math.min(CARDS-1, curIdx+1);
-    else if(touchDx > threshold) next = Math.max(0, curIdx-1);
-    window.goToCard(next);
+    if(horiz){ dragEnd(); }
+    else { dragging = false; var o = outer(); if(o) o.classList.remove('dragging'); resetStage(); }
   }
+
+  // Evita che un drag faccia partire un click "fantasma"
+  function blockClick(e){ if(moved){ e.preventDefault(); e.stopPropagation(); moved = false; } }
 
   function init(){
     window._carouselIdx = 0;
-    var outer = getOuter();
-    if(!outer) return;
-    outer.addEventListener('mousedown',  onPointerDown, {passive:false});
-    window.addEventListener('mousemove', onPointerMove, {passive:true});
-    window.addEventListener('mouseup',   onPointerUp,   {passive:true});
-    outer.addEventListener('touchstart', onTouchStart,  {passive:true});
-    outer.addEventListener('touchmove',  onTouchMove,   {passive:false});
-    outer.addEventListener('touchend',   onTouchEnd,    {passive:true});
-    window.goToCard(0);
+    var o = outer(); if(!o) return;
+    o.addEventListener('mousedown', onMouseDown, {passive:false});
+    window.addEventListener('mousemove', onMouseMove, {passive:true});
+    window.addEventListener('mouseup', onMouseUp, {passive:true});
+    o.addEventListener('touchstart', onTouchStart, {passive:true});
+    o.addEventListener('touchmove', onTouchMove, {passive:false});
+    o.addEventListener('touchend', onTouchEnd, {passive:true});
+    o.addEventListener('click', blockClick, true);
+    window.goToCard(0, false);
   }
 
-  window.addEventListener('resize', function(){ setTimeout(function(){ window.goToCard(curIdx, false); }, 50); }, {passive:true});
+  window.addEventListener('resize', function(){ setTimeout(function(){ layout(false); }, 60); }, {passive:true});
+  window.addEventListener('load', function(){ setTimeout(function(){ layout(false); }, 80); });
 
   if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 100); });
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 120); });
   } else {
-    setTimeout(init, 100);
+    setTimeout(init, 120);
   }
 })();
 
@@ -11146,6 +11335,117 @@ function atFmtTime(s){
     document.addEventListener('DOMContentLoaded', initReveal);
   } else {
     initReveal();
+  }
+})();
+// ══════════════════════════════════════════════════
+// LANDING FX v223 — reveal universali, count-up, journey neon, progress bar
+// ══════════════════════════════════════════════════
+(function(){
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  function initFX(){
+    var reveals = [].slice.call(document.querySelectorAll('#landing [data-reveal]'));
+
+    if(reduce){
+      reveals.forEach(function(el){ el.classList.add('in'); });
+    } else {
+      // stagger: data-reveal con stesso genitore → delay progressivo
+      var groups = [];
+      reveals.forEach(function(el){
+        var p = el.parentNode, g = null;
+        for(var i=0;i<groups.length;i++){ if(groups[i].p===p){ g=groups[i]; break; } }
+        if(!g){ g={p:p,n:0}; groups.push(g); }
+        el.style.transitionDelay = (Math.min(g.n,6)*80) + 'ms';
+        g.n++;
+      });
+      var ro = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if(e.isIntersecting){ e.target.classList.add('in'); ro.unobserve(e.target); }
+        });
+      }, { threshold: 0.14, rootMargin: '0px 0px -8% 0px' });
+      reveals.forEach(function(el){ ro.observe(el); });
+    }
+
+    // ── Count-up numeri ──
+    function countUp(el){
+      var target = parseInt(el.getAttribute('data-count'), 10) || 0;
+      if(reduce){ el.textContent = target; return; }
+      var dur = 1400, t0 = null;
+      function step(ts){
+        if(!t0) t0 = ts;
+        var k = Math.min(1, (ts - t0) / dur);
+        var eased = 1 - Math.pow(1 - k, 3);
+        el.textContent = Math.round(target * eased);
+        if(k < 1) requestAnimationFrame(step);
+        else el.textContent = target;
+      }
+      requestAnimationFrame(step);
+    }
+    var no = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ countUp(e.target); no.unobserve(e.target); }
+      });
+    }, { threshold: 0.5 });
+    [].slice.call(document.querySelectorAll('#landing [data-count]')).forEach(function(el){ no.observe(el); });
+
+    // ── Journey neon + progress bar (scroll, rAF throttled) ──
+    var ticking = false;
+    function frame(){
+      var bar = document.getElementById('lProgress');
+      if(bar){
+        var de = document.scrollingElement || document.documentElement;
+        var max = de.scrollHeight - de.clientHeight;
+        bar.style.width = (max > 0 ? (de.scrollTop / max) * 100 : 0) + '%';
+      }
+      var steps = document.getElementById('journeySteps');
+      var fill = document.getElementById('jrailFill');
+      if(steps && fill){
+        var rect = steps.getBoundingClientRect();
+        var trigger = window.innerHeight * 0.55;
+        var h = Math.max(0, Math.min(rect.height, trigger - rect.top));
+        fill.style.height = h + 'px';
+        steps.querySelectorAll('.l-step').forEach(function(st){
+          var dot = st.querySelector('.l-step-dot');
+          if(!dot) return;
+          var dc = (dot.getBoundingClientRect().top + dot.offsetHeight/2) - rect.top;
+          st.classList.toggle('active', dc <= h + 4);
+        });
+      }
+      // ── Circolo vizioso: pallino rosso guidato dallo scroll (sezione pinnata) ──
+      var vw = document.getElementById('viciousWrap');
+      if(vw){
+        var vr = vw.getBoundingClientRect();
+        var span = vr.height - window.innerHeight;
+        var prog = span > 0 ? Math.max(0, Math.min(1, -vr.top / span)) : 0;
+        var C = 251.327;
+        var arc = document.getElementById('viciousArc');
+        if(arc) arc.style.strokeDashoffset = (C * (1 - prog)).toFixed(2);
+        var vdot = document.getElementById('viciousDot');
+        if(vdot){
+          var th = prog * 2 * Math.PI;
+          vdot.setAttribute('cx', (50 + 40 * Math.sin(th)).toFixed(2));
+          vdot.setAttribute('cy', (50 - 40 * Math.cos(th)).toFixed(2));
+        }
+        var aIdx = Math.min(3, Math.floor(prog * 4));
+        document.querySelectorAll('#viciousCircle .l-vnode').forEach(function(n){
+          n.classList.toggle('on', prog * 4 >= parseInt(n.getAttribute('data-i'), 10));
+        });
+        document.querySelectorAll('#viciousDetails .l-vdetail').forEach(function(d){
+          d.classList.toggle('active', parseInt(d.getAttribute('data-i'), 10) === aIdx);
+        });
+      }
+      ticking = false;
+    }
+    function onScroll(){ if(ticking) return; ticking = true; requestAnimationFrame(frame); }
+    window.addEventListener('scroll', onScroll, {passive:true});
+    window.addEventListener('resize', onScroll, {passive:true});
+    onScroll();
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', initFX);
+  } else {
+    initFX();
   }
 })();
 // ══════════════════════════════════════════════════
