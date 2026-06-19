@@ -155,7 +155,7 @@ body.in-app #landing{display:none}
 .l-dot.on{background:var(--green);width:36px;border-radius:7px}
 .l-carousel-arrow{background:transparent;border:1px solid var(--d4);color:var(--muted);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color .2s,color .2s}
 .l-carousel-arrow:hover{border-color:var(--green);color:var(--green)}
-.l-swipe-hint{margin-top:24px;margin-bottom:8px;font-size:12px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;text-align:center;animation:swipeHint 2s infinite}
+.l-swipe-hint{margin-top:24px;margin-bottom:8px;font-size:12px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;text-align:center;animation:bounce 2s infinite}
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 @keyframes swipeHint{0%,100%{transform:translateX(0)}50%{transform:translateX(-10px)}}
 
@@ -1420,7 +1420,9 @@ body.in-app #lProgress{display:none}
   width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;
   background:var(--gdim);border:2px solid var(--green);
   box-shadow:0 0 16px 4px #22c55e,0 0 34px 9px #22c55e66;z-index:3}
-.l-jpanels{position:relative;flex:1;min-width:0;align-self:stretch;overflow:hidden}
+.l-jpanels{position:relative;flex:1;min-width:0;align-self:stretch;overflow:hidden;
+  -webkit-mask-image:linear-gradient(to bottom,transparent,#000 22%,#000 78%,transparent);
+  mask-image:linear-gradient(to bottom,transparent,#000 22%,#000 78%,transparent)}
 .l-jp-ic{display:none}
 .l-jpanel{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
   opacity:0;transition:opacity .5s,transform .5s;pointer-events:none;will-change:transform,opacity}
@@ -1491,14 +1493,19 @@ body.in-app #lProgress{display:none}
 
 /* ── PROBLEMA: circolo vizioso pinnato ── */
 .l-problem-grid{display:none}
-.l-vicious{position:relative;height:260vh}
-@media(max-width:600px){.l-vicious{height:230vh}}
-.l-vicious-sticky{position:sticky;top:0;height:100vh;height:100svh;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.l-vicious-stage{width:100%;max-width:560px;margin:0 auto;padding:0 20px;display:flex;flex-direction:column;align-items:center;gap:20px}
-.l-circle{position:relative;width:min(80vw,420px);aspect-ratio:1/1}
-@media(min-width:721px){.l-circle{width:min(840px,86vw,calc(92vh - 200px))}}
+.l-problem-section.l-vicious{padding:0;position:relative;height:260vh}
+@media(max-width:600px){.l-problem-section.l-vicious{height:230vh}}
+.l-vicious-sticky{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:42px 20px 26px}
+.l-vicious-sticky .l-problem-inner{flex-shrink:0;width:100%;max-width:760px;margin:0 auto 6px}
+.l-vicious-sticky .l-section-title{margin-bottom:12px}
+.l-vicious-sticky .l-section-sub{margin-bottom:0}
+.l-vicious-stage{flex:1;min-height:0;width:100%;max-width:560px;margin:0 auto;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
+.l-circle{position:relative;width:min(80vw,calc(94vh - 330px));aspect-ratio:1/1}
+@media(min-width:721px){.l-circle{width:min(780px,84vw,calc(94vh - 240px))}}
 .l-circle-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.vc-ring-base{display:none}  /* niente anello di base: la linea la traccia solo il pallino */
+.vc-ring-base{fill:none;stroke:#3a1414;stroke-width:1.4;vector-effect:non-scaling-stroke}  /* traccia tenue del cerchio (come v224) */
 .vc-ring-prog{fill:none;stroke:#ff3b3b;stroke-width:2;stroke-linecap:round;vector-effect:non-scaling-stroke;
   stroke-dasharray:251.327;stroke-dashoffset:251.327;
   filter:drop-shadow(0 0 1.5px #ff5252) drop-shadow(0 0 3px #ef4444) drop-shadow(0 0 7px #ef4444)}
@@ -1622,23 +1629,21 @@ body.in-app #lProgress{display:none}
     <h1 class="l-head"><span class="lh-line"><span>SMETTI DI</span></span><span class="lh-line"><span class="g">TIRARE A CASO.</span></span><span class="lh-line"><span>INIZIA AD</span></span><span class="lh-line"><span class="g">ALLENARTI DAVVERO</span></span></h1>
     <p class="l-sub">Il <strong style="color:var(--green)">Centro Darts Lab</strong> è il primo centro italiano dedicato al miglioramento tecnico alle freccette. Non una palestra generica, non un club del giovedì sera: un percorso strutturato, con dati reali, esercizi progressivi e analisi biomeccanica del tiro con intelligenza artificiale.</p>
     <button class="l-cta" onclick="openLogin()">ACCEDI ALL'APP</button>
-    <div class="l-scroll-hint">↓ &nbsp; Scopri di più &nbsp; ↓</div>
+    <div class="l-scroll-hint">↓ &nbsp; Scorri in basso &nbsp; ↓</div>
   </div>
 
-  <!-- PROBLEMA -->
-  <div class="l-problem-section">
-    <div class="l-problem-inner">
-      <div class="l-section-label" data-reveal="up">Il problema</div>
-      <h2 class="l-section-title" data-reveal="up">PERCHÉ NON MIGLIORI,<br>ANCHE SE TI ALLENI?</h2>
-      <p class="l-section-sub" data-reveal="up">Vai al campo ogni settimana. Tiri frecce. Eppure il livello sembra sempre uguale. Non è colpa della tua coordinazione. È il metodo che manca.</p>
-    </div>
-
-    <!-- CIRCOLO VIZIOSO — cerchio pinnato, pallino rosso guidato dallo scroll -->
-    <div class="l-vicious" id="viciousWrap">
+  <!-- PROBLEMA (pinnata: titolo + cerchio visibili insieme, pallino guida lo scroll) -->
+  <div class="l-problem-section l-vicious" id="viciousWrap">
       <div class="l-vicious-sticky">
+        <div class="l-problem-inner">
+          <div class="l-section-label">Il problema</div>
+          <h2 class="l-section-title">PERCHÉ NON MIGLIORI,<br>ANCHE SE TI ALLENI?</h2>
+          <p class="l-section-sub">Vai al campo ogni settimana. Tiri frecce. Eppure il livello sembra sempre uguale. Non è colpa della tua coordinazione. È il metodo che manca.</p>
+        </div>
         <div class="l-vicious-stage">
           <div class="l-circle" id="viciousCircle">
             <svg class="l-circle-svg" viewBox="0 0 100 100" aria-hidden="true">
+              <circle class="vc-ring-base" cx="50" cy="50" r="40"></circle>
               <circle class="vc-ring-prog" id="viciousArc" cx="50" cy="50" r="40" transform="rotate(-90 50 50)"></circle>
             </svg>
             <div class="vc-dot2" id="viciousDot"></div>
@@ -1663,7 +1668,6 @@ body.in-app #lProgress{display:none}
           </div>
         </div>
       </div>
-    </div>
   </div>
 
   <!-- SOLUZIONE -->
@@ -1700,7 +1704,6 @@ body.in-app #lProgress{display:none}
       </div>
       <div class="l-solution-cta">
         <button class="l-cta" onclick="openLogin()">ACCEDI ALL'APP</button>
-        <div style="margin-top:16px;font-size:12px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase">Accesso su invito, Centro Darts Lab</div>
       </div>
     </div>
   </div>
@@ -1780,18 +1783,7 @@ body.in-app #lProgress{display:none}
 
       </div>
     </div>
-    <div class="l-dot-wrap" id="carouselDots">
-      <button class="l-carousel-arrow" onclick="goToCard(window._carouselIdx-1)" aria-label="Precedente">&#8592;</button>
-      <button class="l-dot on" onclick="goToCard(0)"></button>
-      <button class="l-dot" onclick="goToCard(1)"></button>
-      <button class="l-dot" onclick="goToCard(2)"></button>
-      <button class="l-dot" onclick="goToCard(3)"></button>
-      <button class="l-dot" onclick="goToCard(4)"></button>
-      <button class="l-dot" onclick="goToCard(5)"></button>
-      <button class="l-dot" onclick="goToCard(6)"></button>
-      <button class="l-carousel-arrow" onclick="goToCard(window._carouselIdx+1)" aria-label="Successivo">&#8594;</button>
-    </div>
-    <div class="l-swipe-hint">← SCORRI A SINISTRA →</div>
+    <div class="l-swipe-hint">↓ &nbsp; Scorri in basso &nbsp; ↓</div>
     </div>
   </div>
 
@@ -1861,14 +1853,14 @@ body.in-app #lProgress{display:none}
             <div class="l-jp-head">ACCESSO SU INVITO</div>
             <div class="l-jp-text">L'accesso all'app è riservato agli atleti del Centro Darts Lab. Il responsabile crea il tuo account e ti fornisce le credenziali iniziali. Al primo accesso imposti una password personale. Da quel momento in poi, l'app è tua.</div>
           </div>
-          <div class="l-jpanel" data-i="1" data-emoji="📍">
-            <div class="l-jp-ic">📍</div>
+          <div class="l-jpanel" data-i="1" data-emoji="📝">
+            <div class="l-jp-ic">📝</div>
             <div class="l-jp-label">Passo 2</div>
             <div class="l-jp-head">L'APP SA DOVE SEI RIMASTO</div>
             <div class="l-jp-text">Al login l'app apre automaticamente l'ultima sessione ancora incompleta. Non devi ricordarti nulla: il programma sa esattamente dove sei nel percorso e ti porta lì. Se hai salvato a metà, riprendi da dove ti eri fermato.</div>
           </div>
-          <div class="l-jpanel" data-i="2" data-emoji="🏋️">
-            <div class="l-jp-ic">🏋️</div>
+          <div class="l-jpanel" data-i="2" data-emoji="💪">
+            <div class="l-jp-ic">💪</div>
             <div class="l-jp-label">Passo 3</div>
             <div class="l-jp-head">ALLENATI CON ESERCIZI MIRATI</div>
             <div class="l-jp-text">Ogni sessione contiene 7–9 esercizi progressivi: Tripli, Around the Clock, Pressure Game, partite a 501 con regole speciali, Shanghai e molto altro. Il gioco interattivo integrato registra i risultati esercizio per esercizio, in tempo reale.</div>
@@ -1885,14 +1877,14 @@ body.in-app #lProgress{display:none}
             <div class="l-jp-head">LEGGI I TUOI PROGRESSI</div>
             <div class="l-jp-text">La sezione Statistiche mostra grafici temporali per ogni tipo di esercizio, il numero di corone (risultati perfetti) per sessione, e le tendenze del tuo 501. Vedi in un colpo d'occhio dove stai crescendo, dove sei fermo, e dove devi concentrarti di più.</div>
           </div>
-          <div class="l-jpanel" data-i="5" data-emoji="🎥">
-            <div class="l-jp-ic">🎥</div>
+          <div class="l-jpanel" data-i="5" data-emoji="🤖">
+            <div class="l-jp-ic">🤖</div>
             <div class="l-jp-label">Passo 6</div>
             <div class="l-jp-head">ANALIZZA IL TIRO CON L'IA</div>
             <div class="l-jp-text">Quando vuoi andare più in profondo, carica un video del tuo tiro nella sezione Analisi. L'intelligenza artificiale misura angoli e postura frame per frame e genera un report diagnostico che ti mostra esattamente cosa stai facendo bene e cosa correggere. Il tutto senza inviare nulla a server esterni: il video resta sul tuo dispositivo.</div>
           </div>
-          <div class="l-jpanel" data-i="6" data-emoji="⚔️">
-            <div class="l-jp-ic">⚔️</div>
+          <div class="l-jpanel" data-i="6" data-emoji="🏆">
+            <div class="l-jp-ic">🏆</div>
             <div class="l-jp-label">Passo 7</div>
             <div class="l-jp-head">GIOCA, SFIDA, MIGLIORA</div>
             <div class="l-jp-text">Oltre al programma strutturato, gioca partite a 501 da solo, con un avversario o in torneo con sets, legs e best-of personalizzabili. Statistiche complete per ogni partita: media per turno, percentuale alle doppie, checkout riusciti, grafico storico e registro vinto/perso.</div>
@@ -11408,12 +11400,13 @@ function atFmtTime(s){
         if(jcomet) jcomet.style.top = (26 + jp * lineH).toFixed(1) + 'px';
         var jact = Math.max(0, Math.min(jlast, Math.round(jp * jlast)));
         var jEmoji = '';
-        // pannelli: attivo al centro, precedente/successivo intravisti in dissolvenza
+        // distanza fra i passi: ben separati così non si sovrappongono
+        var jgap = Math.max(240, jpanels.clientHeight * 0.62);
         panels.forEach(function(pn, k){
           var d = k - jact, ad = Math.abs(d);
           pn.classList.toggle('active', d === 0);
-          pn.style.transform = 'translateY(calc(-50% + ' + (d * 168) + 'px))';
-          pn.style.opacity = d === 0 ? '1' : (ad === 1 ? '0.22' : '0');
+          pn.style.transform = 'translateY(calc(-50% + ' + (d * jgap).toFixed(0) + 'px))';
+          pn.style.opacity = d === 0 ? '1' : (ad === 1 ? '0.18' : '0');
           pn.style.pointerEvents = d === 0 ? 'auto' : 'none';
           if(d === 0) jEmoji = pn.getAttribute('data-emoji') || '';
         });
