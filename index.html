@@ -453,6 +453,7 @@ select:hover{border-color:var(--green)}
 .ic input.ok{border-color:#166534;background:#052e16}
 .ic input.xx{border-color:#7f1d1d;background:#1c0404;color:#f87171}
 .ic input.gold{border-color:#f59e0b;background:rgba(251,191,36,0.18);color:#fbbf24}
+.ic input.pgrn{border-color:#22c55e;background:rgba(34,197,94,0.18);color:#86efac;box-shadow:0 0 10px #22c55e88}
 .ic{position:relative}
 .ic:has(input.gold)::after{content:'👑';position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:11px;pointer-events:none;line-height:1;z-index:2}
 .wug{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-bottom:10px;overflow:hidden}
@@ -1502,7 +1503,7 @@ body.in-app #lProgress{display:none}
 .l-vicious-sticky .l-section-sub{margin-bottom:0}
 .l-vicious-stage{flex:1;min-height:0;width:100%;max-width:560px;margin:0 auto;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
-.l-circle{position:relative;width:min(80vw,calc(94vh - 330px));aspect-ratio:1/1}
+.l-circle{position:relative;width:min(78vw,calc(92vh - 380px));aspect-ratio:1/1}
 @media(min-width:721px){.l-circle{width:min(780px,84vw,calc(94vh - 240px))}}
 .l-circle-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .vc-ring-base{fill:none;stroke:#3a1414;stroke-width:1.4;vector-effect:non-scaling-stroke}  /* traccia tenue del cerchio (come v224) */
@@ -1510,10 +1511,22 @@ body.in-app #lProgress{display:none}
   stroke-dasharray:251.327;stroke-dashoffset:251.327;
   filter:drop-shadow(0 0 1.5px #ff5252) drop-shadow(0 0 3px #ef4444) drop-shadow(0 0 7px #ef4444)}
 /* pallino: elemento HTML a dimensione fissa piccola (uguale su desktop e mobile), rosso neon */
-.vc-dot2{position:absolute;left:50%;top:10%;width:16px;height:16px;border-radius:50%;
-  transform:translate(-50%,-50%);pointer-events:none;z-index:3;
-  background:radial-gradient(circle at 50% 42%,#ffd0d0 0%,#ff4040 45%,#e01b1b 100%);
-  box-shadow:0 0 5px 1px #ff5252,0 0 12px 3px #ef4444,0 0 22px 6px #ef444488}
+/* punti sul cerchio (come i punti del COME FUNZIONA, ma rossi) */
+.vc-marks{position:absolute;inset:0;pointer-events:none;z-index:2}
+.vc-mark{position:absolute;width:11px;height:11px;border-radius:50%;transform:translate(-50%,-50%);
+  background:var(--d4);border:1px solid var(--d5);transition:background .4s,border-color .4s,box-shadow .4s,transform .4s}
+.vc-mark.m0{left:50%;top:10%}
+.vc-mark.m1{left:90%;top:50%}
+.vc-mark.m2{left:50%;top:90%}
+.vc-mark.m3{left:10%;top:50%}
+.vc-mark.passed{background:#ef4444;border-color:#ff8080;box-shadow:0 0 9px #ef4444aa}
+.vc-mark.active{transform:translate(-50%,-50%) scale(1.25)}
+/* cerchiolino con emoji che si muove sul cerchio (stile COME FUNZIONA, rosso neon) */
+.vc-comet{position:absolute;left:50%;top:10%;width:44px;height:44px;border-radius:50%;
+  transform:translate(-50%,-50%);pointer-events:none;z-index:4;
+  display:flex;align-items:center;justify-content:center;font-size:21px;
+  background:#2a0f0f;border:2px solid #ff3b3b;
+  box-shadow:0 0 16px 4px #ef4444,0 0 34px 9px #ef444466}
 .l-vhub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;
   font-family:'Bebas Neue',sans-serif;letter-spacing:.12em;line-height:1.02;color:#ef4444;
   font-size:clamp(20px,5.4vw,34px);opacity:.9;text-shadow:0 0 16px #ef444455;pointer-events:none}
@@ -1531,8 +1544,8 @@ body.in-app #lProgress{display:none}
 .l-vnode.on .vn-ic{background:#2a0f0f;border-color:#ef4444;box-shadow:0 0 18px #ef444466;filter:none}
 .l-vnode.on{transform:translate(-50%,-50%) scale(1.06)}
 .l-vnode.on .vn-t{color:#fca5a5}
-.l-vdetails{position:relative;width:100%;min-height:160px}
-@media(max-width:600px){.l-vdetails{min-height:210px}}
+.l-vdetails{position:relative;width:100%;min-height:150px;margin-top:6px}
+@media(max-width:600px){.l-vdetails{min-height:160px}}
 .l-vdetail{position:absolute;inset:0;text-align:center;opacity:0;transform:translateY(12px);
   transition:opacity .4s,transform .4s;pointer-events:none}
 .l-vdetail.active{opacity:1;transform:none}
@@ -1646,7 +1659,13 @@ body.in-app #lProgress{display:none}
               <circle class="vc-ring-base" cx="50" cy="50" r="40"></circle>
               <circle class="vc-ring-prog" id="viciousArc" cx="50" cy="50" r="40" transform="rotate(-90 50 50)"></circle>
             </svg>
-            <div class="vc-dot2" id="viciousDot"></div>
+            <div class="vc-marks">
+              <div class="vc-mark m0" data-i="0"></div>
+              <div class="vc-mark m1" data-i="1"></div>
+              <div class="vc-mark m2" data-i="2"></div>
+              <div class="vc-mark m3" data-i="3"></div>
+            </div>
+            <div class="vc-comet" id="viciousDot"></div>
             <div class="l-vhub"><span>CIRCOLO</span><span>VIZIOSO</span></div>
             <!-- dettaglio al centro (solo desktop) -->
             <div class="l-vcenter" id="viciousCenter">
@@ -1655,10 +1674,6 @@ body.in-app #lProgress{display:none}
               <div class="l-vdetail" data-i="2"><div class="vd-title">L'allenamento è troppo comodo</div><div class="vd-text">Il miglioramento avviene sotto pressione. Se ti alleni sempre nelle condizioni più facili, in gara cadi esattamente nei momenti che non hai mai simulato: il checkout, la doppia decisiva, il recupero dopo una leg persa.</div></div>
               <div class="l-vdetail" data-i="3"><div class="vd-title">Non sai cosa correggere</div><div class="vd-text">Il tiro alle freccette è un gesto tecnico preciso. Angolo di gomito, posizione della spalla, rilascio del polso: basta un millimetro fuori posto per perdere tiri che dovresti fare ad occhi chiusi. Senza analisi, lavori alla cieca.</div></div>
             </div>
-            <div class="l-vnode n0" data-i="0"><span class="vn-ic">🔁</span><span class="vn-t">Ripeti gli stessi gesti</span></div>
-            <div class="l-vnode n1" data-i="1"><span class="vn-ic">📉</span><span class="vn-t">Non misuri nulla</span></div>
-            <div class="l-vnode n2" data-i="2"><span class="vn-ic">😤</span><span class="vn-t">Allenamento troppo comodo</span></div>
-            <div class="l-vnode n3" data-i="3"><span class="vn-ic">🎯</span><span class="vn-t">Non sai cosa correggere</span></div>
           </div>
           <div class="l-vdetails" id="viciousDetails">
             <div class="l-vdetail active" data-i="0"><div class="vd-title">Ripeti sempre gli stessi gesti</div><div class="vd-text">Senza un programma strutturato, consolidi il livello che hai già. Non lo superi. Il tiro migliora solo quando viene messo in discussione con esercizi che ti portano fuori dalla zona di comfort.</div></div>
@@ -2784,6 +2799,7 @@ body.in-app #lProgress{display:none}
     <!-- Result overlay at game end -->
     <div id="pgResultBox" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.97);flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:10">
       <div id="pgResultGold" style="display:none;font-size:36px">👑</div>
+      <div id="pgResultGreen" style="display:none;font-size:34px;filter:drop-shadow(0 0 10px #22c55e)">🟢</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#86efac;letter-spacing:.1em">PARTITA COMPLETATA</div>
       <!-- turni completati — dimensioni ridotte, bianco -->
       <div style="text-align:center">
@@ -2795,8 +2811,8 @@ body.in-app #lProgress{display:none}
         <div style="font-size:clamp(12px,2.8vw,16px);color:#fff;font-weight:600">totale punti</div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(44px,11vw,68px);color:#fff;line-height:1" id="pgResultTotal">0</div>
       </div>
-      <button id="pgNextBtn" onclick="pgNextGame()" class="g501-key ok-btn" style="width:220px;height:54px;aspect-ratio:unset;font-size:18px;margin-top:8px">▶ PARTITA 2</button>
-      <button id="pgDoneBtn" onclick="pgClose()" class="g501-key ok-btn" style="width:220px;height:54px;aspect-ratio:unset;font-size:18px">✓ FINE</button>
+      <button id="pgNextBtn" onclick="pgNextGame()" class="g501-key ok-btn" style="width:auto;min-width:240px;height:auto;aspect-ratio:unset;font-size:21px;padding:20px 52px;margin-top:8px">▶ PARTITA 2</button>
+      <button id="pgDoneBtn" onclick="pgClose()" class="g501-key ok-btn" style="width:auto;min-width:240px;height:auto;aspect-ratio:unset;font-size:21px;padding:20px 52px">✓ FINE</button>
     </div>
   </div>
 </div>
@@ -4612,13 +4628,13 @@ function rShanghai(gid, sv){
 function rPressure(gid, variant, sv){
   const cfgs={
     '60':{name:'60 POINTS PRESSURE', sub:'10 vite · T20 · 2 partite',
-      info:'Parti con 10 vite. In ogni turno tira 3 frecce al 20. Se il punteggio totale del turno è inferiore a 60 punti, perdi una vita. Se fai 60 o più (colpendo almeno un triplo, o tre singoli), mantieni le tue vite. L\'obiettivo è sopravvivere il più a lungo possibile.',
+      info:'Parti con 10 vite. In ogni turno tira 3 frecce al 20. Se il punteggio totale del turno è inferiore a 60 punti, perdi una vita. Se fai 60 o più (colpendo almeno un triplo, o tre singoli), mantieni le tue vite. L\'obiettivo è sopravvivere il più a lungo possibile. A 2.000 punti il gioco termina nel caso in cui tu abbia ancora 1 o più vite. Il punteggio non viene visualizzato ma il contatore somma ogni turno.',
       target:60},
     '57':{name:'57 POINTS PRESSURE', sub:'10 vite · T19 · 2 partite',
-      info:'Parti con 10 vite. In ogni turno tira 3 frecce al 19. Se il punteggio totale del turno è inferiore a 57 punti, perdi una vita. Se fai 57 o più (colpendo almeno un triplo, o tre singoli), mantieni le tue vite. L\'obiettivo è sopravvivere il più a lungo possibile.',
+      info:'Parti con 10 vite. In ogni turno tira 3 frecce al 19. Se il punteggio totale del turno è inferiore a 57 punti, perdi una vita. Se fai 57 o più (colpendo almeno un triplo, o tre singoli), mantieni le tue vite. L\'obiettivo è sopravvivere il più a lungo possibile. A 2.000 punti il gioco termina nel caso in cui tu abbia ancora 1 o più vite. Il punteggio non viene visualizzato ma il contatore somma ogni turno.',
       target:57},
     'mix':{name:'20+19+18 POINTS PRESSURE', sub:'10 vite · 20+19+18 · 2 partite',
-      info:'Parti con 10 vite. In ogni turno tira 1 freccia al 20, 1 freccia al 19 e 1 freccia al 18. Se il punteggio totale del turno è inferiore a 57 punti, perdi una vita. Se fai 57 o più, mantieni le tue vite. L\'obiettivo è sopravvivere il più a lungo possibile.',
+      info:'Parti con 10 vite. In ogni turno tira 1 freccia al 20, 1 freccia al 19 e 1 freccia al 18. Se il punteggio totale del turno è inferiore a 57 punti, perdi una vita. Se fai 57 o più, mantieni le tue vite. L\'obiettivo è sopravvivere il più a lungo possibile. A 2.000 punti il gioco termina nel caso in cui tu abbia ancora 1 o più vite. Il punteggio non viene visualizzato ma il contatore somma ogni turno.',
       target:57},
   };
   const cfg=cfgs[variant]||cfgs['60'];
@@ -4741,8 +4757,8 @@ function pgConfirm(){
 
   // End conditions:
   // 1) Lives reached 0
-  // 2) Total accumulated score exceeded 1000 (champion mode)
-  if(_PG.lives <= 0 || _PG.totalScore > 1000){
+  // 2) Punteggio totale raggiunge 2000 (con almeno 1 vita ancora)
+  if(_PG.lives <= 0 || _PG.totalScore >= 2000){
     pgEndGame();
     return;
   }
@@ -4758,21 +4774,30 @@ function pgNoScore(){
 function pgEndGame(){
   _PG.active = false;
 
-  const isGold = _PG.totalScore > 1000 && _PG.completed === 6;
+  // Esiti:
+  // - ORO + corona  → arrivato a 2000 punti SENZA perdere vite (lives === 10)
+  // - VERDE fosfor. → arrivato a 2000 punti avendo perso almeno 1 vita ma non tutte (1..9)
+  // - normale       → vite esaurite prima dei 2000
+  const reached = _PG.totalScore >= 2000;
+  const isGold  = reached && _PG.lives === 10;
+  const isGreen = reached && _PG.lives >= 1 && _PG.lives < 10;
 
   // Update result screen
   document.getElementById('pgResultVal').textContent    = _PG.completed;
   document.getElementById('pgResultTotal').textContent  = _PG.totalScore;
   document.getElementById('pgResultGold').style.display = isGold ? 'block' : 'none';
+  var pgrnEl = document.getElementById('pgResultGreen');
+  if(pgrnEl) pgrnEl.style.display = isGreen ? 'block' : 'none';
   document.getElementById('pgResultBox').style.display  = 'flex';
 
-  // Save to card cell — gold class if totalScore>1000, green otherwise
+  // Save to card cell — oro / verde fosforescente / normale
   const inputs = document.querySelectorAll(`[data-gid="${_PG.gid}"]`);
   if(inputs[_PG.slot]){
     inputs[_PG.slot].value = _PG.completed;
-    inputs[_PG.slot].classList.remove('ok','gold','xx');
+    inputs[_PG.slot].classList.remove('ok','gold','xx','pgrn');
     if(isGold) inputs[_PG.slot].classList.add('gold');
-    else if(_PG.completed >= 0) inputs[_PG.slot].classList.add('ok');
+    else if(isGreen) inputs[_PG.slot].classList.add('pgrn');
+    else inputs[_PG.slot].classList.add('ok');
     updTot(_PG.gid);
     saveSession();
   }
@@ -5313,7 +5338,7 @@ function g501GroupSummary(groupLegs, isTour){
     <div><span style="color:var(--muted)">Media avg: </span>${sum.avgPts}</div>
     <div><span style="color:var(--muted)">Doppie tot: </span>${sum.totDbl}</div>
     <div><span style="color:var(--muted)">%: </span>${sum.avgPct}%</div>
-    <div><span style="color:var(--muted)">100+: </span><span style="color:var(--green);font-weight:600">${sum.hundred||0}</span></div>
+    <div><span style="color:var(--muted)">90+: </span><span style="color:var(--green);font-weight:600">${sum.hundred||0}</span></div>
   </div>`;
 }
 
@@ -5861,7 +5886,7 @@ function renderAdmin501Panel(uid){
           <div><span style="color:var(--muted)">Media avg: </span>${summary.avgPts}</div>
           <div><span style="color:var(--muted)">Doppie tot: </span>${summary.totDbl}</div>
           <div><span style="color:var(--muted)">% avg: </span>${summary.avgPct}%</div>
-          <div><span style="color:var(--muted)">100+: </span><span style="color:var(--green);font-weight:600">${summary.hundred||0}</span></div>
+          <div><span style="color:var(--muted)">90+: </span><span style="color:var(--green);font-weight:600">${summary.hundred||0}</span></div>
         </div>
       </div>
     </div>`;
@@ -5904,7 +5929,7 @@ function renderAdmin501Compare(uid){
   const rows=[
     {label:'Turni',key:'avgRounds'},{label:'Frecce',key:'avgDarts'},
     {label:'Media',key:'avgPts'},{label:'Doppie',key:'totDbl'},{label:'%',key:'avgPct'},
-    {label:'100+',key:'hundred'}
+    {label:'90+',key:'hundred'}
   ].map(r=>`<tr><td style="padding:4px 8px;font-size:11px;color:var(--muted)">${r.label}</td>${summaries.map(s=>`<td style="padding:4px 8px;font-size:11px;text-align:center;color:var(--light)">${s[r.key]??'—'}</td>`).join('')}</tr>`).join('');
   return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
     <thead><tr><th style="padding:5px 8px;font-size:11px;color:var(--muted);text-align:left">Dato</th>${header}</tr></thead>
@@ -9565,6 +9590,8 @@ function legDone_training(completed){
 
 function finalizeTraining501(){
   document.getElementById('g501overlay').classList.remove('open');
+  document.getElementById('g501missScreen').classList.remove('open');
+  document.getElementById('g501coScreen').classList.remove('open');
   if(G.trainingGid){
     for(let i=0;i<3;i++){
       const inp=document.querySelector(`[data-gid="${G.trainingGid}"][data-key="${i}"]`);
@@ -9574,7 +9601,10 @@ function finalizeTraining501(){
       }
     }
     updTot(G.trainingGid);
+    saveSession();
   }
+  // FIX: ripristina scroll/dock (prima mancava → la pagina restava bloccata)
+  gameOverlayClose();
 }
 
 // ── Free mode: checkout doubles screen ──
@@ -9891,7 +9921,7 @@ function render501SessPanel(){
         <div><span style="color:var(--muted)">Media avg: </span>${summary.avgPts}</div>
         <div><span style="color:var(--muted)">Doppie tot: </span>${summary.totDbl}</div>
         <div><span style="color:var(--muted)">% avg: </span>${summary.avgPct}%</div>
-        <div><span style="color:var(--muted)">100+: </span><span style="color:var(--green);font-weight:600">${summary.hundred||0}</span></div>
+        <div><span style="color:var(--muted)">90+: </span><span style="color:var(--green);font-weight:600">${summary.hundred||0}</span></div>
       </div>
     </div>`;
 
@@ -10001,7 +10031,7 @@ function render501Compare(){
     {label:'Media avg',  key:'avgPts'},
     {label: 'Doppie tot', key: isTour?'totDbl':'totDbl'},
     {label:'% avg',      key:'avgPct'},
-    {label:'100+',       key:'hundred'},
+    {label:'90+',       key:'hundred'},
   ].map(r=>`<tr>
     <td style="padding:5px 10px;font-size:12px;color:var(--muted)">${r.label}</td>
     ${summaries.map(s=>`<td style="padding:5px 10px;font-size:12px;text-align:center;color:var(--light)">${s[r.key]??'—'}</td>`).join('')}
@@ -10019,7 +10049,7 @@ function calc501SessSummary(legs){
   const totHitT = legs.reduce((s,l)=>s+(l.doublesHit||0),0);
   const totThrownT = legs.reduce((s,l)=>s+(l.doublesThrown||0),0);
   const avgPct = totThrownT > 0 ? Math.round(totHitT / totThrownT * 100) : 0;
-  const hundred = legs.reduce((s,l)=>s+(l.legScores||[]).filter(v=>v>=100).length,0);
+  const hundred = legs.reduce((s,l)=>s+(l.legScores||[]).filter(v=>v>=90).length,0);
   return {
     avgRounds: avg(legs,'rounds'),
     avgDarts: +(legs.reduce((s,l)=>s+(l.dartsThrown||l.darts||0),0)/n).toFixed(1),
@@ -10063,7 +10093,7 @@ function calcTourSessSummary(legs, isTour){
   const totDbl = totHit + '/' + totThrown;
   // % avg = colpite_tot / tirate_tot (coerente con "Doppie tot:")
   const avgPct = totThrown > 0 ? Math.round(totHit / totThrown * 100) : 0;
-  const hundred = legs.reduce((s,l)=>s+(l.legScores||[]).filter(v=>v>=100).length,0);
+  const hundred = legs.reduce((s,l)=>s+(l.legScores||[]).filter(v=>v>=90).length,0);
   return { avgRounds, avgDarts, avgPts, totDbl, avgPct, hundred };
 }
 
@@ -11426,15 +11456,19 @@ function atFmtTime(s){
         var C = 251.327;
         var arc = document.getElementById('viciousArc');
         if(arc) arc.style.strokeDashoffset = (C * (1 - prog)).toFixed(2);
+        var aIdx = Math.min(3, Math.floor(prog * 4));
+        var vEmojis = ['🔁','📉','😤','🎯'];
         var vdot = document.getElementById('viciousDot');
         if(vdot){
           var th = prog * 2 * Math.PI;
           vdot.style.left = (50 + 40 * Math.sin(th)).toFixed(2) + '%';
           vdot.style.top  = (50 - 40 * Math.cos(th)).toFixed(2) + '%';
+          vdot.textContent = vEmojis[aIdx] || '';
         }
-        var aIdx = Math.min(3, Math.floor(prog * 4));
-        document.querySelectorAll('#viciousCircle .l-vnode').forEach(function(n){
-          n.classList.toggle('on', prog * 4 >= parseInt(n.getAttribute('data-i'), 10));
+        // punti sul cerchio: accesi quando raggiunti dal cerchiolino
+        document.querySelectorAll('#viciousCircle .vc-mark').forEach(function(m, k){
+          m.classList.toggle('passed', prog * 4 >= k);
+          m.classList.toggle('active', k === aIdx);
         });
         document.querySelectorAll('.l-vdetail').forEach(function(d){
           d.classList.toggle('active', parseInt(d.getAttribute('data-i'), 10) === aIdx);
