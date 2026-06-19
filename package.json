@@ -1,0 +1,23 @@
+{
+  "name": "comemigliorareafreccette",
+  "version": "1.0.0",
+  "description": "Come Migliorare a Freccette - Dart training tracker",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"No tests specified\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/micheledemonte/comemigliorareafreccette.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/micheledemonte/comemigliorareafreccette/issues"
+  },
+  "homepage": "https://github.com/micheledemonte/comemigliorareafreccette#readme",
+  "dependencies": {
+    "@vercel/speed-insights": "^2.0.0"
+  }
+}
