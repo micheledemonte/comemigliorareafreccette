@@ -1506,7 +1506,7 @@ body.in-app #lProgress{display:none}
 .l-circle{position:relative;width:min(78vw,calc(92vh - 380px));aspect-ratio:1/1}
 @media(min-width:721px){.l-circle{width:min(780px,84vw,calc(94vh - 240px))}}
 .l-circle-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.vc-ring-base{fill:none;stroke:#3a1414;stroke-width:1.4;vector-effect:non-scaling-stroke}  /* traccia tenue del cerchio (come v224) */
+.vc-ring-base{fill:none;stroke:#2a2a2a;stroke-width:2;vector-effect:non-scaling-stroke}  /* cerchio grigio (come la linea del COME FUNZIONA); il rosso lo traccia il pallino */
 .vc-ring-prog{fill:none;stroke:#ff3b3b;stroke-width:2;stroke-linecap:round;vector-effect:non-scaling-stroke;
   stroke-dasharray:251.327;stroke-dashoffset:251.327;
   filter:drop-shadow(0 0 1.5px #ff5252) drop-shadow(0 0 3px #ef4444) drop-shadow(0 0 7px #ef4444)}
@@ -4423,9 +4423,6 @@ function getInputClass(nm, v){
   if(nm.startsWith('DOPPIO') && n===3) return 'gold';
   if(nm==='SHANGHAI' && n===1) return 'gold';
   if(nm==='AROUND THE CLOCK (DOPPIE)' && n===3) return 'gold';
-  // Pressure games: value===6 means the player got the crown (totalScore>1000 with 6 completed)
-  // This persists across login/logout via the stored value
-  if((nm.startsWith('60 POINTS PRESSURE')||nm.startsWith('57 POINTS PRESSURE')||nm.startsWith('20+19+18')) && n===6) return 'gold';
   return 'ok';
 }
 
@@ -4433,17 +4430,21 @@ function stI(inp){
   const v=inp.value.trim();
   // Try data-nm first (set by mkI), then fall back to .gc-name
   const nm=inp.dataset.nm||inp.closest('.gc')?.querySelector('.gc-name')?.textContent||'';
-  inp.classList.remove('ok','xx','gold');
+  inp.classList.remove('ok','xx','gold','pgrn');
+  // Points Pressure: colore persistito (oro/verde) ha la precedenza sul valore
+  if(inp.dataset.pgc){ inp.classList.add(inp.dataset.pgc); return; }
   if(v==='') return;
   inp.classList.add(getInputClass(nm,v));
 }
 
-function mkI(gid,k,val,ph='',st='',nm=''){
+function mkI(gid,k,val,ph='',st='',nm='',pgc=''){
   const v=val!==undefined?String(val):'';
-  const c=v!==''?getInputClass(nm,v):'';
+  // pgc = classe colore persistita (Points Pressure: 'gold'/'pgrn'/'ok'); ha la precedenza
+  const c = pgc ? pgc : (v!==''?getInputClass(nm,v):'');
   const crown=(c==='gold')?' data-crown="1"':'';
   const dnm=nm?` data-nm="${nm.replace(/"/g,'&quot;')}"` :'';
-  return `<input type="text" inputmode="decimal" pattern="[0-9X]*" class="gi ${c}" data-gid="${gid}" data-key="${k}" value="${v}" placeholder="${ph}" style="${st}" autocomplete="off"${crown}${dnm}>`;
+  const dpgc=pgc?` data-pgc="${pgc}"`:'';
+  return `<input type="text" inputmode="decimal" pattern="[0-9X]*" class="gi ${c}" data-gid="${gid}" data-key="${k}" value="${v}" placeholder="${ph}" style="${st}" autocomplete="off"${crown}${dnm}${dpgc}>`;
 }
 
 function gcrd(gid,name,sub,info,body,extraBtn=''){
@@ -4647,13 +4648,11 @@ function rPressure(gid, variant, sv){
   const cells=`
     <div class="ic" style="position:relative">
       <label>Partita 1</label>
-      ${mkI(gid,'0',v0,'','width:72px',nm)}
-      ${isCrown(v0)?'<span style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:11px">👑</span>':''}
+      ${mkI(gid,'0',v0,'','width:72px',nm,sv['_c0']||'')}
     </div>
     <div class="ic" style="position:relative">
       <label>Partita 2</label>
-      ${mkI(gid,'1',v1,'','width:72px',nm)}
-      ${isCrown(v1)?'<span style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:11px">👑</span>':''}
+      ${mkI(gid,'1',v1,'','width:72px',nm,sv['_c1']||'')}
     </div>`;
   const n0=parseFloat(v0)||0, n1=parseFloat(v1)||0;
   const tot=n0+n1;
@@ -4790,14 +4789,15 @@ function pgEndGame(){
   if(pgrnEl) pgrnEl.style.display = isGreen ? 'block' : 'none';
   document.getElementById('pgResultBox').style.display  = 'flex';
 
-  // Save to card cell — oro / verde fosforescente / normale
+  // Save to card cell — oro / verde fosforescente / normale (colore PERSISTITO via data-pgc)
   const inputs = document.querySelectorAll(`[data-gid="${_PG.gid}"]`);
   if(inputs[_PG.slot]){
-    inputs[_PG.slot].value = _PG.completed;
-    inputs[_PG.slot].classList.remove('ok','gold','xx','pgrn');
-    if(isGold) inputs[_PG.slot].classList.add('gold');
-    else if(isGreen) inputs[_PG.slot].classList.add('pgrn');
-    else inputs[_PG.slot].classList.add('ok');
+    const cell = inputs[_PG.slot];
+    cell.value = _PG.completed;
+    cell.classList.remove('ok','gold','xx','pgrn');
+    if(isGold){ cell.dataset.pgc='gold'; cell.classList.add('gold'); }
+    else if(isGreen){ cell.dataset.pgc='pgrn'; cell.classList.add('pgrn'); }
+    else { delete cell.dataset.pgc; cell.classList.add(String(_PG.completed)==='0' ? 'xx' : 'ok'); }
     updTot(_PG.gid);
     saveSession();
   }
@@ -4929,6 +4929,8 @@ function saveSession(){
     if(!res[gid]) res[gid]={};
     const v=inp.value.trim();
     res[gid][k]=v.toUpperCase()==='X'?'X':v;
+    // Points Pressure: persisti il colore casella (oro/verde) accanto al valore
+    if(inp.dataset.pgc) res[gid]['_c'+k]=inp.dataset.pgc;
   });
   const data=getUD(CU.id);
   data[key]=res;
@@ -5163,9 +5165,14 @@ function extractCrownsPerSession(uid){
     for(const g of si.games){
       const gid = 'g' + (gi++);
       const gd  = s.data[gid] || {};
-      Object.values(gd).forEach(v=>{
-        if(isGameCrown(null, g.t, v)) crowns++;
-      });
+      if(g.t==='pressure'){
+        // corona = casella oro (2000 punti senza perdere vite), persistita in _c0/_c1
+        crowns += ['_c0','_c1'].filter(k=>gd[k]==='gold').length;
+      } else {
+        Object.values(gd).forEach(v=>{
+          if(isGameCrown(null, g.t, v)) crowns++;
+        });
+      }
     }
     if(crowns > 0){
       const d = new Date(s.meta.savedAt);
@@ -11465,10 +11472,9 @@ function atFmtTime(s){
           vdot.style.top  = (50 - 40 * Math.cos(th)).toFixed(2) + '%';
           vdot.textContent = vEmojis[aIdx] || '';
         }
-        // punti sul cerchio: accesi quando raggiunti dal cerchiolino
+        // punti sul cerchio: grigi all'inizio, si accendono solo quando la linea rossa li raggiunge
         document.querySelectorAll('#viciousCircle .vc-mark').forEach(function(m, k){
-          m.classList.toggle('passed', prog * 4 >= k);
-          m.classList.toggle('active', k === aIdx);
+          m.classList.toggle('passed', prog * 4 > k);
         });
         document.querySelectorAll('.l-vdetail').forEach(function(d){
           d.classList.toggle('active', parseInt(d.getAttribute('data-i'), 10) === aIdx);
