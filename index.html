@@ -6728,8 +6728,8 @@ function userExportICS(btn){
     'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//CMAF//Freccette//IT','CALSCALE:GREGORIAN','METHOD:PUBLISH',
     'BEGIN:VEVENT','UID:'+uid,'DTSTAMP:'+dtstamp,'DTSTART:'+dtStr,'DTEND:'+dtEnd,
     'SUMMARY:'+title.replace(/,/g,'\\,'),
-    'LOCATION:ASD Rocket Club',
-    'DESCRIPTION:Allenamento individuale - Centro Darts Lab. Mappa: https://maps.app.goo.gl/1ar96zTxMupBCtij7',
+    'LOCATION:'+'ASD Rocket Club, Via del Lavoro 74, 37012 Bussolengo VR, Italia'.replace(/,/g,'\\,'),
+    'DESCRIPTION:Allenamento individuale - Centro Darts Lab',
     'BEGIN:VALARM','TRIGGER:-PT60M','ACTION:DISPLAY','DESCRIPTION:Promemoria allenamento tra 1 ora','END:VALARM',
     'BEGIN:VALARM','TRIGGER:-PT30M','ACTION:DISPLAY','DESCRIPTION:Promemoria allenamento tra 30 minuti','END:VALARM',
     'END:VEVENT','END:VCALENDAR'
@@ -6749,8 +6749,8 @@ function userExportICS(btn){
     const gcUrl   = 'https://calendar.google.com/calendar/render?action=TEMPLATE'
       +'&text='+encodeURIComponent(title)
       +'&dates='+gcStart+'/'+gcEnd
-      +'&location='+encodeURIComponent('ASD Rocket Club')
-      +'&details='+encodeURIComponent('Allenamento individuale - Centro Darts Lab. Mappa: https://maps.app.goo.gl/1ar96zTxMupBCtij7')
+      +'&location='+encodeURIComponent('ASD Rocket Club, Via del Lavoro 74, 37012 Bussolengo VR, Italia')
+      +'&details='+encodeURIComponent('Allenamento individuale - Centro Darts Lab')
       +'&sf=true&output=xml';
     URL.revokeObjectURL(url);
     window.location.href = gcUrl;
@@ -8075,8 +8075,8 @@ function calExportICS(btn){
     'DTSTART:'+dtStr,
     'DTEND:'+dtEnd,
     'SUMMARY:'+title.replace(/,/g,'\\,'),
-    'LOCATION:ASD Rocket Club',
-    'DESCRIPTION:Allenamento individuale - Centro Darts Lab. Mappa: https://maps.app.goo.gl/1ar96zTxMupBCtij7',
+    'LOCATION:'+'ASD Rocket Club, Via del Lavoro 74, 37012 Bussolengo VR, Italia'.replace(/,/g,'\\,'),
+    'DESCRIPTION:Allenamento individuale - Centro Darts Lab',
     'BEGIN:VALARM',
     'TRIGGER:-PT60M',
     'ACTION:DISPLAY',
@@ -8103,8 +8103,8 @@ function calExportICS(btn){
     const gcUrl   = 'https://calendar.google.com/calendar/render?action=TEMPLATE'
       +'&text='+encodeURIComponent(title)
       +'&dates='+gcStart+'/'+gcEnd
-      +'&location='+encodeURIComponent('ASD Rocket Club')
-      +'&details='+encodeURIComponent('Allenamento individuale - Centro Darts Lab. Mappa: https://maps.app.goo.gl/1ar96zTxMupBCtij7')
+      +'&location='+encodeURIComponent('ASD Rocket Club, Via del Lavoro 74, 37012 Bussolengo VR, Italia')
+      +'&details='+encodeURIComponent('Allenamento individuale - Centro Darts Lab')
       +'&sf=true&output=xml';
     URL.revokeObjectURL(url);
     btn.classList.add('ics-saved');
