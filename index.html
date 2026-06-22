@@ -1509,10 +1509,11 @@ body.in-app #lProgress{display:none}
 .vc-ring-base{fill:none;stroke:#2a2a2a;stroke-width:2;vector-effect:non-scaling-stroke}  /* anello grigio tenue (traccia) */
 /* LINEA ROSSA NEON tracciata dal pallino: pathLength=100 => un solo tratto continuo (niente spezzature).
    stroke-dashoffset = 100*(1-prog) la fa crescere in avanti e cancellare a ritroso, sincronizzata col pallino.
-   glow ristretto e vicino alla linea (alone stretto, stessa intensità). */
+   Il glow NON è in CSS (i px del drop-shadow non scalano col viewBox e su un cerchio grande sparisce):
+   è un filtro SVG #neonRed (feGaussianBlur in unità viewBox) applicato all'arco, quindi scala col cerchio. */
 .vc-ring-prog{fill:none;stroke:#ff3b3b;stroke-width:.8;stroke-linecap:round;
-  stroke-dasharray:100;stroke-dashoffset:100;
-  filter:drop-shadow(0 0 1px #ff6b6b) drop-shadow(0 0 2px #ef4444) drop-shadow(0 0 4px #ef4444)}
+  stroke-dasharray:100;stroke-dashoffset:100}
+@media(min-width:721px){.vc-ring-prog{stroke-width:.3}}  /* desktop: linea molto più sottile */
 /* pallino: elemento HTML a dimensione fissa piccola (uguale su desktop e mobile), rosso neon */
 /* punti sul cerchio (come i punti del COME FUNZIONA, ma rossi) */
 .vc-marks{position:absolute;inset:0;pointer-events:none;z-index:2}
@@ -1659,8 +1660,25 @@ body.in-app #lProgress{display:none}
         <div class="l-vicious-stage">
           <div class="l-circle" id="viciousCircle">
             <svg class="l-circle-svg" viewBox="0 0 100 100" aria-hidden="true">
+              <defs>
+                <filter id="neonRed" x="-70%" y="-70%" width="240%" height="240%" color-interpolation-filters="sRGB">
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="3.6" result="bWide"></feGaussianBlur>
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="1.4" result="bTight"></feGaussianBlur>
+                  <feComponentTransfer in="bWide" result="bWideB"><feFuncA type="linear" slope="2.6"></feFuncA></feComponentTransfer>
+                  <feComponentTransfer in="bTight" result="bTightB"><feFuncA type="linear" slope="3.4"></feFuncA></feComponentTransfer>
+                  <feFlood flood-color="#ff3b3b" result="col"></feFlood>
+                  <feComposite in="col" in2="bWideB" operator="in" result="glowWide"></feComposite>
+                  <feComposite in="col" in2="bTightB" operator="in" result="glowTight"></feComposite>
+                  <feMerge>
+                    <feMergeNode in="glowWide"></feMergeNode>
+                    <feMergeNode in="glowWide"></feMergeNode>
+                    <feMergeNode in="glowTight"></feMergeNode>
+                    <feMergeNode in="SourceGraphic"></feMergeNode>
+                  </feMerge>
+                </filter>
+              </defs>
               <circle class="vc-ring-base" cx="50" cy="50" r="40"></circle>
-              <circle class="vc-ring-prog" id="viciousArc" cx="50" cy="50" r="40" pathLength="100" transform="rotate(-90 50 50)"></circle>
+              <circle class="vc-ring-prog" id="viciousArc" cx="50" cy="50" r="40" pathLength="100" transform="rotate(-90 50 50)" filter="url(#neonRed)"></circle>
             </svg>
             <div class="vc-marks">
               <div class="vc-mark m0" data-i="0"></div>
@@ -3736,14 +3754,36 @@ function autoLoadNextSession(){
     return true;
   }
 
+  // A session counts as "empty" if every inline game has ALL its cells empty
+  // (le chiavi colore _c0/_c1 non contano). Una sessione salvata ma completamente
+  // vuota va IGNORATA: l'utente può aver salvato per sbaglio/test una sessione molto
+  // successiva e poi averla svuotata; non deve diventare il punto di apertura.
+  function isSessEmpty(sessKey, sessData){
+    const sess = SESS[sessKey];
+    if(!sess) return false;
+    let gi = 0;
+    for(const g of sess.games){
+      const gid = 'g' + gi++;
+      if(g.t === 's501') continue;
+      const gdata = sessData[gid];
+      if(!gdata || typeof gdata !== 'object') continue;
+      for(const [k, v] of Object.entries(gdata)){
+        if(k.charAt(0) === '_') continue; // salta i metadati colore (_c0/_c1)
+        if(String(v).trim() !== '') return false; // trovata una casella piena → non vuota
+      }
+    }
+    return true;
+  }
+
   // Build flat ordered list of all 40 session keys
   const allKeys = [];
   for(const w of weeks) for(const s of sessions) allKeys.push({w, s, key:`${w}-${s}`});
 
   // Strategy:
-  // 1. Find the first SAVED session that is INCOMPLETE → open it
+  // 1. Find the first SAVED (e non vuota) session that is INCOMPLETE → open it
   // 2. If all saved sessions are complete → open the one right after the last saved
   // 3. If nothing saved → open 1-1
+  // Le sessioni salvate ma completamente vuote vengono bypassate (come non salvate).
   let firstIncompleteEntry = null;
   let lastSavedIdx = -1;
 
@@ -3751,6 +3791,7 @@ function autoLoadNextSession(){
     const entry = allKeys[i];
     const sessData = data[entry.key];
     if(!sessData?.__meta) continue; // not saved, skip
+    if(isSessEmpty(entry.key, sessData)) continue; // BYPASS: salvata ma tutte le caselle vuote
     lastSavedIdx = i;
     if(!firstIncompleteEntry && !isSessComplete(entry.key, sessData)){
       firstIncompleteEntry = entry;
