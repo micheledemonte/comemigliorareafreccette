@@ -6242,7 +6242,7 @@ function gsLezBtnHtml(uid, l, i, tipo){
   }
 
   const stateDesc = (l.svolta ? ' — svolta' : '') + (l.pagata ? ' — pagata' : '') + (hasDt ? ' | ' + gsFormatDtShort(l.dt) : '') + (l.note ? ' | ' + l.note : '');
-  const mainTitle = 'Lezione ' + (i+1) + stateDesc;
+  const mainTitle = 'Allenamento ' + (i+1) + stateDesc;
 
   return '<div class="gs-lez-wrap' + (hasDt ? ' has-dt' : '') + '">'
     + '<button class="gs-lez-btn ' + btnCls + '" onclick="gsToggleLezione(\'' + uid + '\',' + i + ')" title="' + mainTitle + '">' + innerHtml + '</button>'
@@ -6433,7 +6433,7 @@ function gsOpenAppt(uid, idx){
   const u      = getUsers().find(u=>u.id===uid);
   _gsApptCtx   = {uid, idx};
   const titleEl = document.getElementById('gsApptTitle');
-  if(titleEl) titleEl.textContent = '📅 Appuntamento — '+(u?u.firstName+' '+u.lastName:'')+' · Lezione '+(idx+1);
+  if(titleEl) titleEl.textContent = '📅 Appuntamento — '+(u?u.firstName+' '+u.lastName:'')+' · Allenamento '+(idx+1);
   document.getElementById('gsApptDt').value   = l.dt   || '';
   document.getElementById('gsApptNote').value = l.note || '';
   // Popola select admin
@@ -6594,7 +6594,7 @@ function renderApptUser(){
           : '<span style="display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--d3);color:var(--mu2);border:1px solid var(--d5);white-space:nowrap">DA PAGARE</span>';
       }
       return '<div class="cal-event-item" style="border-left:3px solid var(--d5);flex-direction:column;align-items:stretch;padding:12px 14px;gap:4px">'
-        +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--mu2);letter-spacing:.06em">LEZIONE '+(l.idx+1)+'</div>'
+        +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--mu2);letter-spacing:.06em">ALLENAMENTO '+(l.idx+1)+'</div>'
         +'<div style="font-size:13px;color:var(--muted);margin-bottom:6px">Data non ancora fissata</div>'
         +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px">'+pagBadgeNd
         +'<button onclick="reqToggleApptForm('+(l.idx)+')" style="display:inline-flex;align-items:center;height:28px;background:transparent;border:1px solid var(--green);color:var(--green);border-radius:999px;padding:0 12px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.04em">📆 RICHIEDI APPUNTAMENTO</button>'
@@ -6626,7 +6626,7 @@ function renderApptUser(){
     // Pillola ICS (solo se non locked)
     const icsB = locked ? '' : (
       '<button class="cal-ics-btn'+(isSaved?' ics-saved':'')+'" data-dt="'+l.dt+'" data-idx="'+l.idx+'" data-icsid="'+(l.icsId||'')
-      +'" data-title="'+(teacher?teacher:'Sessione di allenamento')+' - Lezione '+(l.idx+1)+(l.note?' - '+l.note:'')+'"'
+      +'" data-title="'+(teacher?teacher:'Sessione di allenamento')+' - Allenamento '+(l.idx+1)+(l.note?' - '+l.note:'')+'"'
       +' onclick="userExportICS(this)" title="Aggiungi al calendario del dispositivo">'
       +(isSaved?'&#x2713; SALVATO':'&#x1F4C5; AGGIUNGI AL CALENDARIO')
       +'</button>'
@@ -6665,7 +6665,7 @@ function renderApptUser(){
 
     return '<div class="cal-event-item" style="border-left:3px solid '+col.border+';opacity:'+(locked?'.5':'1')+';flex-direction:column;align-items:stretch;padding:12px 14px;gap:4px">'
       // Riga 1: LEZIONE N — font grande
-      +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--light);letter-spacing:.06em;line-height:1.1">LEZIONE '+(l.idx+1)+'</div>'
+      +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--light);letter-spacing:.06em;line-height:1.1">ALLENAMENTO '+(l.idx+1)+'</div>'
       // Riga 2: data e orario — font più grande del nome lezione, colore utente
       +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;color:'+col.color+';letter-spacing:.04em;line-height:1.15">'+dateLabel+'</div>'
       // Riga 3: insegnante (solo nome, senza 'Fissato il')
@@ -6701,7 +6701,7 @@ function apptSetFilter(f){
 
 function userExportICS(btn){
   const dt    = btn.dataset.dt;
-  const title = btn.dataset.title || 'Lezione freccette';
+  const title = btn.dataset.title || 'Allenamento';
   const idx   = btn.dataset.idx;
   if(!dt){ alert('Nessuna data impostata.'); return; }
 
@@ -6728,9 +6728,10 @@ function userExportICS(btn){
     'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//CMAF//Freccette//IT','CALSCALE:GREGORIAN','METHOD:PUBLISH',
     'BEGIN:VEVENT','UID:'+uid,'DTSTAMP:'+dtstamp,'DTSTART:'+dtStr,'DTEND:'+dtEnd,
     'SUMMARY:'+title.replace(/,/g,'\\,'),
-    'DESCRIPTION:Lezione freccette - Centro Darts Lab',
-    'BEGIN:VALARM','TRIGGER:-PT60M','ACTION:DISPLAY','DESCRIPTION:Promemoria lezione tra 1 ora','END:VALARM',
-    'BEGIN:VALARM','TRIGGER:-PT30M','ACTION:DISPLAY','DESCRIPTION:Promemoria lezione tra 30 minuti','END:VALARM',
+    'LOCATION:ASD Rocket Club',
+    'DESCRIPTION:Allenamento individuale - Centro Darts Lab. Mappa: https://maps.app.goo.gl/1ar96zTxMupBCtij7',
+    'BEGIN:VALARM','TRIGGER:-PT60M','ACTION:DISPLAY','DESCRIPTION:Promemoria allenamento tra 1 ora','END:VALARM',
+    'BEGIN:VALARM','TRIGGER:-PT30M','ACTION:DISPLAY','DESCRIPTION:Promemoria allenamento tra 30 minuti','END:VALARM',
     'END:VEVENT','END:VCALENDAR'
   ].join(CRLF);
   const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
@@ -6748,7 +6749,8 @@ function userExportICS(btn){
     const gcUrl   = 'https://calendar.google.com/calendar/render?action=TEMPLATE'
       +'&text='+encodeURIComponent(title)
       +'&dates='+gcStart+'/'+gcEnd
-      +'&details='+encodeURIComponent('Lezione freccette - Centro Darts Lab')
+      +'&location='+encodeURIComponent('ASD Rocket Club')
+      +'&details='+encodeURIComponent('Allenamento individuale - Centro Darts Lab. Mappa: https://maps.app.goo.gl/1ar96zTxMupBCtij7')
       +'&sf=true&output=xml';
     URL.revokeObjectURL(url);
     window.location.href = gcUrl;
@@ -6756,7 +6758,7 @@ function userExportICS(btn){
   } else {
     // iOS Safari, desktop, altri browser: download diretto dell'ICS (con promemoria) funziona
     const a = document.createElement('a');
-    a.href=url; a.download='lezione-freccette.ics';
+    a.href=url; a.download='allenamento.ics';
     document.body.appendChild(a); a.click();
     setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 3000);
   }
@@ -7327,7 +7329,7 @@ function reqOpenDetail(reqId){
   if(r.type==='percorso'){
     _waText = 'Ciao '+_waName+', ho letto la tua richiesta per iniziare un nuovo percorso. ';
   } else if(r.type==='fixappt'){
-    _waText = 'Ciao '+_waName+', ho letto la tua richiesta per fissare la data per la lezione '+(r.lessonIdx!==undefined?r.lessonIdx+1:'')+'. ';
+    _waText = 'Ciao '+_waName+', ho letto la tua richiesta per fissare la data per l\'allenamento '+(r.lessonIdx!==undefined?r.lessonIdx+1:'')+'. ';
   } else if(r.type==='reschedule'){
     _waText = 'Ciao '+_waName+', ho letto la tua richiesta per spostare l\'appuntamento che avevamo fissato. ';
   } else if(r.type==='generic'){
@@ -7349,7 +7351,7 @@ function reqOpenDetail(reqId){
     +'<div class="rdu-row"><span class="rdu-label">Nome</span><strong>'+r.firstName+' '+r.lastName+'</strong></div>'
     +'<div class="rdu-row"><span class="rdu-label">Email</span><span>'+r.email+'</span></div>'
     +(r.phone ? '<div class="rdu-row"><span class="rdu-label">Tel</span><span>'+r.phone+'</span></div>' : '')
-    +((isReschedule||isFixAppt) && r.lessonIdx !== undefined ? '<div class="rdu-row"><span class="rdu-label">Lezione</span><span>Lezione '+(r.lessonIdx+1)+'</span></div>' : '')
+    +((isReschedule||isFixAppt) && r.lessonIdx !== undefined ? '<div class="rdu-row"><span class="rdu-label">Allenamento</span><span>Allenamento '+(r.lessonIdx+1)+'</span></div>' : '')
     +(isReschedule && r.appointmentDate ? '<div class="rdu-row"><span class="rdu-label">Appuntamento</span><span>📅 '+escHtml(r.appointmentDate)+'</span></div>' : '')
     +(isReschedule && r.teacherName ? '<div class="rdu-row"><span class="rdu-label">Insegnante</span><span>👨‍🏫 '+escHtml(r.teacherName)+'</span></div>' : '')
     +(isDevice && r.deviceName ? '<div class="rdu-row"><span class="rdu-label">Dispositivo</span><span>'+r.deviceName+'</span></div>' : '')
@@ -7597,10 +7599,10 @@ function userCalBuildHtml(){
       const icsId   = lezione && lezione.icsId ? lezione.icsId : null;
       const icsKey  = icsId || (String(ev.idx)+'_'+(ev.dt||''));
       const isSaved = _userIcsSaved.has(icsKey);
-      const icsTitle= (teacher||'Sessione di allenamento')+' - Lezione '+(ev.idx+1)+(ev.note?' - '+ev.note:'');
+      const icsTitle= (teacher||'Sessione di allenamento')+' - Allenamento '+(ev.idx+1)+(ev.note?' - '+ev.note:'');
       const icsBtn  = '<button class="cal-ics-btn'+(isSaved?' ics-saved':'')+'" data-dt="'+ev.dt+'" data-idx="'+ev.idx+'" data-icsid="'+(icsId||'')+'" data-title="'+icsTitle.replace(/"/g,'&quot;')+'" onclick="userExportICS(this)" style="font-size:11px;margin-top:6px">'+(isSaved?'&#x2713; SALVATO':'&#x1F4C5; AGGIUNGI AL CALENDARIO')+'</button>';
       html+='<div style="border-left:3px solid var(--green);padding:8px 12px;margin-bottom:8px;background:var(--d3);border-radius:6px">';
-      html+='<div style="font-size:14px;font-weight:700;color:var(--green)">ORE '+lbl+' — LEZIONE '+(ev.idx+1)+'</div>';
+      html+='<div style="font-size:14px;font-weight:700;color:var(--green)">ORE '+lbl+' — ALLENAMENTO '+(ev.idx+1)+'</div>';
       if(teacher) html+='<div style="font-size:12px;color:var(--mu2);margin-top:2px">👨‍🏫 '+teacher+'</div>';
       html+=icsBtn+'</div>';
     });
@@ -7720,11 +7722,11 @@ function calBuildHtml(){
           const d2  = new Date(parseInt(_dp2[0]), parseInt(_dp2[1])-1, parseInt(_dp2[2]), ...ev.dt.length>10 ? ev.dt.slice(11,16).split(':').map(Number) : [0,0]);
           const dateLabel2 = d2.toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short',year:'numeric'})+' '+ev.timeStr;
           const col2 = colorMap2[ev.uid]||{border:'var(--green)',color:'var(--green)'};
-          const icsT = ev.userName+' - Lezione '+(ev.idx+1)+(ev.note?' - '+ev.note:'');
+          const icsT = ev.userName+' - Allenamento '+(ev.idx+1)+(ev.note?' - '+ev.note:'');
           return '<div class="cal-event-item" style="border-left:3px solid '+col2.border+'">'
             +'<div class="cei-time" style="color:'+col2.color+'">'+ev.timeStr+'</div>'
             +'<div class="cei-info">'
-            +'<div class="cei-name">'+ev.userName+' · Lezione '+(ev.idx+1)+'</div>'
+            +'<div class="cei-name">'+ev.userName+' · Allenamento '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+dateLabel2+(ev.note?' · '+ev.note:'')+'</div>'
             +'</div>'
             +'<div class="cei-actions">'+calAdminBtns(ev,icsT,undefined)
@@ -7749,11 +7751,11 @@ function calBuildHtml(){
           const d   = new Date(parseInt(_dp[0]), parseInt(_dp[1])-1, parseInt(_dp[2]), ...ev.dt.length>10 ? ev.dt.slice(11,16).split(':').map(Number) : [0,0]);
           const dateLabel = d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short',year:'numeric'}) + ' ' + (ev.dt.length>10 ? ev.dt.slice(11,16) : '');
           const adminOpts = admins.map(a=>'<option value="'+a.id+'"'+(ev.adminRef===a.id?' selected':'')+'>'+a.firstName+' '+a.lastName+'</option>').join('');
-          const icsTitle1 = ev.userName+' - Lezione '+(ev.idx+1)+(ev.note?' - '+ev.note:'');
+          const icsTitle1 = ev.userName+' - Allenamento '+(ev.idx+1)+(ev.note?' - '+ev.note:'');
           return '<div class="cal-event-item" style="border-left:3px solid '+col.border+'">'
             +'<div class="cei-time" style="color:'+col.color+'">'+ev.timeStr+'</div>'
             +'<div class="cei-info">'
-            +'<div class="cei-name">Lezione '+(ev.idx+1)+'</div>'
+            +'<div class="cei-name">Allenamento '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+dateLabel+(ev.note?' · '+ev.note:'')+'</div>'
             +'</div>'
             +'<div class="cei-actions">'+calAdminBtns(ev,icsTitle1,adminOpts)
@@ -7779,18 +7781,18 @@ function calBuildHtml(){
       ? selEvs.map(ev=>{
           const col       = colorMap[ev.uid]||{border:'var(--green)',color:'var(--green)'};
           const adminOpts = admins.map(a=>'<option value="'+a.id+'"'+(ev.adminRef===a.id?' selected':'')+'>'+a.firstName+' '+a.lastName+'</option>').join('');
-          const icsTitle2 = ev.userName+' - Lezione '+(ev.idx+1)+(ev.note?' - '+ev.note:'');
+          const icsTitle2 = ev.userName+' - Allenamento '+(ev.idx+1)+(ev.note?' - '+ev.note:'');
           return '<div class="cal-event-item" style="border-left:3px solid '+col.border+'">'
             +'<div class="cei-time" style="color:'+col.color+'">'+ev.timeStr+'</div>'
             +'<div class="cei-info">'
-            +'<div class="cei-name">'+ev.userName+' · Lezione '+(ev.idx+1)+'</div>'
+            +'<div class="cei-name">'+ev.userName+' · Allenamento '+(ev.idx+1)+'</div>'
             +'<div class="cei-meta">'+(ev.note||'Nessuna nota')+'</div>'
             +'</div>'
             +'<div class="cei-actions">'+calAdminBtns(ev,icsTitle2,adminOpts)
             +'</div>'
             +'</div>';
         }).join('')
-      : '<div class="gs-empty" style="padding:20px">Nessuna lezione in questo giorno.</div>';
+      : '<div class="gs-empty" style="padding:20px">Nessun allenamento in questo giorno.</div>';
 
     listHtml = '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--light);letter-spacing:.04em;margin-bottom:10px;text-transform:capitalize">'+selLabel+'</div>'+rows;
   }
@@ -8039,7 +8041,7 @@ function calToggleMyFilter(){
 // ── Esporta ICS per calendario dispositivo ───────────────────────────────────
 function calExportICS(btn){
   const dt    = btn.dataset.dt;
-  const title = btn.dataset.title || 'Lezione freccette';
+  const title = btn.dataset.title || 'Allenamento';
   if(!dt){ alert('Nessuna data impostata per questo appuntamento.'); return; }
   // Registra questo appuntamento come salvato (persiste tra re-render e logout)
   const icsKey = (btn.dataset.uid||'')+'_'+(btn.dataset.idx||'');
@@ -8073,16 +8075,17 @@ function calExportICS(btn){
     'DTSTART:'+dtStr,
     'DTEND:'+dtEnd,
     'SUMMARY:'+title.replace(/,/g,'\\,'),
-    'DESCRIPTION:Lezione freccette - Centro Darts Lab',
+    'LOCATION:ASD Rocket Club',
+    'DESCRIPTION:Allenamento individuale - Centro Darts Lab. Mappa: https://maps.app.goo.gl/1ar96zTxMupBCtij7',
     'BEGIN:VALARM',
     'TRIGGER:-PT60M',
     'ACTION:DISPLAY',
-    'DESCRIPTION:Promemoria lezione tra 1 ora',
+    'DESCRIPTION:Promemoria allenamento tra 1 ora',
     'END:VALARM',
     'BEGIN:VALARM',
     'TRIGGER:-PT30M',
     'ACTION:DISPLAY',
-    'DESCRIPTION:Promemoria lezione tra 30 minuti',
+    'DESCRIPTION:Promemoria allenamento tra 30 minuti',
     'END:VALARM',
     'END:VEVENT',
     'END:VCALENDAR'
@@ -8095,7 +8098,7 @@ function calExportICS(btn){
   //  Chrome desktop chiede come aprirlo oppure lo apre nel visualizzatore)
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = 'lezione-freccette.ics';
+  a.download = 'allenamento.ics';
   // Niente target='_blank': evita la finestra/tab vuota.
   // Su iOS Safari e macOS: il sistema riconosce .ics e apre l'app Calendario.
   // Su Android e desktop: il file viene scaricato, si apre con un tap/doppio click.
@@ -8128,7 +8131,7 @@ function gsScheduleNotifications(uid, idx, dt, note, studentUser){
   const now      = Date.now();
   const userName = studentUser ? studentUser.firstName+' '+studentUser.lastName : 'Studente';
   const noteStr  = note ? ` · ${note}` : '';
-  const label    = `Lezione ${idx+1} — ${userName}${noteStr}`;
+  const label    = `Allenamento ${idx+1} — ${userName}${noteStr}`;
 
   const offsets = [
     {ms: 24*60*60*1000, txt:'tra 24 ore'},
@@ -8149,7 +8152,7 @@ function gsScheduleNotifications(uid, idx, dt, note, studentUser){
     const tid = setTimeout(()=>{
       if(Notification.permission==='granted'){
         new Notification('📅 '+label, {
-          body: `La lezione è ${txt}`,
+          body: `L'allenamento è ${txt}`,
           icon: '/favicon.ico',
           tag:  key+'_'+ms,
         });
@@ -11307,6 +11310,11 @@ function atFmtTime(s){
     var maxH = 0;
     cs.forEach(function(c){ if(c.offsetHeight > maxH) maxH = c.offsetHeight; });
     if(maxH) t.style.height = maxH + 'px';
+    // fit-scale: se la card è più alta dello spazio disponibile (font scaling Grande/Molto grande),
+    // la rimpicciolisce in width+height così non copre titolo/sottotitolo/hint e sta nello schermo
+    var outerEl = document.getElementById('carouselOuter');
+    var availH = outerEl ? outerEl.clientHeight : maxH;
+    var fit = (maxH > 0 && availH > 0) ? Math.min(1, (availH - 16) / maxH) : 1;
     var act = Math.round(pos);
     cs.forEach(function(c,i){
       var p = i - pos, ap = Math.abs(p);
@@ -11314,7 +11322,7 @@ function atFmtTime(s){
       var tx = p * (cw * 0.82);          // più separazione: i riquadri restano distinti
       var tz = -ap * 220;                // vicini spinti indietro: niente collasso
       var ry = -p * 32;
-      var sc = 1 - Math.min(ap, 1.2) * 0.2;
+      var sc = (1 - Math.min(ap, 1.2) * 0.2) * fit;
       var op = ap > 1.06 ? 0 : (1 - ap * 0.55);
       c.style.transform = 'translate(calc(-50% + ' + tx + 'px), -50%) translateZ(' + tz + 'px) rotateY(' + ry + 'deg) scale(' + sc + ')';
       c.style.opacity = op;
