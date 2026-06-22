@@ -3774,6 +3774,7 @@ function autoLoadNextSession(){
       if(!gdata || typeof gdata !== 'object') continue;
       for(const [k, v] of Object.entries(gdata)){
         if(k.charAt(0) === '_') continue; // salta i metadati colore (_c0/_c1)
+        if(v == null) continue; // null/undefined = casella inesistente/vuota (Firebase mette null negli array)
         if(String(v).trim() !== '') return false; // trovata una casella piena → non vuota
       }
     }
