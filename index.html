@@ -1321,6 +1321,11 @@ body.in-app #lProgress{display:none}
 [data-reveal="zoom"]{transform:scale(.84)}
 [data-reveal="blur"]{filter:blur(16px);opacity:0}
 [data-reveal].in{opacity:1;transform:none;filter:none}
+/* mobile: niente slide orizzontale (gli elementi non ancora rivelati causavano un
+   piccolo scroll laterale durante lo scorrimento); reveal solo verticale */
+@media(max-width:720px){
+  [data-reveal="left"],[data-reveal="right"]{transform:translateY(44px)}
+}
 
 /* ── HERO: aurora + particelle ── */
 .lhero{overflow:hidden}
@@ -1664,8 +1669,8 @@ body.in-app #lProgress{display:none}
                 <filter id="neonRed" x="-70%" y="-70%" width="240%" height="240%" color-interpolation-filters="sRGB">
                   <feGaussianBlur in="SourceAlpha" stdDeviation="3.6" result="bWide"></feGaussianBlur>
                   <feGaussianBlur in="SourceAlpha" stdDeviation="1.4" result="bTight"></feGaussianBlur>
-                  <feComponentTransfer in="bWide" result="bWideB"><feFuncA type="linear" slope="2.6"></feFuncA></feComponentTransfer>
-                  <feComponentTransfer in="bTight" result="bTightB"><feFuncA type="linear" slope="3.4"></feFuncA></feComponentTransfer>
+                  <feComponentTransfer in="bWide" result="bWideB"><feFuncA type="linear" slope="1.3"></feFuncA></feComponentTransfer>
+                  <feComponentTransfer in="bTight" result="bTightB"><feFuncA type="linear" slope="1.7"></feFuncA></feComponentTransfer>
                   <feFlood flood-color="#ff3b3b" result="col"></feFlood>
                   <feComposite in="col" in2="bWideB" operator="in" result="glowWide"></feComposite>
                   <feComposite in="col" in2="bTightB" operator="in" result="glowTight"></feComposite>
