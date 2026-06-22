@@ -2185,6 +2185,12 @@ body.in-app #lProgress{display:none}
           <div class="sel-group"><label>Numero di legs</label>
             <select id="legCount"><option value="1">1 leg</option><option value="2">2 legs</option><option value="3" selected>3 legs</option><option value="4">4 legs</option><option value="5">5 legs</option><option value="6">6 legs</option><option value="7">7 legs</option><option value="8">8 legs</option><option value="9">9 legs</option><option value="10">10 legs</option><option value="11">11 legs</option><option value="12">12 legs</option><option value="13">13 legs</option><option value="14">14 legs</option><option value="15">15 legs</option><option value="16">16 legs</option><option value="17">17 legs</option><option value="18">18 legs</option><option value="19">19 legs</option><option value="20">20 legs</option><option value="21">21 legs</option></select>
           </div>
+          <div class="sel-group"><label>Inserimento punteggio</label>
+            <select id="trainInputMethod" onchange="DartCam.savePrefs()"><option value="keypad" selected>⌨️ Tastierino</option><option value="camera">📷 Videocamera</option></select>
+          </div>
+          <div class="sel-group" id="trainBoardTypeGroup" style="display:none"><label>Tipo bersaglio</label>
+            <select id="trainBoardType" onchange="DartCam.savePrefs()"><option value="steel" selected>🎯 Steel</option><option value="soft">🟢 Soft</option></select>
+          </div>
           <button class="playbtn" style="padding:10px 28px;font-size:16px;margin-top:16px" onclick="startFree501()">GIOCA DA SOLO</button>
         </div>
       </div>
@@ -2691,6 +2697,77 @@ body.in-app #lProgress{display:none}
   </div>
 
 </div>
+<!-- ══════════ DARTCAM · autoscoring videocamera (501 solitario) ══════════ -->
+<style id="dartcam-css">
+#dcLayer{position:fixed;inset:0;z-index:9700;background:#000;display:none;flex-direction:column;overflow:hidden;touch-action:none;font-family:'DM Sans',sans-serif}
+#dcLayer.open{display:flex}
+#dcStage{position:relative;flex:1;min-height:0;overflow:hidden;background:#050505}
+#dcVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+#dcCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+.dc-topbar{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:linear-gradient(#000c,transparent);z-index:3}
+.dc-title{font-weight:800;font-size:15px;color:#fff;letter-spacing:.3px}
+.dc-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:#22c55e22;color:#22c55e;border:1px solid #22c55e55}
+.dc-x{background:#ffffff14;border:1px solid #ffffff33;color:#fff;border-radius:8px;padding:7px 11px;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif}
+.dc-hint{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;max-width:92%;text-align:center;font-size:13px;line-height:1.4;color:#fff;background:#000b;border:1px solid #ffffff22;padding:8px 14px;border-radius:12px;z-index:3}
+.dc-calbtn{position:absolute;top:54px;right:12px;z-index:3}
+.dc-panel{flex:0 0 auto;background:#0b0b0b;border-top:1px solid #ffffff14;padding:12px 12px calc(12px + env(safe-area-inset-bottom))}
+.dc-darts{display:flex;gap:8px;margin-bottom:10px}
+.dc-dart{flex:1;min-width:0;border:1.5px solid #ffffff22;border-radius:12px;background:#141414;padding:8px 4px;text-align:center;position:relative}
+.dc-dart.filled{border-color:#22c55e88;background:#13251a}
+.dc-dart.prov{border-color:#f59e0b;background:#23190a}
+.dc-dart .dl{font-size:10px;color:#9aa6a0;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.dc-dart .dv{font-family:'Bebas Neue',sans-serif;font-size:25px;color:#fff;line-height:1}
+.dc-dart .de{font-size:10px;color:#22c55e;margin-top:3px}
+.dc-actions{display:flex;gap:8px}
+.dc-actions button{flex:1;border:none;border-radius:11px;padding:13px 4px;font-size:13.5px;font-weight:700;font-family:'DM Sans',sans-serif}
+.dc-noscore{background:#3a1414;color:#f87171;border:1px solid #ef444455 !important}
+.dc-undo{background:#ffffff12;color:#fff;border:1px solid #ffffff24 !important}
+.dc-confirm{background:linear-gradient(135deg,#22c55e,#16a34a);color:#04140a}
+#dcPicker{position:fixed;inset:0;z-index:9800;background:#000d;display:none;flex-direction:column;justify-content:flex-end;font-family:'DM Sans',sans-serif}
+#dcPicker.open{display:flex}
+.dc-pk-card{background:#111;border-top-left-radius:20px;border-top-right-radius:20px;border-top:1px solid #ffffff1a;padding:16px 14px calc(16px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto}
+.dc-pk-title{font-weight:800;color:#fff;font-size:16px;text-align:center;margin-bottom:12px}
+.dc-pk-mult{display:flex;gap:8px;margin-bottom:12px}
+.dc-pk-mult button{flex:1;border:1.5px solid #ffffff22;background:#1b1b1b;color:#ccc;border-radius:10px;padding:10px;font-weight:700;font-size:14px;font-family:'DM Sans',sans-serif}
+.dc-pk-mult button.on{background:#22c55e;color:#04140a;border-color:#22c55e}
+.dc-pk-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+.dc-pk-grid button{border:1px solid #ffffff1c;background:#1b1b1b;color:#fff;border-radius:9px;padding:13px 0;font-size:16px;font-weight:700;font-family:'DM Sans',sans-serif}
+.dc-pk-grid button.special{background:#13251a;border-color:#22c55e55;color:#22c55e}
+.dc-pk-grid button.miss{background:#2a1414;border-color:#ef444455;color:#f87171}
+.dc-pk-cancel{width:100%;margin-top:12px;border:1px solid #ffffff22;background:#ffffff10;color:#fff;border-radius:10px;padding:12px;font-weight:700;font-family:'DM Sans',sans-serif}
+</style>
+<div id="dcLayer">
+  <div id="dcStage">
+    <video id="dcVideo" playsinline muted autoplay></video>
+    <canvas id="dcCanvas"></canvas>
+    <div class="dc-topbar">
+      <div style="display:flex;align-items:center;gap:8px"><span class="dc-title">Autoscoring</span><span class="dc-badge" id="dcBadge">STEEL</span></div>
+      <button class="dc-x" onclick="DartCam.switchToKeypad()">⌨️ Tastierino</button>
+    </div>
+    <button class="dc-x dc-calbtn" id="dcCalBtn" onclick="DartCam.startCalibration()" style="display:none">🎯 Ricalibra</button>
+    <div class="dc-hint" id="dcHint"></div>
+  </div>
+  <div class="dc-panel" id="dcPanel">
+    <div class="dc-darts" id="dcDarts"></div>
+    <div class="dc-actions">
+      <button class="dc-noscore" onclick="DartCam.markNoScore()">NESSUN PUNTO</button>
+      <button class="dc-undo" onclick="DartCam.undoDart()">↩︎ Annulla</button>
+      <button class="dc-confirm" onclick="DartCam.confirmTurn()">CONFERMA ✓</button>
+    </div>
+  </div>
+</div>
+<div id="dcPicker">
+  <div class="dc-pk-card">
+    <div class="dc-pk-title" id="dcPkTitle">Correggi freccia</div>
+    <div class="dc-pk-mult" id="dcPkMult">
+      <button data-m="1" class="on" onclick="DartCam.pkSetMult(1)">Singolo</button>
+      <button data-m="2" onclick="DartCam.pkSetMult(2)">Doppio ×2</button>
+      <button data-m="3" onclick="DartCam.pkSetMult(3)">Triplo ×3</button>
+    </div>
+    <div class="dc-pk-grid" id="dcPkGrid"></div>
+    <button class="dc-pk-cancel" onclick="DartCam.pkClose()">Chiudi</button>
+  </div>
+</div>
 <div id="g501overlay">
   <div class="g501-inner">
   <div class="g501-score-area">
@@ -2713,6 +2790,7 @@ body.in-app #lProgress{display:none}
     <div class="g501-display" id="g501display">—</div>
     <button class="g501-clr-btn" onclick="g501Clear()">CANCELLA</button>
   </div>
+  <button id="g501camBtn" onclick="DartCam.openCapture()" style="display:none;margin:0 0 10px;padding:14px;font-size:17px;font-weight:700;border:none;border-radius:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#04140a;letter-spacing:.4px;font-family:'DM Sans',sans-serif;box-shadow:0 6px 20px #22c55e44">📷 RILEVA TURNO CON CAMERA</button>
   <div class="g501-pad" id="g501pad">
     <button class="g501-key" onclick="g501Digit('1')">1</button>
     <button class="g501-key" onclick="g501Digit('2')">2</button>
@@ -12285,6 +12363,395 @@ document.addEventListener('keydown', function(e){
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',ready);
   else ready();
+})();
+</script>
+<script>
+/* ══════════ DARTCAM · autoscoring videocamera (501 solitario) ══════════
+   Pipeline single-camera: calibrazione 4 punti → omografia → board model →
+   detection per differenza di frame (steel: valida se persiste >3s; soft:
+   valida subito, anche rimbalzi) → conferma/correzione per freccia → totale
+   turno nel motore 501 esistente (g501OKBtn / g501NoScoreLeft).
+   Tutto opzionale e lazy: se l'utente resta su "Tastierino" nulla cambia. */
+window.DartCam = (function(){
+  'use strict';
+  const ORDER=[20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5];
+  // raggi normalizzati con bordo esterno del doppio = 1 (misure board standard, mm/170)
+  const RAD={bull:6.35/170, obull:15.9/170, tripIn:99/170, tripOut:107/170, dblIn:162/170, dblOut:1.0};
+  const THRESH=38;      // soglia differenza luma per pixel
+  const MIN_AREA=55;    // pixel-diff minimi (su proc 320w) per considerare "freccia"
+  const PROC_W=320;     // larghezza canvas di elaborazione
+  const STEEL_MS=3000;  // persistenza richiesta per steel
+  const LS_CAL='dcCalPts', LS_INPUT='dcInputMethod', LS_BOARD='dcBoardType';
+
+  const S={open:false, calibrating:false, calStep:0, calPts:[], H:null,
+           boardType:'steel', stream:null, timer:null, vw:0, vh:0,
+           refData:null, proc:null, pctx:null, darts:[null,null,null], curIdx:0,
+           prov:null, lastArea:0, stableCount:0, pkIdx:0, pkMult:1, started:false};
+
+  const CAL_LABELS=['20 (in ALTO)','6 (a DESTRA)','3 (in BASSO)','11 (a SINISTRA)'];
+  // destinazione canonica dei 4 tap (board normalizzato, y verso il basso)
+  const CAL_DST=[[0,-1],[1,0],[0,1],[-1,0]];
+
+  const $=id=>document.getElementById(id);
+
+  /* ---------- omografia 4 punti (DLT, risolto con eliminazione di Gauss) ---------- */
+  function solveHomography(src,dst){
+    // costruisce 8x9 e risolve per h (h33=1). Restituisce [h11..h32] (8 valori).
+    const A=[];
+    for(let i=0;i<4;i++){
+      const [x,y]=src[i], [u,v]=dst[i];
+      A.push([x,y,1,0,0,0,-u*x,-u*y,u]);
+      A.push([0,0,0,x,y,1,-v*x,-v*y,v]);
+    }
+    // sistema 8x8 (incognite h11..h32), termine noto = ultima colonna
+    const M=A.map(r=>r.slice(0,8));
+    const b=A.map(r=>r[8]);
+    const h=gauss(M,b);
+    if(!h) return null;
+    return h; // 8 valori, h33=1
+  }
+  function gauss(M,b){
+    const n=8;
+    for(let i=0;i<n;i++){
+      // pivot
+      let p=i;
+      for(let r=i+1;r<n;r++) if(Math.abs(M[r][i])>Math.abs(M[p][i])) p=r;
+      if(Math.abs(M[p][i])<1e-9) return null;
+      [M[i],M[p]]=[M[p],M[i]]; [b[i],b[p]]=[b[p],b[i]];
+      for(let r=0;r<n;r++){
+        if(r===i) continue;
+        const f=M[r][i]/M[i][i];
+        for(let c=i;c<n;c++) M[r][c]-=f*M[i][c];
+        b[r]-=f*b[i];
+      }
+    }
+    const x=new Array(n);
+    for(let i=0;i<n;i++) x[i]=b[i]/M[i][i];
+    return x;
+  }
+  // applica H (8 valori) a un punto immagine → board normalizzato
+  function applyH(h,x,y){
+    if(!h) return null;
+    const d=h[6]*x+h[7]*y+1;
+    if(Math.abs(d)<1e-9) return null;
+    return [(h[0]*x+h[1]*y+h[2])/d, (h[3]*x+h[4]*y+h[5])/d];
+  }
+
+  /* ---------- board model: punto board normalizzato → punteggio ---------- */
+  function scoreForBoard(bx,by){
+    const r=Math.hypot(bx,by);
+    if(r>RAD.dblOut) return {value:0, base:0, mult:0, label:'—'};            // fuori
+    if(r<=RAD.bull)  return {value:50, base:50, mult:1, label:'BULL'};
+    if(r<=RAD.obull) return {value:25, base:25, mult:1, label:'25'};
+    // angolo orario dall'alto
+    let ang=Math.atan2(bx,-by); if(ang<0) ang+=Math.PI*2;
+    const idx=Math.round(ang/(Math.PI/10))%20;
+    const num=ORDER[(idx+20)%20];
+    let mult=1, pre='';
+    if(r>RAD.dblIn){ mult=2; pre='D'; }
+    else if(r>RAD.tripIn && r<=RAD.tripOut){ mult=3; pre='T'; }
+    return {value:num*mult, base:num, mult, label:pre+num};
+  }
+
+  /* ---------- coordinate: client → pixel video (object-fit:contain) ---------- */
+  function stageRect(){
+    const st=$('dcStage'); const r=st.getBoundingClientRect();
+    if(!S.vw||!S.vh) return {scale:1,ox:0,oy:0,rect:r};
+    const scale=Math.min(r.width/S.vw, r.height/S.vh);
+    return {scale, ox:(r.width-S.vw*scale)/2, oy:(r.height-S.vh*scale)/2, rect:r};
+  }
+  function clientToVideo(cx,cy){
+    const {scale,ox,oy,rect}=stageRect();
+    return [ (cx-rect.left-ox)/scale, (cy-rect.top-oy)/scale ];
+  }
+  function videoToStage(vx,vy){
+    const {scale,ox,oy}=stageRect();
+    return [ ox+vx*scale, oy+vy*scale ];
+  }
+
+  /* ---------- preferenze ---------- */
+  function savePrefs(){
+    const im=$('trainInputMethod'), bt=$('trainBoardType');
+    if(!im) return;
+    localStorage.setItem(LS_INPUT, im.value);
+    if(bt) localStorage.setItem(LS_BOARD, bt.value);
+    const g=$('trainBoardTypeGroup'); if(g) g.style.display = im.value==='camera' ? '' : 'none';
+  }
+  function loadPrefs(){
+    const im=$('trainInputMethod'), bt=$('trainBoardType');
+    if(im){ const v=localStorage.getItem(LS_INPUT); if(v) im.value=v; }
+    if(bt){ const v=localStorage.getItem(LS_BOARD); if(v) bt.value=v; }
+    const g=$('trainBoardTypeGroup'); if(g&&im) g.style.display = im.value==='camera' ? '' : 'none';
+    // calibrazione memorizzata (treppiede fermo → riutilizzabile)
+    try{ const c=JSON.parse(localStorage.getItem(LS_CAL)||'null'); if(c&&c.length===4){ S.calPts=c; S.H=solveHomography(c,CAL_DST); } }catch(e){}
+  }
+  function isCameraMode(){ const im=$('trainInputMethod'); return im && im.value==='camera'; }
+
+  /* ---------- ciclo vita ---------- */
+  function onLegStart(){
+    const camBtn=$('g501camBtn'); if(!camBtn) return;
+    if(isCameraMode()){
+      S.boardType = ($('trainBoardType')&&$('trainBoardType').value) || 'steel';
+      camBtn.style.display='';
+      // apri la cattura per il primo turno
+      setTimeout(()=>{ try{ openCapture(); }catch(e){} }, 350);
+    } else {
+      camBtn.style.display='none';
+    }
+  }
+  async function openCapture(){
+    if(!isCameraMode()) return;
+    S.boardType = ($('trainBoardType')&&$('trainBoardType').value) || 'steel';
+    $('dcBadge').textContent = S.boardType==='soft' ? 'SOFT' : 'STEEL';
+    S.darts=[null,null,null]; S.curIdx=0; S.prov=null; S.lastArea=0; S.stableCount=0; S.refData=null;
+    renderDarts();
+    $('dcLayer').classList.add('open');
+    try{ await startCamera(); }
+    catch(e){ alert('Impossibile accedere alla fotocamera: '+(e&&e.message?e.message:e)+'\nPuoi usare il tastierino.'); closeLayer(); return; }
+    if(S.H && S.calPts.length===4){ S.calibrating=false; $('dcCalBtn').style.display=''; setHint('Tira le frecce. Tocca una freccia in basso per correggerla.'); }
+    else { startCalibration(); }
+  }
+  async function startCamera(){
+    if(S.stream) return;
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720}}, audio:false});
+    S.stream=stream;
+    const v=$('dcVideo'); v.srcObject=stream;
+    await new Promise(res=>{
+      if(v.readyState>=2 && v.videoWidth){ res(); return; }
+      v.onloadedmetadata=()=>res();
+    });
+    await v.play().catch(()=>{});
+    S.vw=v.videoWidth||1280; S.vh=v.videoHeight||720;
+    // proc canvas
+    if(!S.proc){ S.proc=document.createElement('canvas'); S.pctx=S.proc.getContext('2d',{willReadFrequently:true}); }
+    S.proc.width=PROC_W; S.proc.height=Math.round(PROC_W*S.vh/S.vw);
+    sizeCanvas();
+    startLoop();
+  }
+  function sizeCanvas(){
+    const c=$('dcCanvas'); if(!c) return;
+    const r=$('dcStage').getBoundingClientRect();
+    c.width=Math.max(1,Math.round(r.width)); c.height=Math.max(1,Math.round(r.height));
+  }
+  function stopCamera(){
+    if(S.stream){ S.stream.getTracks().forEach(t=>t.stop()); S.stream=null; }
+    const v=$('dcVideo'); if(v) v.srcObject=null;
+  }
+  function closeLayer(){
+    stopLoop(); stopCamera();
+    const L=$('dcLayer'); if(L) L.classList.remove('open');
+    const P=$('dcPicker'); if(P) P.classList.remove('open');
+    S.calibrating=false; S.prov=null;
+  }
+  function switchToKeypad(){ closeLayer(); /* il tastierino resta sotto, camBtn per riaprire */ }
+
+  /* ---------- calibrazione ---------- */
+  function startCalibration(){
+    S.calibrating=true; S.calStep=0; S.calPts=[];
+    $('dcCalBtn').style.display='none';
+    setHint('CALIBRAZIONE · Tocca sul bersaglio il bordo ESTERNO del doppio · '+CAL_LABELS[0]);
+    drawOverlay();
+  }
+  function onCanvasTap(ev){
+    if(!S.calibrating) return;
+    ev.preventDefault();
+    const t=ev.touches&&ev.touches[0] ? ev.touches[0] : ev;
+    const [vx,vy]=clientToVideo(t.clientX, t.clientY);
+    S.calPts.push([vx,vy]); S.calStep++;
+    if(S.calStep<4){
+      setHint('CALIBRAZIONE · '+CAL_LABELS[S.calStep]+'  ('+S.calStep+'/4)');
+    } else {
+      S.H=solveHomography(S.calPts, CAL_DST);
+      S.calibrating=false;
+      if(S.H){ localStorage.setItem(LS_CAL, JSON.stringify(S.calPts)); $('dcCalBtn').style.display='';
+        setHint('Calibrato ✓ Tira le frecce. Tocca una freccia per correggerla.');
+        S.refData=null; // nuova reference al prossimo frame
+      } else { setHint('Calibrazione non valida, riprova (4 punti ben distinti).'); startCalibration(); }
+    }
+    drawOverlay();
+  }
+
+  /* ---------- loop detection ---------- */
+  function startLoop(){ if(S.timer) return; S.timer=setInterval(tick, 150); }
+  function stopLoop(){ if(S.timer){ clearInterval(S.timer); S.timer=null; } }
+
+  function grabProc(){
+    const v=$('dcVideo'); if(!v||!v.videoWidth) return null;
+    S.pctx.drawImage(v,0,0,S.proc.width,S.proc.height);
+    return S.pctx.getImageData(0,0,S.proc.width,S.proc.height);
+  }
+  function tick(){
+    if(!S.open && !$('dcLayer').classList.contains('open')) return;
+    drawOverlay();
+    if(S.calibrating || !S.H) return;
+    if(S.curIdx>=3) return; // turno pieno
+    const cur=grabProc(); if(!cur) return;
+    if(!S.refData){ S.refData=cur; return; }
+    const det=diffBlob(cur, S.refData);
+    const area=det?det.area:0;
+
+    if(S.boardType==='soft'){
+      if(area>=MIN_AREA){
+        if(Math.abs(area-S.lastArea) < S.lastArea*0.45 + 25) S.stableCount++; else S.stableCount=0;
+        if(S.stableCount>=2 && det.tip){ commitDart(det.tip); S.stableCount=0; }
+      } else S.stableCount=0;
+    } else { // steel: persistenza 3s
+      if(!S.prov){
+        if(area>=MIN_AREA){
+          if(Math.abs(area-S.lastArea) < S.lastArea*0.45 + 25) S.stableCount++; else S.stableCount=0;
+          if(S.stableCount>=2 && det.tip){ S.prov={t0:Date.now(), tip:det.tip}; S.stableCount=0; renderDarts(); }
+        } else S.stableCount=0;
+      } else {
+        if(area < MIN_AREA*0.5){ S.prov=null; renderDarts(); }          // caduta/rimbalzo: scartata
+        else { if(det.tip) S.prov.tip=det.tip;
+          if(Date.now()-S.prov.t0>=STEEL_MS){ const tp=S.prov.tip; S.prov=null; commitDart(tp); } }
+      }
+    }
+    S.lastArea=area;
+  }
+  function diffBlob(cur, ref){
+    const w=cur.width, h=cur.height, a=cur.data, b=ref.data;
+    let n=0, sx=0, sy=0; const xs=[], ys=[];
+    for(let y=0;y<h;y+=2){
+      for(let x=0;x<w;x+=2){
+        const i=(y*w+x)*4;
+        const gc=(a[i]+a[i+1]+a[i+2])/3, gr=(b[i]+b[i+1]+b[i+2])/3;
+        if(Math.abs(gc-gr)>THRESH){ n++; sx+=x; sy+=y; xs.push(x); ys.push(y); }
+      }
+    }
+    if(n<MIN_AREA) return {area:n, tip:null};
+    const cx=sx/n, cy=sy/n;
+    // asse principale (PCA) per trovare gli estremi della freccia
+    let sxx=0,syy=0,sxy=0;
+    for(let k=0;k<xs.length;k++){ const dx=xs[k]-cx, dy=ys[k]-cy; sxx+=dx*dx; syy+=dy*dy; sxy+=dx*dy; }
+    const ang=0.5*Math.atan2(2*sxy, (sxx-syy)); const ca=Math.cos(ang), sa=Math.sin(ang);
+    let tmin=1e9,tmax=-1e9, pmin=[cx,cy], pmax=[cx,cy];
+    for(let k=0;k<xs.length;k++){ const t=(xs[k]-cx)*ca+(ys[k]-cy)*sa;
+      if(t<tmin){tmin=t; pmin=[xs[k],ys[k]];} if(t>tmax){tmax=t; pmax=[xs[k],ys[k]];} }
+    // la punta è l'estremo più vicino al centro del bersaglio
+    const scaleVX=S.vw/w, scaleVY=S.vh/h;
+    const b1=applyH(S.H, pmin[0]*scaleVX, pmin[1]*scaleVY);
+    const b2=applyH(S.H, pmax[0]*scaleVX, pmax[1]*scaleVY);
+    if(!b1||!b2) return {area:n, tip:null};
+    const r1=Math.hypot(b1[0],b1[1]), r2=Math.hypot(b2[0],b2[1]);
+    const pe = r1<=r2 ? pmin : pmax;
+    return {area:n, tip:{px:pe[0]*scaleVX, py:pe[1]*scaleVY}};
+  }
+  function commitDart(tip){
+    if(S.curIdx>=3) return;
+    const bp=applyH(S.H, tip.px, tip.py); if(!bp) return;
+    const sc=scoreForBoard(bp[0],bp[1]);
+    sc.vx=tip.px; sc.vy=tip.py;
+    S.darts[S.curIdx]=sc; S.curIdx++;
+    S.refData=grabProc()||S.refData; // la freccia piazzata diventa sfondo
+    S.prov=null; S.lastArea=0; S.stableCount=0;
+    renderDarts(); drawOverlay();
+  }
+
+  /* ---------- disegno overlay ---------- */
+  function drawOverlay(){
+    const c=$('dcCanvas'); if(!c) return; const ctx=c.getContext('2d');
+    if(c.width!==Math.round($('dcStage').getBoundingClientRect().width)) sizeCanvas();
+    ctx.clearRect(0,0,c.width,c.height);
+    // punti di calibrazione
+    if(S.calibrating || (S.calPts.length===4)){
+      for(let i=0;i<S.calPts.length;i++){ const [sx,sy]=videoToStage(S.calPts[i][0],S.calPts[i][1]);
+        ctx.beginPath(); ctx.arc(sx,sy,7,0,7); ctx.fillStyle=S.calibrating?'#f59e0b':'#22c55e88'; ctx.fill();
+        ctx.fillStyle='#fff'; ctx.font='11px sans-serif'; ctx.fillText(String(i+1), sx-3, sy-10); }
+    }
+    // frecce piazzate
+    for(let i=0;i<3;i++){ const d=S.darts[i]; if(!d||d.vx==null) continue;
+      const [sx,sy]=videoToStage(d.vx,d.vy);
+      ctx.beginPath(); ctx.arc(sx,sy,9,0,7); ctx.fillStyle='#22c55e'; ctx.fill();
+      ctx.lineWidth=2; ctx.strokeStyle='#04140a'; ctx.stroke();
+      ctx.fillStyle='#fff'; ctx.font='bold 12px sans-serif'; ctx.fillText(d.label, sx+12, sy+4); }
+    // provvisoria (steel countdown)
+    if(S.prov&&S.prov.tip){ const [sx,sy]=videoToStage(S.prov.tip.px,S.prov.tip.py);
+      ctx.beginPath(); ctx.arc(sx,sy,11,0,7); ctx.strokeStyle='#f59e0b'; ctx.lineWidth=3; ctx.stroke(); }
+  }
+
+  /* ---------- render chip frecce ---------- */
+  function renderDarts(){
+    const wrap=$('dcDarts'); if(!wrap) return; wrap.innerHTML='';
+    for(let i=0;i<3;i++){
+      const d=S.darts[i];
+      const prov = S.prov && i===S.curIdx;
+      const el=document.createElement('div');
+      el.className='dc-dart'+(d?' filled':'')+(prov?' prov':'');
+      const val = d ? (d.value+'') : (prov?'⏳':'—');
+      const sub = d ? (d.label+(d.mult>1?'':'')) : (prov? (S.boardType==='steel'?'attendi 3s':'...') : 'tocca per inserire');
+      el.innerHTML='<div class="dl">Freccia '+(i+1)+'</div><div class="dv">'+val+'</div><div class="de">'+sub+'</div>';
+      el.onclick=()=>pkOpen(i);
+      wrap.appendChild(el);
+    }
+  }
+
+  /* ---------- picker correzione ---------- */
+  function buildGrid(){
+    const g=$('dcPkGrid'); if(!g||g.dataset.built) return; g.dataset.built='1';
+    let html='';
+    for(let n=1;n<=20;n++) html+='<button onclick="DartCam.pkPick('+n+')">'+n+'</button>';
+    html+='<button class="special" onclick="DartCam.pkPick(25)">25</button>';
+    html+='<button class="special" onclick="DartCam.pkPick(50)">BULL</button>';
+    html+='<button class="miss" onclick="DartCam.pkPick(0)">MISS</button>';
+    g.innerHTML=html;
+  }
+  function pkOpen(i){
+    buildGrid(); S.pkIdx=i; S.pkMult=1; setMultUI(1);
+    $('dcPkTitle').textContent='Freccia '+(i+1)+' · scegli il punteggio';
+    $('dcPicker').classList.add('open');
+  }
+  function pkClose(){ $('dcPicker').classList.remove('open'); }
+  function setMultUI(m){ document.querySelectorAll('#dcPkMult button').forEach(b=>b.classList.toggle('on', +b.dataset.m===m)); }
+  function pkSetMult(m){ S.pkMult=m; setMultUI(m); }
+  function pkPick(n){
+    let sc;
+    if(n===0) sc={value:0,base:0,mult:0,label:'—'};
+    else if(n===50) sc={value:50,base:50,mult:1,label:'BULL'};
+    else if(n===25) sc={value:25,base:25,mult:1,label:'25'};
+    else { const m=S.pkMult; sc={value:n*m, base:n, mult:m, label:(m===2?'D':m===3?'T':'')+n}; }
+    const prev=S.darts[S.pkIdx];
+    if(prev){ sc.vx=prev.vx; sc.vy=prev.vy; }
+    S.darts[S.pkIdx]=sc;
+    if(S.pkIdx>=S.curIdx) S.curIdx=S.pkIdx+1;
+    S.prov=null; S.refData=grabProc()||S.refData; // riallinea lo sfondo
+    pkClose(); renderDarts(); drawOverlay();
+  }
+
+  /* ---------- azioni turno ---------- */
+  function undoDart(){
+    let i=S.curIdx-1; while(i>=0 && !S.darts[i]) i--;
+    if(i<0){ return; }
+    S.darts[i]=null; S.curIdx=i; S.prov=null; S.refData=grabProc()||null;
+    renderDarts(); drawOverlay();
+  }
+  function markNoScore(){ closeLayer(); if(typeof g501NoScoreLeft==='function') g501NoScoreLeft(); }
+  function confirmTurn(){
+    let total=0; for(let i=0;i<3;i++) if(S.darts[i]) total+=S.darts[i].value;
+    total=Math.max(0, Math.min(180, total));
+    closeLayer();
+    if(total===0){ if(typeof g501NoScoreLeft==='function') g501NoScoreLeft(); return; }
+    if(window.G){ window.G.enteredStr=String(total); }
+    if(typeof g501OKBtn==='function') g501OKBtn();
+  }
+  function setHint(t){ const h=$('dcHint'); if(h) h.textContent=t; }
+
+  /* ---------- init + hook ---------- */
+  function init(){
+    loadPrefs();
+    const c=$('dcCanvas');
+    if(c){ c.addEventListener('pointerdown', onCanvasTap, {passive:false}); }
+    window.addEventListener('resize', ()=>{ if($('dcLayer').classList.contains('open')){ sizeCanvas(); drawOverlay(); } });
+    // hook non invasivi sul motore 501 esistente
+    if(typeof window.startFree501==='function'){ const o=window.startFree501; window.startFree501=function(){ o.apply(this,arguments); try{onLegStart();}catch(e){} }; }
+    if(typeof window.close501==='function'){ const o=window.close501; window.close501=function(){ try{closeLayer();}catch(e){} return o.apply(this,arguments); }; }
+    if(typeof window.finalizeTraining501==='function'){ const o=window.finalizeTraining501; window.finalizeTraining501=function(){ try{closeLayer();}catch(e){} return o.apply(this,arguments); }; }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+
+  return { savePrefs, openCapture, startCalibration, switchToKeypad, markNoScore,
+           undoDart, confirmTurn, pkSetMult, pkPick, pkClose, onLegStart, closeLayer,
+           _scoreForBoard:scoreForBoard, _solveHomography:solveHomography };
 })();
 </script>
 </body>
