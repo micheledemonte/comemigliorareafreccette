@@ -8093,8 +8093,28 @@ function calExportICS(btn){
 
   const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
   const url  = URL.createObjectURL(blob);
+
+  // Su Android apriamo direttamente Google Calendar (come per l'export utente): niente
+  // download + tap manuale su "Apri". iOS/desktop usano il download ICS (con promemoria).
+  const isAndroid = /android/i.test(navigator.userAgent);
+  if(isAndroid){
+    const gcStart = d.toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+    const gcEnd   = dEnd.toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+    const gcUrl   = 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+      +'&text='+encodeURIComponent(title)
+      +'&dates='+gcStart+'/'+gcEnd
+      +'&location='+encodeURIComponent('ASD Rocket Club')
+      +'&details='+encodeURIComponent('Allenamento individuale - Centro Darts Lab. Mappa: https://maps.app.goo.gl/1ar96zTxMupBCtij7')
+      +'&sf=true&output=xml';
+    URL.revokeObjectURL(url);
+    btn.classList.add('ics-saved');
+    btn.textContent = '✓ SALVATO';
+    window.location.href = gcUrl;
+    return;
+  }
+
   // Non impostare .download → il browser apre il file direttamente nel calendario
-  // (iOS Safari, macOS Safari, Chrome Android aprono l'app calendario;
+  // (iOS Safari, macOS Safari aprono l'app calendario;
   //  Chrome desktop chiede come aprirlo oppure lo apre nel visualizzatore)
   const a    = document.createElement('a');
   a.href     = url;
