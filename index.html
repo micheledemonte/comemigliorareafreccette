@@ -2792,6 +2792,7 @@ body.in-app #lProgress{display:none}
       <button class="dc-x" onclick="DartCam.switchToKeypad()">Tastierino</button>
       <button class="dc-x" id="dcCalBtn" onclick="DartCam.startCalibration()" style="display:none">Ricalibra</button>
     </div>
+    <div id="dcRec" style="display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;align-items:center;gap:6px;background:#7f1d1dcc;color:#fff;font:600 11px 'DM Sans',sans-serif;padding:3px 9px;border-radius:999px;pointer-events:none">● REC dati AI</div>
     <button class="dc-stage-btn" id="dcCalConfirm" onclick="DartCam.calConfirmPoint()" style="display:none">✓ Conferma punto</button>
     <button class="dc-stage-btn" id="dcMoveConfirm" onclick="DartCam.moveConfirm()" style="display:none">✓ Conferma posizione</button>
     <div class="dc-hint" id="dcHint"></div>
@@ -2827,6 +2828,14 @@ body.in-app #lProgress{display:none}
         <button data-v="keep" onclick="DartCam.pgSetCal('keep')">Mantieni ultima</button>
         <button data-v="redo" onclick="DartCam.pgSetCal('redo')">Rifai ora</button>
       </div>
+    </div>
+    <div id="dcPgDataWrap" style="display:none">
+      <div class="dc-pg-lbl">Dati per il modello AI</div>
+      <div class="dc-pg-row" id="dcPgData">
+        <button data-v="off" onclick="DartCam.setCollect(false)">Off</button>
+        <button data-v="on" onclick="DartCam.setCollect(true)">Raccogli</button>
+      </div>
+      <div class="dc-pg-note">Salva i frame con le punte per addestrare il rilevamento (gold = quelle che correggi col chip,Sposta). <b><span id="dcPgDataCount">0</span></b> campioni. <a href="#" style="color:#86efac" onclick="DartCam.exportData();return false">Esporta</a> · <a href="#" style="color:#fca5a5" onclick="DartCam.clearData();return false">Svuota</a></div>
     </div>
     <button class="dc-pg-start" onclick="DartCam.pgStart()">INIZIA ▶</button>
     <button class="dc-pg-cancel" onclick="DartCam.pgCancel()">Annulla</button>
@@ -12473,7 +12482,8 @@ window.DartCam = (function(){
   const STABLE_NEED=2;        // frame stabili richiesti (come v246, sensibilità buona)
   const REARM_TIMEOUT=5000;
   const ZMIN=1, ZMAX=3, ZSTEP=0.5;
-  const LS_CAL='dcCalPts', LS_INPUT='dcInputMethod', LS_BOARD='dcBoardType', LS_BIAS='dcBias';
+  const LS_CAL='dcCalPts', LS_INPUT='dcInputMethod', LS_BOARD='dcBoardType', LS_BIAS='dcBias', LS_COLLECT='dcCollect';
+  const DATA_DB='dartDataset', DATA_STORE='samples';
   const CAL_LABELS=['20 (in ALTO)','6 (a DESTRA)','3 (in BASSO)','11 (a SINISTRA)'];
   const CAL_DST=[[0,-1],[1,0],[0,1],[-1,0]];
 
@@ -12485,7 +12495,8 @@ window.DartCam = (function(){
            refData:null, emptyRef:null, phase:'idle', darts:[null,null,null], curIdx:0,
            prov:null, stableCount:0, tipBuf:null, lastCommit:0, rearmT0:0, rearmClearCount:0,
            lastTurnTotal:null, pkIdx:0, pkMult:1, chipIdx:0, moveMode:null, movePreview:null,
-           bias:{sx:0,sy:0,n:0}, timer:null, settleTimer:null};
+           bias:{sx:0,sy:0,n:0}, timer:null, settleTimer:null,
+           collect:false, _dataDB:null, _dataCount:0, _capCanvas:null};
 
   const $=id=>document.getElementById(id);
   const layerOpen=()=> $('dcLayer') && $('dcLayer').classList.contains('open');
@@ -12568,7 +12579,8 @@ window.DartCam = (function(){
   function loadPrefs(){ const im=localStorage.getItem(LS_INPUT); if(im) S.inputMethod=im;
     const bt=localStorage.getItem(LS_BOARD); if(bt) S.boardType=bt;
     try{ const c=JSON.parse(localStorage.getItem(LS_CAL)||'null'); if(c&&c.length===4){ S.calLocked=c; S.H=solveHomography(c,CAL_DST); } }catch(e){}
-    try{ const bz=JSON.parse(localStorage.getItem(LS_BIAS)||'null'); if(bz&&typeof bz.n==='number'){ S.bias=bz; } }catch(e){} }
+    try{ const bz=JSON.parse(localStorage.getItem(LS_BIAS)||'null'); if(bz&&typeof bz.n==='number'){ S.bias=bz; } }catch(e){}
+    S.collect = localStorage.getItem(LS_COLLECT)==='1'; }
   function savePrefs(){ localStorage.setItem(LS_INPUT,S.inputMethod); localStorage.setItem(LS_BOARD,S.boardType); }
   function saveLocalBias(){ try{ localStorage.setItem(LS_BIAS, JSON.stringify(S.bias)); }catch(e){} }
   function biasVec(){ if(S.bias.n<=0) return [0,0]; const C=0.08;
@@ -12587,15 +12599,54 @@ window.DartCam = (function(){
       if(cur.n>800){ cur.sx*=0.5; cur.sy*=0.5; cur.n*=0.5; } return cur; },
       function(err,committed,snap){ if(!err&&committed&&snap){ const v=snap.val(); if(v&&typeof v.n==='number'){ S.bias={sx:v.sx,sy:v.sy,n:v.n}; saveLocalBias(); } } }, false); }
 
+  /* ---------- raccolta dati per il modello AI (opt-in, locale via IndexedDB) ----------
+     Ogni turno confermato salva un frame camera + le punte (x,y nel frame) con il loro
+     "truth": 'manual' (corretta col chip,Sposta = ground-truth d'oro), 'auto' (pin auto non
+     corretto), 'picker' (solo punteggio, posizione inaffidabile). Export = JSON scaricabile. */
+  function idbOpen(){ return new Promise(function(res,rej){ if(!window.indexedDB){ rej(new Error('no idb')); return; }
+    if(S._dataDB){ res(S._dataDB); return; }
+    const rq=indexedDB.open(DATA_DB,1);
+    rq.onupgradeneeded=function(){ const db=rq.result; if(!db.objectStoreNames.contains(DATA_STORE)) db.createObjectStore(DATA_STORE,{keyPath:'id',autoIncrement:true}); };
+    rq.onsuccess=function(){ S._dataDB=rq.result; res(rq.result); };
+    rq.onerror=function(){ rej(rq.error); }; }); }
+  function dataRefreshCount(){ idbOpen().then(function(db){ const rq=db.transaction(DATA_STORE,'readonly').objectStore(DATA_STORE).count();
+    rq.onsuccess=function(){ S._dataCount=rq.result; const el=$('dcPgDataCount'); if(el) el.textContent=rq.result; }; }).catch(function(){}); }
+  function dataCapture(){ if(!S.collect) return; const v=$('dcVideo'); if(!v||!v.videoWidth||!S.H||S.calLocked.length!==4) return;
+    const darts=S.darts.filter(Boolean); if(!darts.length) return;
+    const MAXW=720, scale=Math.min(1, MAXW/S.vw), iw=Math.round(S.vw*scale), ih=Math.round(S.vh*scale);
+    let cv=S._capCanvas; if(!cv){ cv=S._capCanvas=document.createElement('canvas'); }
+    cv.width=iw; cv.height=ih; cv.getContext('2d').drawImage(v,0,0,iw,ih);
+    let img; try{ img=cv.toDataURL('image/jpeg',0.72); }catch(e){ return; }
+    const sx=iw/S.vw, sy=ih/S.vh;
+    const rec={ ts:Date.now(), board:S.boardType, iw:iw, ih:ih,
+      cal:S.calLocked.map(function(p){ return [Math.round(p[0]*sx),Math.round(p[1]*sy)]; }),
+      darts:darts.map(function(d){ return { x:Math.round((d.vx||0)*sx), y:Math.round((d.vy||0)*sy), label:d.label, value:d.value, base:d.base, mult:d.mult, truth:d.posTruth||'auto' }; }),
+      img:img };
+    idbOpen().then(function(db){ const tx=db.transaction(DATA_STORE,'readwrite'); tx.objectStore(DATA_STORE).add(rec);
+      tx.oncomplete=function(){ S._dataCount++; const el=$('dcPgDataCount'); if(el) el.textContent=S._dataCount; }; }).catch(function(){}); }
+  function setCollect(v){ S.collect=!!v; try{ localStorage.setItem(LS_COLLECT, v?'1':'0'); }catch(e){}
+    updatePgUI(); if(v) dataRefreshCount(); updateRecBadge(); }
+  function updateRecBadge(){ const el=$('dcRec'); if(el) el.style.display=(S.collect && layerOpen())?'flex':'none'; }
+  function exportData(){ idbOpen().then(function(db){ const rq=db.transaction(DATA_STORE,'readonly').objectStore(DATA_STORE).getAll();
+    rq.onsuccess=function(){ const samples=rq.result||[]; if(!samples.length){ alert('Nessun campione raccolto.'); return; }
+      const blob=new Blob([JSON.stringify({v:1, app:'dartcam', count:samples.length, samples:samples})], {type:'application/json'});
+      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='dartcam_dataset_'+samples.length+'.json';
+      document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1500); }; }).catch(function(){ alert('Export non riuscito.'); }); }
+  function clearData(){ if(!confirm('Svuotare i '+S._dataCount+' campioni raccolti? Esportali prima.')) return;
+    idbOpen().then(function(db){ const tx=db.transaction(DATA_STORE,'readwrite'); tx.objectStore(DATA_STORE).clear();
+      tx.oncomplete=function(){ S._dataCount=0; const el=$('dcPgDataCount'); if(el) el.textContent='0'; }; }).catch(function(){}); }
+
   /* ---------- modale pre-partita ---------- */
-  function preGame(){ loadPrefs(); S.calMode='keep'; updatePgUI(); $('dcPreGame').classList.add('open'); }
+  function preGame(){ loadPrefs(); S.calMode='keep'; updatePgUI(); $('dcPreGame').classList.add('open'); if(S.collect) dataRefreshCount(); }
   function updatePgUI(){
     document.querySelectorAll('#dcPgInput button').forEach(b=>b.classList.toggle('on', b.dataset.v===S.inputMethod));
     document.querySelectorAll('#dcPgBoard button').forEach(b=>b.classList.toggle('on', b.dataset.v===S.boardType));
     document.querySelectorAll('#dcPgCal button').forEach(b=>b.classList.toggle('on', b.dataset.v===S.calMode));
     const cam=S.inputMethod==='camera';
     const bw=$('dcPgBoardWrap'); if(bw) bw.style.display = cam ? '' : 'none';
-    const cw=$('dcPgCalWrap'); if(cw) cw.style.display = (cam && S.calLocked.length===4) ? '' : 'none'; }
+    const cw=$('dcPgCalWrap'); if(cw) cw.style.display = (cam && S.calLocked.length===4) ? '' : 'none';
+    document.querySelectorAll('#dcPgData button').forEach(b=>b.classList.toggle('on', (b.dataset.v==='on')===S.collect));
+    const dw=$('dcPgDataWrap'); if(dw) dw.style.display = (cam && S.calLocked.length===4) ? '' : 'none'; }
   function pgSetInput(v){ S.inputMethod=v; updatePgUI(); }
   function pgSetBoard(v){ S.boardType=v; updatePgUI(); }
   function pgSetCal(v){ S.calMode=v; updatePgUI(); }
@@ -12607,7 +12658,7 @@ window.DartCam = (function(){
   function onLegStart(){ if(S.inputMethod==='camera'){ setTimeout(()=>{ try{ openCapture(); }catch(e){} }, 300); } else { closeLayer(); } }
   async function openCapture(){
     S.darts=[null,null,null]; S.curIdx=0; S.prov=null; S.stableCount=0; S.tipBuf=null; S.lastTurnTotal=null; S.moveMode=null;
-    $('dcLayer').classList.add('open'); renderDarts(); updateActionBtn(); updateHud(); applyZoom(); fetchGlobalBias();
+    $('dcLayer').classList.add('open'); renderDarts(); updateActionBtn(); updateHud(); applyZoom(); fetchGlobalBias(); updateRecBadge();
     try{ await startCamera(); }
     catch(e){ alert('Fotocamera non accessibile: '+(e&&e.message?e.message:e)+'. Puoi usare il tastierino.'); closeLayer(); return; }
     const hasCal = S.H && S.calLocked.length===4;
@@ -12627,6 +12678,7 @@ window.DartCam = (function(){
   function stopCamera(){ if(S.stream){ S.stream.getTracks().forEach(t=>t.stop()); S.stream=null; } const v=$('dcVideo'); if(v) v.srcObject=null; }
   function closeLayer(){ stopLoop(); if(S.settleTimer){clearTimeout(S.settleTimer);S.settleTimer=null;} stopCamera();
     ['dcLayer','dcPicker','dcChipMenu'].forEach(id=>{ const e=$(id); if(e) e.classList.remove('open'); });
+    updateRecBadge();
     S.calibrating=false; S.prov=null; S.phase='idle'; S.moveMode=null; S.movePreview=null;
     if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none'; }
   function switchToKeypad(){ closeLayer(); }
@@ -12667,7 +12719,7 @@ window.DartCam = (function(){
   function moveDartTo(idx,vx,vy){ const b=applyH(S.H,vx,vy); if(!b) return; const d=S.darts[idx];
     if(d && d.auto && d.detB){ const dx=b[0]-d.detB[0], dy=b[1]-d.detB[1];
       if(Math.hypot(dx,dy)<0.22) learnBias(dx,dy); }
-    const sc=scoreForBoard(b[0],b[1]); sc.vx=vx; sc.vy=vy; sc.auto=false; sc.detB=b;
+    const sc=scoreForBoard(b[0],b[1]); sc.vx=vx; sc.vy=vy; sc.auto=false; sc.detB=b; sc.posTruth='manual';
     S.darts[idx]=sc; if(S.curIdx<idx+1) S.curIdx=idx+1;
     S.refData=grabProc()||S.refData; renderDarts(); drawOverlay(); updateActionBtn(); updateHud(); }
 
@@ -12758,7 +12810,7 @@ window.DartCam = (function(){
     return {area:bestSize, tip:{ px:(ex/wsum)*S.vw/w, py:(ey/wsum)*S.vh/h }}; }
   function commitDart(tip){ if(S.curIdx>=3) return; const rawB=applyH(S.H,tip.px,tip.py); if(!rawB) return;
     const bv=biasVec(); const adjB=[rawB[0]+bv[0], rawB[1]+bv[1]];
-    const sc=scoreForBoard(adjB[0],adjB[1]); sc.auto=true; sc.detB=rawB;
+    const sc=scoreForBoard(adjB[0],adjB[1]); sc.auto=true; sc.detB=rawB; sc.posTruth='auto';
     const va=boardToVideo(adjB[0],adjB[1]); sc.vx = va?va[0]:tip.px; sc.vy = va?va[1]:tip.py;
     S._dartComps[S.curIdx]=S._lastComp; S.darts[S.curIdx]=sc; S.curIdx++; rebuildCommittedMask();
     S.refData=grabProc()||S.refData; S.lastCommit=Date.now();
@@ -12853,6 +12905,7 @@ window.DartCam = (function(){
     else if(n===25) sc={value:25,base:25,mult:1,label:'25'};
     else { const m=S.pkMult; sc={value:n*m,base:n,mult:m,label:(m===2?'D':m===3?'T':'')+n}; }
     const prev=S.darts[S.pkIdx]; if(prev){ sc.vx=prev.vx; sc.vy=prev.vy; } sc.auto=false;
+    sc.posTruth=(prev&&prev.posTruth==='manual')?'manual':'picker';
     S.darts[S.pkIdx]=sc; if(S.curIdx<S.pkIdx+1) S.curIdx=S.pkIdx+1;
     S.prov=null; S.refData=grabProc()||S.refData; pkClose(); renderDarts(); drawOverlay(); updateHud(); }
 
@@ -12876,7 +12929,7 @@ window.DartCam = (function(){
     renderDarts(); updateActionBtn(); updateHud(); }
   function markNoScore(){ S.lastTurnTotal=0; feedTurn(0); afterTurn(); }
   function confirmTurn(){ let total=0; for(const d of S.darts) if(d) total+=d.value;
-    total=Math.max(0,Math.min(180,total)); S.lastTurnTotal=total; feedTurn(total); afterTurn(); }
+    total=Math.max(0,Math.min(180,total)); S.lastTurnTotal=total; try{ dataCapture(); }catch(e){} feedTurn(total); afterTurn(); }
   function setHint(t){ const h=$('dcHint'); if(h) h.textContent=t; }
 
   /* ---------- init + hook ---------- */
@@ -12891,6 +12944,7 @@ window.DartCam = (function(){
   return { preGame, pgSetInput, pgSetBoard, pgSetCal, pgStart, pgCancel, startCalibration, calConfirmPoint,
            switchToKeypad, exitGame, markNoScore, undoDart, undoOrPrev, confirmTurn, pkSetMult, pkPick, pkClose,
            chipMove, chipScore, chipFell, chipMenuClose, moveConfirm, zoom, openCapture, onLegStart, closeLayer,
+           setCollect, exportData, clearData,
            _scoreForBoard:scoreForBoard, _solveHomography:solveHomography, _invert3:invert3 };
 })();
 </script>
