@@ -2702,7 +2702,7 @@ body.in-app #lProgress{display:none}
 .dc-hud-left b{color:#fff;font-weight:700}
 .dc-hud-main{flex:0 0 auto;text-align:center;line-height:1}
 .dc-hud-score{font-family:'Bebas Neue',sans-serif;font-size:38px;color:#fff;letter-spacing:1px}
-.dc-hud-co{font-size:12px;color:#22c55e;font-weight:700;min-height:14px;margin-top:1px}
+.dc-hud-co{display:none;font-size:11px;font-weight:800;color:#04140a;background:var(--green);border:1px solid #4ade80;border-radius:7px;padding:2px 8px;margin-top:4px;letter-spacing:.3px;line-height:1.35;box-shadow:inset 0 1px 0 rgba(134,239,172,0.35)}
 .dc-hud-right{flex:1;display:flex;justify-content:flex-end}
 .dc-hud-x{background:#ffffff14;border:1px solid #ffffff33;color:#fff;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif}
 #dcStage{position:relative;flex:1;min-height:0;overflow:hidden;background:#050505}
@@ -2729,6 +2729,7 @@ body.in-app #lProgress{display:none}
 .dc-noscore{background:#3a1414;color:#f87171;border:1px solid #ef444455 !important}
 .dc-undo{background:#ffffff12;color:#fff;border:1px solid #ffffff24 !important}
 .dc-confirm{background:linear-gradient(135deg,#22c55e,#16a34a);color:#04140a}
+.dc-confirm.dc-bust{background:#3d0c0c;color:#ff7070}
 /* modale pre-partita (z 9520) */
 #dcPreGame{position:fixed;inset:0;z-index:9520;background:#000d;display:none;flex-direction:column;justify-content:center;align-items:center;padding:24px;font-family:'DM Sans',sans-serif}
 #dcPreGame.open{display:flex}
@@ -2798,9 +2799,9 @@ body.in-app #lProgress{display:none}
   <div class="dc-panel" id="dcPanel">
     <div class="dc-darts" id="dcDarts"></div>
     <div class="dc-actions">
-      <button class="dc-noscore" onclick="DartCam.markNoScore()">NESSUN PUNTO</button>
-      <button class="dc-undo" id="dcUndoBtn" onclick="DartCam.undoOrPrev()">↩︎ Turno prec.</button>
-      <button class="dc-confirm" onclick="DartCam.confirmTurn()">CONFERMA ✓</button>
+      <button class="dc-noscore" onclick="DartCam.markNoScore()">NO SCORE</button>
+      <button class="dc-undo" id="dcUndoBtn" onclick="DartCam.undoOrPrev()">Turno prec.</button>
+      <button class="dc-confirm" id="dcConfirmBtn" onclick="DartCam.confirmTurn()">CONFERMA</button>
     </div>
   </div>
 </div>
@@ -12771,12 +12772,20 @@ window.DartCam = (function(){
       el.onclick=()=>chipMenu(i); wrap.appendChild(el); }
     updateActionBtn(); }
   function updateActionBtn(){ const b=$('dcUndoBtn'); if(!b) return;
-    const filled=S.darts.filter(Boolean).length; b.textContent = filled>0 ? '↩︎ Annulla' : '↩︎ Turno prec.'; }
+    const filled=S.darts.filter(Boolean).length; b.textContent = filled>0 ? 'Cancella' : 'Turno prec.'; }
   function updateHud(){ const sc=$('g501pts'); if(sc&&$('dcHudScore')) $('dcHudScore').textContent=sc.textContent;
-    const co=$('g501co'); const ce=$('dcHudCo'); if(co&&ce) ce.innerHTML=co.innerHTML;
+    const co=$('g501co'); const ce=$('dcHudCo');
+    if(ce){ const ds=co?co.querySelectorAll('.g501-co-dart'):null;
+      if(ds&&ds.length){ ce.textContent=Array.prototype.map.call(ds,s=>s.textContent.trim()).join(' + '); ce.style.display='inline-block'; }
+      else { ce.textContent=''; ce.style.display='none'; } }
     const rd=$('g501round'); if(rd&&$('dcHudRound')) $('dcHudRound').textContent=rd.textContent;
     let sum=0; for(const d of S.darts) if(d) sum+=d.value; if($('dcHudTurn')) $('dcHudTurn').textContent=sum;
-    const av=$('g501closures'); if(av&&$('dcHudAvg')) $('dcHudAvg').textContent=av.textContent; }
+    const av=$('g501closures'); if(av&&$('dcHudAvg')) $('dcHudAvg').textContent=av.textContent;
+    updateConfirmBtn(sum); }
+  function updateConfirmBtn(sum){ const b=$('dcConfirmBtn'); if(!b) return;
+    const sc=$('g501pts'); const leg=sc?parseInt(sc.textContent):NaN; let label='CONFERMA', bust=false;
+    if(sum>0 && !isNaN(leg)){ const ns=leg-sum; if(ns<0||ns===1){ label='BUST'; bust=true; } else if(ns===0){ label='CHECKOUT'; } }
+    b.textContent=label; b.classList.toggle('dc-bust', bust); }
 
   /* ---------- menu freccia (sposta / punteggio) ---------- */
   function chipMenu(i){ S.chipIdx=i; $('dcCmTitle').textContent='Freccia '+(i+1); $('dcChipMenu').classList.add('open'); }
