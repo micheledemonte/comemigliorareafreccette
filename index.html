@@ -12470,7 +12470,7 @@ window.DartCam = (function(){
   const STEEL_MS=3000;
   const COOLDOWN=1000;        // ms minimi tra due frecce
   const SETTLE_MS=1100;       // stabilizzazione esposizione prima di acquisire lo sfondo
-  const STABLE_NEED=3;        // frame stabili richiesti (più alto = meno falsi positivi)
+  const STABLE_NEED=2;        // frame stabili richiesti (come v246, sensibilità buona)
   const REARM_TIMEOUT=5000;
   const ZMIN=1, ZMAX=3, ZSTEP=0.5;
   const LS_CAL='dcCalPts', LS_INPUT='dcInputMethod', LS_BOARD='dcBoardType', LS_BIAS='dcBias';
@@ -12688,11 +12688,9 @@ window.DartCam = (function(){
     if(Date.now()-S.lastCommit < COOLDOWN) return;
     const det=detectDart(cur);
     if(det.tooBig||!det.tip){ S.stableCount=0; S.tipBuf=null; return; }
-    // ignora rilevamenti troppo vicini a una freccia già piazzata (ri-rilevamento dello stesso dardo)
-    for(let k=0;k<3;k++){ const d=S.darts[k]; if(d&&d.vx!=null && Math.hypot(d.vx-det.tip.px,d.vy-det.tip.py)<S.vw*0.045){ S.stableCount=0; S.tipBuf=null; return; } }
     // steel e soft: stesso comportamento (rilevamento immediato su frame stabili).
     // Se in steel la freccia cade, sarà l'utente a segnarla 0 dal menu della freccia.
-    if(S.tipBuf && dist(det.tip,S.tipBuf)<S.vw*0.06) S.stableCount++; else S.stableCount=1;
+    if(S.tipBuf && dist(det.tip,S.tipBuf)<S.vw*0.07) S.stableCount++; else S.stableCount=1;
     S.tipBuf=det.tip; if(S.stableCount>=STABLE_NEED){ commitDart(det.tip); } }
   function handleRearm(cur){ if(!S.rearmT0) S.rearmT0=Date.now();
     const d=maskedDiffCount(cur, S.emptyRef);
