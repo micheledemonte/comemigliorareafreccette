@@ -12718,10 +12718,25 @@ window.DartCam = (function(){
       if(comp.length>bestSize){ bestSize=comp.length; best=comp; } }
     if(!best || bestSize<MIN_COMP) return {area:total,tip:null,noise:true};
     if(bestSize > S.insideCount*MAX_DART_FRAC) return {area:bestSize,tip:null,tooBig:true};
-    best.sort((p,q)=>rmap[p]-rmap[q]);
-    const take=Math.max(1,Math.floor(best.length*0.18)); let sx=0,sy=0;
-    for(let k=0;k<take;k++){ const p=best[k]; sx+=p%w; sy+=(p/w)|0; }
-    return {area:bestSize, tip:{ px:(sx/take)*S.vw/w, py:(sy/take)*S.vh/h }}; }
+    // PCA: asse della freccia. La punta è l'estremo PIÙ STRETTO (l'aletta è larga, la punta è sottile).
+    let cx=0,cy=0; for(let k=0;k<best.length;k++){ cx+=best[k]%w; cy+=(best[k]/w)|0; } cx/=best.length; cy/=best.length;
+    let sxx=0,syy=0,sxy=0; for(let k=0;k<best.length;k++){ const dx=(best[k]%w)-cx, dy=((best[k]/w)|0)-cy; sxx+=dx*dx; syy+=dy*dy; sxy+=dx*dy; }
+    const ang=0.5*Math.atan2(2*sxy, sxx-syy), ca=Math.cos(ang), sa=Math.sin(ang);
+    let tmin=1e9,tmax=-1e9;
+    for(let k=0;k<best.length;k++){ const dx=(best[k]%w)-cx, dy=((best[k]/w)|0)-cy; const t=dx*ca+dy*sa; if(t<tmin)tmin=t; if(t>tmax)tmax=t; }
+    const len=tmax-tmin;
+    if(len<4){ return {area:bestSize, tip:{ px:cx*S.vw/w, py:cy*S.vh/h }}; } // poco allungato → centroide
+    const band=len*0.30;
+    let nA=0,sA=0,ssA=0,nB=0,sB=0,ssB=0;
+    for(let k=0;k<best.length;k++){ const dx=(best[k]%w)-cx, dy=((best[k]/w)|0)-cy; const t=dx*ca+dy*sa, u=-dx*sa+dy*ca;
+      if(t<=tmin+band){ nA++; sA+=u; ssA+=u*u; } if(t>=tmax-band){ nB++; sB+=u; ssB+=u*u; } }
+    const varA = nA?(ssA/nA-(sA/nA)*(sA/nA)):1e9, varB = nB?(ssB/nB-(sB/nB)*(sB/nB)):1e9;
+    const tipAtMin = varA<=varB;                 // estremo con larghezza minore = punta
+    const eband=len*0.15; let ex=0,ey=0,en=0;
+    for(let k=0;k<best.length;k++){ const px_=best[k]%w, py_=(best[k]/w)|0; const t=(px_-cx)*ca+(py_-cy)*sa;
+      if(tipAtMin ? (t<=tmin+eband) : (t>=tmax-eband)){ ex+=px_; ey+=py_; en++; } }
+    if(!en){ ex=cx; ey=cy; en=1; }
+    return {area:bestSize, tip:{ px:(ex/en)*S.vw/w, py:(ey/en)*S.vh/h }}; }
   function commitDart(tip){ if(S.curIdx>=3) return; const rawB=applyH(S.H,tip.px,tip.py); if(!rawB) return;
     const bv=biasVec(); const adjB=[rawB[0]+bv[0], rawB[1]+bv[1]];
     const sc=scoreForBoard(adjB[0],adjB[1]); sc.auto=true; sc.detB=rawB;
