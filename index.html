@@ -12556,8 +12556,22 @@ window.DartCam = (function(){
     try{ const c=JSON.parse(localStorage.getItem(LS_CAL)||'null'); if(c&&c.length===4){ S.calLocked=c; S.H=solveHomography(c,CAL_DST); } }catch(e){}
     try{ const bz=JSON.parse(localStorage.getItem(LS_BIAS)||'null'); if(bz&&typeof bz.n==='number'){ S.bias=bz; } }catch(e){} }
   function savePrefs(){ localStorage.setItem(LS_INPUT,S.inputMethod); localStorage.setItem(LS_BOARD,S.boardType); }
-  function saveBias(){ try{ localStorage.setItem(LS_BIAS, JSON.stringify(S.bias)); }catch(e){} }
-  function biasVec(){ return S.bias.n>0 ? [S.bias.sx/S.bias.n, S.bias.sy/S.bias.n] : [0,0]; }
+  function saveLocalBias(){ try{ localStorage.setItem(LS_BIAS, JSON.stringify(S.bias)); }catch(e){} }
+  function biasVec(){ if(S.bias.n<=0) return [0,0]; const C=0.08;
+    let bx=S.bias.sx/S.bias.n, by=S.bias.sy/S.bias.n;
+    return [Math.max(-C,Math.min(C,bx)), Math.max(-C,Math.min(C,by))]; }
+  /* apprendimento GLOBALE: bias condiviso fra tutti gli utenti via Firebase (db/dartcamBias).
+     Locale come fallback offline; transaction per aggiornare in sicurezza con più utenti. */
+  function fbBiasRef(){ try{ if(window.firebase && firebase.apps && firebase.apps.length) return firebase.database().ref('db/dartcamBias'); }catch(e){} return null; }
+  function fetchGlobalBias(){ const r=fbBiasRef(); if(!r) return;
+    r.once('value').then(function(snap){ const v=snap.val();
+      if(v && typeof v.n==='number' && v.n>0 && isFinite(v.sx) && isFinite(v.sy)){ S.bias={sx:v.sx,sy:v.sy,n:v.n}; saveLocalBias(); } }).catch(function(){}); }
+  function learnBias(dx,dy){
+    S.bias.sx+=dx; S.bias.sy+=dy; S.bias.n++; if(S.bias.n>800){ S.bias.sx*=0.5; S.bias.sy*=0.5; S.bias.n*=0.5; } saveLocalBias();
+    const r=fbBiasRef(); if(!r) return;
+    r.transaction(function(cur){ cur=cur||{sx:0,sy:0,n:0}; cur.sx=(cur.sx||0)+dx; cur.sy=(cur.sy||0)+dy; cur.n=(cur.n||0)+1;
+      if(cur.n>800){ cur.sx*=0.5; cur.sy*=0.5; cur.n*=0.5; } return cur; },
+      function(err,committed,snap){ if(!err&&committed&&snap){ const v=snap.val(); if(v&&typeof v.n==='number'){ S.bias={sx:v.sx,sy:v.sy,n:v.n}; saveLocalBias(); } } }, false); }
 
   /* ---------- modale pre-partita ---------- */
   function preGame(){ loadPrefs(); S.calMode='keep'; updatePgUI(); $('dcPreGame').classList.add('open'); }
@@ -12579,7 +12593,7 @@ window.DartCam = (function(){
   function onLegStart(){ if(S.inputMethod==='camera'){ setTimeout(()=>{ try{ openCapture(); }catch(e){} }, 300); } else { closeLayer(); } }
   async function openCapture(){
     S.darts=[null,null,null]; S.curIdx=0; S.prov=null; S.stableCount=0; S.tipBuf=null; S.lastTurnTotal=null; S.moveMode=null;
-    $('dcLayer').classList.add('open'); renderDarts(); updateActionBtn(); updateHud(); applyZoom();
+    $('dcLayer').classList.add('open'); renderDarts(); updateActionBtn(); updateHud(); applyZoom(); fetchGlobalBias();
     try{ await startCamera(); }
     catch(e){ alert('Fotocamera non accessibile: '+(e&&e.message?e.message:e)+'. Puoi usare il tastierino.'); closeLayer(); return; }
     const hasCal = S.H && S.calLocked.length===4;
@@ -12638,8 +12652,7 @@ window.DartCam = (function(){
     renderDarts(); drawOverlay(); updateActionBtn(); updateHud(); }
   function moveDartTo(idx,vx,vy){ const b=applyH(S.H,vx,vy); if(!b) return; const d=S.darts[idx];
     if(d && d.auto && d.detB){ const dx=b[0]-d.detB[0], dy=b[1]-d.detB[1];
-      if(Math.hypot(dx,dy)<0.22){ S.bias.sx+=dx; S.bias.sy+=dy; S.bias.n++;
-        if(S.bias.n>60){ S.bias.sx*=0.5; S.bias.sy*=0.5; S.bias.n*=0.5; } saveBias(); } }
+      if(Math.hypot(dx,dy)<0.22) learnBias(dx,dy); }
     const sc=scoreForBoard(b[0],b[1]); sc.vx=vx; sc.vy=vy; sc.auto=false; sc.detB=b;
     S.darts[idx]=sc; if(S.curIdx<idx+1) S.curIdx=idx+1;
     S.refData=grabProc()||S.refData; renderDarts(); drawOverlay(); updateActionBtn(); updateHud(); }
