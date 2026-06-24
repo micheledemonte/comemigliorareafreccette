@@ -2792,6 +2792,7 @@ body.in-app #lProgress{display:none}
       <button class="dc-x" id="dcCalBtn" onclick="DartCam.startCalibration()" style="display:none">Ricalibra</button>
     </div>
     <button class="dc-stage-btn" id="dcCalConfirm" onclick="DartCam.calConfirmPoint()" style="display:none">✓ Conferma punto</button>
+    <button class="dc-stage-btn" id="dcMoveConfirm" onclick="DartCam.moveConfirm()" style="display:none">✓ Conferma posizione</button>
     <div class="dc-hint" id="dcHint"></div>
   </div>
   <div class="dc-panel" id="dcPanel">
@@ -12480,7 +12481,7 @@ window.DartCam = (function(){
            insideMask:null, rMap:null, insideCount:0, _dm:null, _vis:null,
            refData:null, emptyRef:null, phase:'idle', darts:[null,null,null], curIdx:0,
            prov:null, stableCount:0, tipBuf:null, lastCommit:0, rearmT0:0, rearmClearCount:0,
-           lastTurnTotal:null, pkIdx:0, pkMult:1, chipIdx:0, moveMode:null,
+           lastTurnTotal:null, pkIdx:0, pkMult:1, chipIdx:0, moveMode:null, movePreview:null,
            bias:{sx:0,sy:0,n:0}, timer:null, settleTimer:null};
 
   const $=id=>document.getElementById(id);
@@ -12598,13 +12599,15 @@ window.DartCam = (function(){
   function stopCamera(){ if(S.stream){ S.stream.getTracks().forEach(t=>t.stop()); S.stream=null; } const v=$('dcVideo'); if(v) v.srcObject=null; }
   function closeLayer(){ stopLoop(); if(S.settleTimer){clearTimeout(S.settleTimer);S.settleTimer=null;} stopCamera();
     ['dcLayer','dcPicker','dcChipMenu'].forEach(id=>{ const e=$(id); if(e) e.classList.remove('open'); });
-    S.calibrating=false; S.prov=null; S.phase='idle'; S.moveMode=null; }
+    S.calibrating=false; S.prov=null; S.phase='idle'; S.moveMode=null; S.movePreview=null;
+    if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none'; }
   function switchToKeypad(){ closeLayer(); }
   function exitGame(){ closeLayer(); if(typeof window.close501==='function') window.close501(); }
 
   /* ---------- calibrazione multi-tap ---------- */
   function startCalibration(){ S.calibrating=true; S.calStep=0; S.calLocked=[]; S.calProv=null; S.phase='calib';
     if($('dcCalBtn')) $('dcCalBtn').style.display='none'; if($('dcCalConfirm')) $('dcCalConfirm').style.display='none';
+    S.moveMode=null; S.movePreview=null; if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none';
     setHint('CALIBRAZIONE · Punto 1 di 4 · tocca il bordo esterno del doppio: '+CAL_LABELS[0]+'. Ritocca finché sei preciso, poi conferma.');
     drawOverlay(); }
   function calConfirmPoint(){ if(!S.calProv) return;
@@ -12623,7 +12626,7 @@ window.DartCam = (function(){
     if(S.calibrating){ S.calProv=[vx,vy]; if($('dcCalConfirm')) $('dcCalConfirm').style.display=''; drawOverlay(); return; }
     if(!S.H) return; if(S.phase==='settle') return;
     if(S.phase==='rearm'){ armFromEmpty(grabProc()); }
-    if(S.moveMode!=null){ moveDartTo(S.moveMode,vx,vy); S.moveMode=null; setHint(readyHint()); return; }
+    if(S.moveMode!=null){ S.movePreview={px:vx,py:vy}; if($('dcMoveConfirm')) $('dcMoveConfirm').style.display=''; drawOverlay(); return; }
     // tap libero: aggiunge nel primo slot vuoto (se pieni, usa il menu della freccia)
     let slot=-1; for(let k=0;k<3;k++) if(!S.darts[k]){slot=k;break;}
     if(slot<0) return;
@@ -12663,6 +12666,7 @@ window.DartCam = (function(){
     if(!S.refData){ S.refData=cur; return; }
     if(S.phase==='rearm'){ handleRearm(cur); return; }
     if(S.phase!=='aim') return;
+    if(S.moveMode!=null) return;
     if(S.curIdx>=3) return;
     if(Date.now()-S.lastCommit < COOLDOWN) return;
     const det=detectDart(cur); const area=det.area;
@@ -12731,10 +12735,16 @@ window.DartCam = (function(){
     if(S.calProv){ const p=videoToStage(S.calProv[0],S.calProv[1]); ctx.strokeStyle='#f59e0b'; ctx.lineWidth=2;
       ctx.beginPath(); ctx.moveTo(p[0]-14,p[1]); ctx.lineTo(p[0]+14,p[1]); ctx.moveTo(p[0],p[1]-14); ctx.lineTo(p[0],p[1]+14); ctx.stroke();
       dot(ctx,p[0],p[1],5,'#f59e0bcc'); }
-    for(let i=0;i<3;i++){ const d=S.darts[i]; if(!d||d.vx==null) continue; const p=videoToStage(d.vx,d.vy);
-      const sel=(S.moveMode===i); dot(ctx,p[0],p[1],sel?10:8,sel?'#f59e0b':'#22c55e');
+    for(let i=0;i<3;i++){ const d=S.darts[i]; const sel=(S.moveMode===i);
+      let vx,vy,lbl;
+      if(sel && S.movePreview){ vx=S.movePreview.px; vy=S.movePreview.py; lbl=d?d.label:'?'; }
+      else { if(!d||d.vx==null) continue; vx=d.vx; vy=d.vy; lbl=d.label; }
+      const p=videoToStage(vx,vy);
+      dot(ctx,p[0],p[1],sel?10:8,sel?'#f59e0b':'#22c55e');
       ctx.lineWidth=2; ctx.strokeStyle='#04140a'; ctx.beginPath(); ctx.arc(p[0],p[1],sel?10:8,0,Math.PI*2); ctx.stroke();
-      ctx.fillStyle='#fff'; ctx.font='bold 12px sans-serif'; ctx.fillText((i+1)+':'+d.label,p[0]+11,p[1]+4); }
+      ctx.fillStyle='#fff'; ctx.font='bold 12px sans-serif'; ctx.fillText((i+1)+':'+lbl,p[0]+11,p[1]+4);
+      if(sel && S.movePreview){ ctx.strokeStyle='#f59e0b'; ctx.lineWidth=2; ctx.beginPath();
+        ctx.moveTo(p[0]-15,p[1]); ctx.lineTo(p[0]+15,p[1]); ctx.moveTo(p[0],p[1]-15); ctx.lineTo(p[0],p[1]+15); ctx.stroke(); } }
     if(S.prov&&S.prov.tip){ const p=videoToStage(S.prov.tip.px,S.prov.tip.py); ctx.strokeStyle='#f59e0b'; ctx.lineWidth=3;
       ctx.beginPath(); ctx.arc(p[0],p[1],11,0,Math.PI*2); ctx.stroke(); } }
 
@@ -12759,7 +12769,13 @@ window.DartCam = (function(){
   function chipMenu(i){ S.chipIdx=i; $('dcCmTitle').textContent='Freccia '+(i+1); $('dcChipMenu').classList.add('open'); }
   function chipMenuClose(){ $('dcChipMenu').classList.remove('open'); }
   function chipMove(){ chipMenuClose(); S.moveMode=S.chipIdx;
-    setHint('Tocca sul video la posizione esatta della punta della Freccia '+(S.chipIdx+1)+'.'); renderDarts(); drawOverlay(); }
+    const d=S.darts[S.chipIdx]; S.movePreview=(d&&d.vx!=null)?{px:d.vx,py:d.vy}:null;
+    if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='';
+    setHint('Tocca sul video la punta della Freccia '+(S.chipIdx+1)+'. Puoi ritoccare più volte, poi premi Conferma posizione.'); renderDarts(); drawOverlay(); }
+  function moveConfirm(){ if(S.moveMode==null) return; const i=S.moveMode;
+    if(S.movePreview) moveDartTo(i, S.movePreview.px, S.movePreview.py);
+    cancelMove(); setHint(readyHint()); }
+  function cancelMove(){ S.moveMode=null; S.movePreview=null; if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none'; renderDarts(); drawOverlay(); }
   function chipScore(){ chipMenuClose(); pkOpen(S.chipIdx); }
 
   /* ---------- picker ---------- */
@@ -12784,10 +12800,11 @@ window.DartCam = (function(){
 
   /* ---------- azioni turno ---------- */
   function undoDart(){ let i=S.curIdx-1; while(i>=0&&!S.darts[i]) i--; if(i<0) return;
-    S.darts[i]=null; S.curIdx=i; S.prov=null; S.stableCount=0; S.tipBuf=null; S.moveMode=null; S.lastCommit=Date.now(); S.refData=grabProc()||S.refData;
+    S.darts[i]=null; S.curIdx=i; S.prov=null; S.stableCount=0; S.tipBuf=null; S.moveMode=null; S.movePreview=null; if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none'; S.lastCommit=Date.now(); S.refData=grabProc()||S.refData;
     renderDarts(); drawOverlay(); updateHud(); }
   function prevTurn(){ if(typeof g501Prev==='function') g501Prev();
-    S.darts=[null,null,null]; S.curIdx=0; S.prov=null; S.stableCount=0; S.tipBuf=null; S.lastTurnTotal=null; S.moveMode=null;
+    S.darts=[null,null,null]; S.curIdx=0; S.prov=null; S.stableCount=0; S.tipBuf=null; S.lastTurnTotal=null; S.moveMode=null; S.movePreview=null;
+    if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none';
     S.phase='aim'; S.refData=grabProc()||S.refData; S.lastCommit=Date.now();
     setHint(readyHint()); renderDarts(); drawOverlay(); updateHud(); }
   function undoOrPrev(){ const filled=S.darts.filter(Boolean).length; if(filled>0) undoDart(); else prevTurn(); }
@@ -12795,7 +12812,7 @@ window.DartCam = (function(){
     if(typeof g501Clear==='function') g501Clear();
     const s=String(total); for(let k=0;k<s.length;k++){ if(typeof g501Digit==='function') g501Digit(s[k]); }
     if(typeof g501OKBtn==='function') g501OKBtn(); }
-  function afterTurn(){ S.darts=[null,null,null]; S.curIdx=0; S.prov=null; S.stableCount=0; S.tipBuf=null; S.moveMode=null;
+  function afterTurn(){ S.darts=[null,null,null]; S.curIdx=0; S.prov=null; S.stableCount=0; S.tipBuf=null; S.moveMode=null; S.movePreview=null; if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none';
     S.phase='rearm'; S.rearmT0=0; S.rearmClearCount=0;
     setHint('Rimuovi le frecce dal bersaglio: il turno successivo parte da solo quando è libero.');
     renderDarts(); updateActionBtn(); updateHud(); }
@@ -12815,7 +12832,7 @@ window.DartCam = (function(){
 
   return { preGame, pgSetInput, pgSetBoard, pgSetCal, pgStart, pgCancel, startCalibration, calConfirmPoint,
            switchToKeypad, exitGame, markNoScore, undoDart, undoOrPrev, confirmTurn, pkSetMult, pkPick, pkClose,
-           chipMove, chipScore, chipMenuClose, zoom, openCapture, onLegStart, closeLayer,
+           chipMove, chipScore, chipMenuClose, moveConfirm, zoom, openCapture, onLegStart, closeLayer,
            _scoreForBoard:scoreForBoard, _solveHomography:solveHomography, _invert3:invert3 };
 })();
 </script>
