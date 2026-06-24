@@ -2696,13 +2696,13 @@ body.in-app #lProgress{display:none}
 /* layer camera: z 9505 → sopra lo scoreboard (9500), sotto i dialog doppie/checkout (9510) */
 #dcLayer{position:fixed;inset:0;z-index:9505;background:#000;display:none;flex-direction:column;overflow:hidden;touch-action:none;font-family:'DM Sans',sans-serif}
 #dcLayer.open{display:flex}
-.dc-hud{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0a0f0c;border-bottom:1px solid #ffffff12}
-.dc-hud-left{flex:1;display:flex;flex-direction:column;gap:5px;align-items:flex-start;font-size:12px;color:#9aa6a0;min-width:0}
+.dc-hud{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 12px;background:#1a3a1a;border-bottom:1px solid #166534}
+.dc-hud-left{flex:1;display:flex;flex-direction:column;gap:5px;align-items:flex-start;font-size:12px;color:#86efac;min-width:0}
 .dc-hud-left span{white-space:nowrap}
 .dc-hud-left b{color:#fff;font-weight:700}
 .dc-hud-main{flex:0 0 auto;text-align:center;line-height:1}
 .dc-hud-score{font-family:'Bebas Neue',sans-serif;font-size:38px;color:#fff;letter-spacing:1px}
-.dc-hud-co{display:none;font-size:11px;font-weight:800;color:#04140a;background:var(--green);border:1px solid #4ade80;border-radius:7px;padding:2px 8px;margin-top:4px;letter-spacing:.3px;line-height:1.35;box-shadow:inset 0 1px 0 rgba(134,239,172,0.35)}
+.dc-hud-co{display:none;font-size:12px;font-weight:600;color:#7fffb5;line-height:1.3;margin-top:2px;letter-spacing:.2px}
 .dc-hud-right{flex:1;display:flex;justify-content:flex-end}
 .dc-hud-x{background:#ffffff14;border:1px solid #ffffff33;color:#fff;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif}
 #dcStage{position:relative;flex:1;min-height:0;overflow:hidden;background:#050505}
@@ -2781,8 +2781,8 @@ body.in-app #lProgress{display:none}
   <div id="dcStage">
     <div id="dcZoomWrap">
       <video id="dcVideo" playsinline muted autoplay></video>
-      <canvas id="dcCanvas"></canvas>
     </div>
+    <canvas id="dcCanvas"></canvas>
     <div class="dc-tl">
       <button class="dc-zoombtn" onclick="DartCam.zoom(-1)">−</button>
       <button class="dc-zoomlbl" id="dcZoomLbl" onclick="DartCam.zoom(0)">1.0×</button>
@@ -2837,6 +2837,7 @@ body.in-app #lProgress{display:none}
     <div class="dc-cm-title" id="dcCmTitle">Freccia 1</div>
     <button class="dc-cm-btn" onclick="DartCam.chipMove()">📍 Sposta il pallino verde</button>
     <button class="dc-cm-btn" onclick="DartCam.chipScore()">⌨️ Inserisci il punteggio</button>
+    <button class="dc-cm-btn" id="dcCmFell" onclick="DartCam.chipFell()" style="display:none;border-color:#ef444455;background:#2a1414">Freccia caduta (0 punti)</button>
     <button class="dc-cm-cancel" onclick="DartCam.chipMenuClose()">Annulla</button>
   </div>
 </div>
@@ -12469,7 +12470,7 @@ window.DartCam = (function(){
   const STEEL_MS=3000;
   const COOLDOWN=1000;        // ms minimi tra due frecce
   const SETTLE_MS=1100;       // stabilizzazione esposizione prima di acquisire lo sfondo
-  const STABLE_NEED=2;        // frame stabili richiesti
+  const STABLE_NEED=3;        // frame stabili richiesti (più alto = meno falsi positivi)
   const REARM_TIMEOUT=5000;
   const ZMIN=1, ZMAX=3, ZSTEP=0.5;
   const LS_CAL='dcCalPts', LS_INPUT='dcInputMethod', LS_BOARD='dcBoardType', LS_BIAS='dcBias';
@@ -12532,7 +12533,9 @@ window.DartCam = (function(){
     let tx=cx-rect.left, ty=cy-rect.top;
     const sx=rect.width/2+(tx-rect.width/2)/Z, sy=rect.height/2+(ty-rect.height/2)/Z;
     return [(sx-ox)/scale,(sy-oy)/scale]; }
-  function videoToStage(vx,vy){ const {scale,ox,oy}=stageRect(); return [ox+vx*scale, oy+vy*scale]; }
+  function videoToStage(vx,vy){ const {scale,ox,oy,rect}=stageRect(); const Z=S.zoom||1;
+    const sx=ox+vx*scale, sy=oy+vy*scale;
+    return [rect.width/2+(sx-rect.width/2)*Z, rect.height/2+(sy-rect.height/2)*Z]; }
 
   /* ---------- zoom digitale ---------- */
   function zoom(dir){ if(dir===0) S.zoom=1; else S.zoom=Math.min(ZMAX,Math.max(ZMIN, +(S.zoom+dir*ZSTEP).toFixed(2)));
@@ -12664,7 +12667,7 @@ window.DartCam = (function(){
   function grabProc(){ const v=$('dcVideo'); if(!v||!v.videoWidth) return null;
     S.pctx.drawImage(v,0,0,S.proc.width,S.proc.height); return S.pctx.getImageData(0,0,S.proc.width,S.proc.height); }
   function readyHint(){ return S.boardType==='steel'
-      ? 'Pronto. Tira le 3 frecce (valide se restano oltre 3s). Tocca una freccia in basso per correggerla.'
+      ? 'Pronto. Tira le 3 frecce. Se una cade, segnala 0 dal menu della freccia. Tocca una freccia in basso per correggerla.'
       : 'Pronto. Tira le 3 frecce. Tocca una freccia in basso per correggerla.'; }
   function settleThenArm(){ S.phase='settle'; setHint('Messa a fuoco in corso, attendi un attimo…');
     if(S.settleTimer) clearTimeout(S.settleTimer);
@@ -12683,19 +12686,14 @@ window.DartCam = (function(){
     if(S.moveMode!=null) return;
     if(S.curIdx>=3) return;
     if(Date.now()-S.lastCommit < COOLDOWN) return;
-    const det=detectDart(cur); const area=det.area;
+    const det=detectDart(cur);
     if(det.tooBig||!det.tip){ S.stableCount=0; S.tipBuf=null; return; }
-    if(S.boardType==='soft'){
-      if(S.tipBuf && dist(det.tip,S.tipBuf)<S.vw*0.06) S.stableCount++; else S.stableCount=1;
-      S.tipBuf=det.tip; if(S.stableCount>=STABLE_NEED){ commitDart(det.tip); }
-    } else {
-      if(!S.prov){
-        if(S.tipBuf && dist(det.tip,S.tipBuf)<S.vw*0.06) S.stableCount++; else S.stableCount=1;
-        S.tipBuf=det.tip; if(S.stableCount>=STABLE_NEED){ S.prov={t0:Date.now(), tip:det.tip}; renderDarts(); }
-      } else {
-        if(area < MIN_COMP*0.5){ S.prov=null; S.tipBuf=null; S.stableCount=0; renderDarts(); }
-        else { S.prov.tip=det.tip; if(Date.now()-S.prov.t0>=STEEL_MS){ const tp=S.prov.tip; S.prov=null; commitDart(tp); } } }
-    } }
+    // ignora rilevamenti troppo vicini a una freccia già piazzata (ri-rilevamento dello stesso dardo)
+    for(let k=0;k<3;k++){ const d=S.darts[k]; if(d&&d.vx!=null && Math.hypot(d.vx-det.tip.px,d.vy-det.tip.py)<S.vw*0.045){ S.stableCount=0; S.tipBuf=null; return; } }
+    // steel e soft: stesso comportamento (rilevamento immediato su frame stabili).
+    // Se in steel la freccia cade, sarà l'utente a segnarla 0 dal menu della freccia.
+    if(S.tipBuf && dist(det.tip,S.tipBuf)<S.vw*0.06) S.stableCount++; else S.stableCount=1;
+    S.tipBuf=det.tip; if(S.stableCount>=STABLE_NEED){ commitDart(det.tip); } }
   function handleRearm(cur){ if(!S.rearmT0) S.rearmT0=Date.now();
     const d=maskedDiffCount(cur, S.emptyRef);
     if(d < MIN_AREA*1.6){ S.rearmClearCount++; if(S.rearmClearCount>=2){ armFromEmpty(cur); } }
@@ -12735,39 +12733,38 @@ window.DartCam = (function(){
 
   /* ---------- disegno overlay ---------- */
   function dot(ctx,x,y,r,col){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=col; ctx.fill(); }
-  function drawBoardOutline(ctx){ if(!S.Hinv) return; ctx.strokeStyle='#22c55e'; ctx.lineWidth=4; ctx.beginPath();
+  function drawBoardOutline(ctx){ if(!S.Hinv) return; ctx.strokeStyle='#22c55e'; ctx.lineWidth=2.5; ctx.beginPath();
     for(let k=0;k<=72;k++){ const a=k/72*Math.PI*2; const bv=boardToVideo(Math.sin(a),-Math.cos(a)); if(!bv) continue;
       const p=videoToStage(bv[0],bv[1]); if(k===0) ctx.moveTo(p[0],p[1]); else ctx.lineTo(p[0],p[1]); } ctx.stroke();
-    const cb=boardToVideo(0,0); if(cb){ const p=videoToStage(cb[0],cb[1]); dot(ctx,p[0],p[1],4,'#22c55e'); } }
+    const cb=boardToVideo(0,0); if(cb){ const p=videoToStage(cb[0],cb[1]); dot(ctx,p[0],p[1],3,'#22c55e'); } }
   function drawOverlay(){ const c=$('dcCanvas'); if(!c) return;
     const r=$('dcStage').getBoundingClientRect();
     if(c.width!==Math.round(r.width)||c.height!==Math.round(r.height)) sizeCanvas();
     const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
     if(!S.calibrating) drawBoardOutline(ctx);
     for(let i=0;i<S.calLocked.length;i++){ const p=videoToStage(S.calLocked[i][0],S.calLocked[i][1]);
-      dot(ctx,p[0],p[1],7,'#22c55e'); ctx.fillStyle='#fff'; ctx.font='11px sans-serif'; ctx.fillText(String(i+1),p[0]+9,p[1]-9); }
+      dot(ctx,p[0],p[1],5,'#22c55e'); ctx.fillStyle='#fff'; ctx.font='10px sans-serif'; ctx.fillText(String(i+1),p[0]+7,p[1]-7); }
     if(S.calProv){ const p=videoToStage(S.calProv[0],S.calProv[1]); ctx.strokeStyle='#f59e0b'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.moveTo(p[0]-14,p[1]); ctx.lineTo(p[0]+14,p[1]); ctx.moveTo(p[0],p[1]-14); ctx.lineTo(p[0],p[1]+14); ctx.stroke();
-      dot(ctx,p[0],p[1],5,'#f59e0bcc'); }
+      ctx.beginPath(); ctx.moveTo(p[0]-11,p[1]); ctx.lineTo(p[0]+11,p[1]); ctx.moveTo(p[0],p[1]-11); ctx.lineTo(p[0],p[1]+11); ctx.stroke();
+      dot(ctx,p[0],p[1],4,'#f59e0bcc'); }
     for(let i=0;i<3;i++){ const d=S.darts[i]; const sel=(S.moveMode===i);
+      if(S.moveMode!=null && !sel) continue;   // durante lo spostamento nascondi gli altri pin
       let vx,vy,lbl;
       if(sel && S.movePreview){ vx=S.movePreview.px; vy=S.movePreview.py; lbl=d?d.label:'?'; }
       else { if(!d||d.vx==null) continue; vx=d.vx; vy=d.vy; lbl=d.label; }
       const p=videoToStage(vx,vy);
-      dot(ctx,p[0],p[1],sel?10:8,sel?'#f59e0b':'#22c55e');
-      ctx.lineWidth=2; ctx.strokeStyle='#04140a'; ctx.beginPath(); ctx.arc(p[0],p[1],sel?10:8,0,Math.PI*2); ctx.stroke();
-      ctx.fillStyle='#fff'; ctx.font='bold 12px sans-serif'; ctx.fillText((i+1)+':'+lbl,p[0]+11,p[1]+4);
+      dot(ctx,p[0],p[1],sel?7:5,sel?'#f59e0b':'#22c55e');
+      ctx.lineWidth=1.5; ctx.strokeStyle='#04140a'; ctx.beginPath(); ctx.arc(p[0],p[1],sel?7:5,0,Math.PI*2); ctx.stroke();
+      ctx.fillStyle='#fff'; ctx.font='bold 11px sans-serif'; ctx.fillText((i+1)+':'+lbl,p[0]+9,p[1]+4);
       if(sel && S.movePreview){ ctx.strokeStyle='#f59e0b'; ctx.lineWidth=2; ctx.beginPath();
-        ctx.moveTo(p[0]-15,p[1]); ctx.lineTo(p[0]+15,p[1]); ctx.moveTo(p[0],p[1]-15); ctx.lineTo(p[0],p[1]+15); ctx.stroke(); } }
-    if(S.prov&&S.prov.tip){ const p=videoToStage(S.prov.tip.px,S.prov.tip.py); ctx.strokeStyle='#f59e0b'; ctx.lineWidth=3;
-      ctx.beginPath(); ctx.arc(p[0],p[1],11,0,Math.PI*2); ctx.stroke(); } }
+        ctx.moveTo(p[0]-12,p[1]); ctx.lineTo(p[0]+12,p[1]); ctx.moveTo(p[0],p[1]-12); ctx.lineTo(p[0],p[1]+12); ctx.stroke(); } } }
 
   /* ---------- chip frecce + HUD + bottoni ---------- */
   function renderDarts(){ const wrap=$('dcDarts'); if(!wrap) return; wrap.innerHTML='';
-    for(let i=0;i<3;i++){ const d=S.darts[i]; const prov=S.prov&&i===S.curIdx; const mv=(S.moveMode===i);
-      const el=document.createElement('div'); el.className='dc-dart'+(d?' filled':'')+(prov?' prov':'')+(mv?' prov':'');
-      const val=d?(''+d.value):(prov?'⏳':'—');
-      const sub=mv?'tocca sul video':(d?d.label:(prov?(S.boardType==='steel'?'attendi 3s':'...'):'tocca per opzioni'));
+    for(let i=0;i<3;i++){ const d=S.darts[i]; const mv=(S.moveMode===i);
+      const el=document.createElement('div'); el.className='dc-dart'+(d?' filled':'')+(mv?' prov':'');
+      const val=d?(''+d.value):'—';
+      const sub=mv?'tocca sul video':(d?d.label:'tocca per opzioni');
       el.innerHTML='<div class="dl">Freccia '+(i+1)+'</div><div class="dv">'+val+'</div><div class="de">'+sub+'</div>';
       el.onclick=()=>chipMenu(i); wrap.appendChild(el); }
     updateActionBtn(); }
@@ -12788,8 +12785,14 @@ window.DartCam = (function(){
     b.textContent=label; b.classList.toggle('dc-bust', bust); }
 
   /* ---------- menu freccia (sposta / punteggio) ---------- */
-  function chipMenu(i){ S.chipIdx=i; $('dcCmTitle').textContent='Freccia '+(i+1); $('dcChipMenu').classList.add('open'); }
+  function chipMenu(i){ S.chipIdx=i; $('dcCmTitle').textContent='Freccia '+(i+1);
+    const f=$('dcCmFell'); if(f) f.style.display = (S.boardType==='steel') ? '' : 'none';
+    $('dcChipMenu').classList.add('open'); }
   function chipMenuClose(){ $('dcChipMenu').classList.remove('open'); }
+  function chipFell(){ chipMenuClose(); const i=S.chipIdx; const prev=S.darts[i]||{};
+    const sc={value:0,base:0,mult:0,label:'0',auto:false}; if(prev.vx!=null){ sc.vx=prev.vx; sc.vy=prev.vy; }
+    S.darts[i]=sc; if(S.curIdx<i+1) S.curIdx=i+1; S.refData=grabProc()||S.refData;
+    renderDarts(); drawOverlay(); updateActionBtn(); updateHud(); }
   function chipMove(){ chipMenuClose(); S.moveMode=S.chipIdx;
     const d=S.darts[S.chipIdx]; S.movePreview=(d&&d.vx!=null)?{px:d.vx,py:d.vy}:null;
     if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='';
@@ -12854,7 +12857,7 @@ window.DartCam = (function(){
 
   return { preGame, pgSetInput, pgSetBoard, pgSetCal, pgStart, pgCancel, startCalibration, calConfirmPoint,
            switchToKeypad, exitGame, markNoScore, undoDart, undoOrPrev, confirmTurn, pkSetMult, pkPick, pkClose,
-           chipMove, chipScore, chipMenuClose, moveConfirm, zoom, openCapture, onLegStart, closeLayer,
+           chipMove, chipScore, chipFell, chipMenuClose, moveConfirm, zoom, openCapture, onLegStart, closeLayer,
            _scoreForBoard:scoreForBoard, _solveHomography:solveHomography, _invert3:invert3 };
 })();
 </script>
