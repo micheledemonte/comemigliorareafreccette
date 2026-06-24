@@ -12481,6 +12481,7 @@ window.DartCam = (function(){
            proc:null,pctx:null, H:null, Hinv:null, zoom:1,
            calLocked:[], calProv:null, calStep:0, calibrating:false,
            insideMask:null, rMap:null, insideCount:0, _dm:null, _vis:null,
+           _committedMask:null, _dartComps:[null,null,null], _lastComp:null,
            refData:null, emptyRef:null, phase:'idle', darts:[null,null,null], curIdx:0,
            prov:null, stableCount:0, tipBuf:null, lastCommit:0, rearmT0:0, rearmClearCount:0,
            lastTurnTotal:null, pkIdx:0, pkMult:1, chipIdx:0, moveMode:null, movePreview:null,
@@ -12552,7 +12553,16 @@ window.DartCam = (function(){
       const r=Math.hypot(vb[0],vb[1]); rmap[idx]=r;
       if(r<=1.10){ mask[idx]=1; cnt++; } else mask[idx]=0; } }
     S.insideMask=mask; S.rMap=rmap; S.insideCount=cnt||1; S.Hinv=invert3(S.H);
-    S._dm=new Uint8Array(w*h); S._vis=new Uint8Array(w*h); }
+    S._dm=new Uint8Array(w*h); S._vis=new Uint8Array(w*h);
+    S._committedMask=new Uint8Array(w*h); S._dartComps=[null,null,null]; }
+  /* maschera delle frecce già confermate (in coord. PROC): impedisce di ri-contare lo stesso
+     dardo quando l'aletta soft oscilla / la luce cambia. Ricostruita a ogni commit/annulla. */
+  function rebuildCommittedMask(){ const cm=S._committedMask; if(!cm||!S.proc) return; cm.fill(0);
+    const w=S.proc.width,h=S.proc.height,DIL=2;
+    for(let d=0;d<3;d++){ const comp=S._dartComps[d]; if(!comp) continue;
+      for(let k=0;k<comp.length;k++){ const p=comp[k], x=p%w, y=(p/w)|0;
+        for(let dy=-DIL;dy<=DIL;dy++){ for(let dx=-DIL;dx<=DIL;dx++){
+          const nx=x+dx, ny=y+dy; if(nx<0||ny<0||nx>=w||ny>=h) continue; cm[ny*w+nx]=1; } } } } }
 
   /* ---------- preferenze + bias ---------- */
   function loadPrefs(){ const im=localStorage.getItem(LS_INPUT); if(im) S.inputMethod=im;
@@ -12703,8 +12713,8 @@ window.DartCam = (function(){
       if(Math.abs((a[i]+a[i+1]+a[i+2])-(b[i]+b[i+1]+b[i+2]))>TH) n++; } return n; }
   function detectDart(cur){ if(!S.insideMask||!S.refData) return {area:0,tip:null};
     const w=cur.width,h=cur.height,a=cur.data,b=S.refData.data,mask=S.insideMask,rmap=S.rMap,TH=THRESH*3;
-    const N=mask.length, dm=S._dm, vis=S._vis; let total=0;
-    for(let idx=0;idx<N;idx++){ if(mask[idx]){ const i=idx*4;
+    const N=mask.length, dm=S._dm, vis=S._vis, cm=S._committedMask; let total=0;
+    for(let idx=0;idx<N;idx++){ if(mask[idx] && !(cm&&cm[idx])){ const i=idx*4;
       if(Math.abs((a[i]+a[i+1]+a[i+2])-(b[i]+b[i+1]+b[i+2]))>TH){ dm[idx]=1; total++; } else dm[idx]=0; } else dm[idx]=0; }
     if(total<MIN_AREA) return {area:0,tip:null};
     if(total > S.insideCount*MAX_AREA_FRAC) return {area:total,tip:null,tooBig:true};
@@ -12725,23 +12735,33 @@ window.DartCam = (function(){
     let tmin=1e9,tmax=-1e9;
     for(let k=0;k<best.length;k++){ const dx=(best[k]%w)-cx, dy=((best[k]/w)|0)-cy; const t=dx*ca+dy*sa; if(t<tmin)tmin=t; if(t>tmax)tmax=t; }
     const len=tmax-tmin;
-    if(len<4){ return {area:bestSize, tip:{ px:cx*S.vw/w, py:cy*S.vh/h }}; } // poco allungato → centroide
+    if(len<4){ S._lastComp=best; return {area:bestSize, tip:{ px:cx*S.vw/w, py:cy*S.vh/h }}; } // poco allungato → centroide
+    // larghezza (varianza perpendicolare) E raggio bersaglio medio dei due estremi (banda 30%).
     const band=len*0.30;
-    let nA=0,sA=0,ssA=0,nB=0,sB=0,ssB=0;
-    for(let k=0;k<best.length;k++){ const dx=(best[k]%w)-cx, dy=((best[k]/w)|0)-cy; const t=dx*ca+dy*sa, u=-dx*sa+dy*ca;
-      if(t<=tmin+band){ nA++; sA+=u; ssA+=u*u; } if(t>=tmax-band){ nB++; sB+=u; ssB+=u*u; } }
+    let nA=0,sA=0,ssA=0,rA=0,nB=0,sB=0,ssB=0,rB=0;
+    for(let k=0;k<best.length;k++){ const idx=best[k], dx=(idx%w)-cx, dy=((idx/w)|0)-cy; const t=dx*ca+dy*sa, u=-dx*sa+dy*ca;
+      if(t<=tmin+band){ nA++; sA+=u; ssA+=u*u; rA+=rmap[idx]; }
+      if(t>=tmax-band){ nB++; sB+=u; ssB+=u*u; rB+=rmap[idx]; } }
     const varA = nA?(ssA/nA-(sA/nA)*(sA/nA)):1e9, varB = nB?(ssB/nB-(sB/nB)*(sB/nB)):1e9;
-    const tipAtMin = varA<=varB;                 // estremo con larghezza minore = punta
-    const eband=len*0.15; let ex=0,ey=0,en=0;
-    for(let k=0;k<best.length;k++){ const px_=best[k]%w, py_=(best[k]/w)|0; const t=(px_-cx)*ca+(py_-cy)*sa;
-      if(tipAtMin ? (t<=tmin+eband) : (t>=tmax-eband)){ ex+=px_; ey+=py_; en++; } }
-    if(!en){ ex=cx; ey=cy; en=1; }
-    return {area:bestSize, tip:{ px:(ex/en)*S.vw/w, py:(ey/en)*S.vh/h }}; }
+    const radA = nA?rA/nA:99, radB = nB?rB/nB:99;
+    // la punta è SEMPRE più verso il centro dell'aletta/stelo → estremo a raggio minore.
+    // se i due raggi sono quasi uguali (freccia ~tangente al raggio) → tiebreak: estremo più stretto = punta.
+    const tipAtMin = (Math.abs(radA-radB)>=0.06) ? (radA<radB) : (varA<=varB);
+    // punto punta = centroide PESATO verso l'apice (peso² lineare nella banda 30% dell'estremo-punta):
+    // avvicina alla punta reale conficcata invece del barrel (centroide piatto della v249).
+    let ex=0,ey=0,wsum=0;
+    for(let k=0;k<best.length;k++){ const idx=best[k], px_=idx%w, py_=(idx/w)|0; const t=(px_-cx)*ca+(py_-cy)*sa;
+      let wgt = tipAtMin ? ((tmin+band)-t) : (t-(tmax-band)); if(wgt<=0) continue; wgt*=wgt;
+      ex+=px_*wgt; ey+=py_*wgt; wsum+=wgt; }
+    if(wsum<=0){ ex=cx; ey=cy; wsum=1; }
+    S._lastComp=best;
+    return {area:bestSize, tip:{ px:(ex/wsum)*S.vw/w, py:(ey/wsum)*S.vh/h }}; }
   function commitDart(tip){ if(S.curIdx>=3) return; const rawB=applyH(S.H,tip.px,tip.py); if(!rawB) return;
     const bv=biasVec(); const adjB=[rawB[0]+bv[0], rawB[1]+bv[1]];
     const sc=scoreForBoard(adjB[0],adjB[1]); sc.auto=true; sc.detB=rawB;
     const va=boardToVideo(adjB[0],adjB[1]); sc.vx = va?va[0]:tip.px; sc.vy = va?va[1]:tip.py;
-    S.darts[S.curIdx]=sc; S.curIdx++; S.refData=grabProc()||S.refData; S.lastCommit=Date.now();
+    S._dartComps[S.curIdx]=S._lastComp; S.darts[S.curIdx]=sc; S.curIdx++; rebuildCommittedMask();
+    S.refData=grabProc()||S.refData; S.lastCommit=Date.now();
     S.prov=null; S.stableCount=0; S.tipBuf=null; renderDarts(); drawOverlay(); updateActionBtn(); updateHud(); }
 
   /* ---------- disegno overlay ---------- */
@@ -12838,10 +12858,10 @@ window.DartCam = (function(){
 
   /* ---------- azioni turno ---------- */
   function undoDart(){ let i=S.curIdx-1; while(i>=0&&!S.darts[i]) i--; if(i<0) return;
-    S.darts[i]=null; S.curIdx=i; S.prov=null; S.stableCount=0; S.tipBuf=null; S.moveMode=null; S.movePreview=null; if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none'; S.lastCommit=Date.now(); S.refData=grabProc()||S.refData;
+    S.darts[i]=null; S._dartComps[i]=null; rebuildCommittedMask(); S.curIdx=i; S.prov=null; S.stableCount=0; S.tipBuf=null; S.moveMode=null; S.movePreview=null; if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none'; S.lastCommit=Date.now(); S.refData=grabProc()||S.refData;
     renderDarts(); drawOverlay(); updateHud(); }
   function prevTurn(){ if(typeof g501Prev==='function') g501Prev();
-    S.darts=[null,null,null]; S.curIdx=0; S.prov=null; S.stableCount=0; S.tipBuf=null; S.lastTurnTotal=null; S.moveMode=null; S.movePreview=null;
+    S.darts=[null,null,null]; S._dartComps=[null,null,null]; rebuildCommittedMask(); S.curIdx=0; S.prov=null; S.stableCount=0; S.tipBuf=null; S.lastTurnTotal=null; S.moveMode=null; S.movePreview=null;
     if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none';
     S.phase='aim'; S.refData=grabProc()||S.refData; S.lastCommit=Date.now();
     setHint(readyHint()); renderDarts(); drawOverlay(); updateHud(); }
@@ -12850,7 +12870,7 @@ window.DartCam = (function(){
     if(typeof g501Clear==='function') g501Clear();
     const s=String(total); for(let k=0;k<s.length;k++){ if(typeof g501Digit==='function') g501Digit(s[k]); }
     if(typeof g501OKBtn==='function') g501OKBtn(); }
-  function afterTurn(){ S.darts=[null,null,null]; S.curIdx=0; S.prov=null; S.stableCount=0; S.tipBuf=null; S.moveMode=null; S.movePreview=null; if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none';
+  function afterTurn(){ S.darts=[null,null,null]; S._dartComps=[null,null,null]; rebuildCommittedMask(); S.curIdx=0; S.prov=null; S.stableCount=0; S.tipBuf=null; S.moveMode=null; S.movePreview=null; if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none';
     S.phase='rearm'; S.rearmT0=0; S.rearmClearCount=0;
     setHint('Rimuovi le frecce dal bersaglio: il turno successivo parte da solo quando è libero.');
     renderDarts(); updateActionBtn(); updateHud(); }
