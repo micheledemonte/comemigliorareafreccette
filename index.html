@@ -2256,10 +2256,6 @@ body.in-app #lProgress{display:none}
       </div>
       <div id="prev501Content"></div>
     </div>
-    <div class="cw" id="free501Results" style="display:none">
-      <h3>Risultati ultima sessione 501</h3>
-      <div id="free501ResContent"></div>
-    </div>
   </div>
 
 
@@ -9996,6 +9992,7 @@ function finalizeFree501(){
 
 function show501Results(legs){
   const rc=document.getElementById('free501ResContent');
+  if(!rc) return; // riquadro "Risultati ultima sessione 501" rimosso (mostrava la sessione precedente, ridondante)
   rc.innerHTML=legs.map((l,i)=>`
     <div style="background:var(--d3);border-radius:6px;padding:12px;margin-bottom:8px">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--green);margin-bottom:6px">Leg ${i+1}</div>
@@ -12679,7 +12676,7 @@ window.DartCam = (function(){
     const t=new ort.Tensor('float32', pp.data, [1,3,800,800]);
     const out=await sess.run({images:t}); const o=out.output0||out[Object.keys(out)[0]];
     const dims=o.dims, d=o.data; // [1, C, A] con C=4+NC
-    const C=dims[1], A=dims[2], NC=C-4; S._aiNC=NC; const CONF=0.25;
+    const C=dims[1], A=dims[2], NC=C-4; S._aiNC=NC; const CONF=0.10; // soglia bassa: modello ancora poco confidente (poco dato)
     const darts=[];
     for(let a=0;a<A;a++){ let best=4, bs=d[4*A+a]; for(let c=5;c<C;c++){ const s=d[c*A+a]; if(s>bs){ bs=s; best=c; } }
       if(best!==4 || bs<CONF) continue; // classe 0 = dart (canale 4)
@@ -12735,6 +12732,7 @@ window.DartCam = (function(){
   async function openCapture(){
     S.darts=[null,null,null]; S.curIdx=0; S.prov=null; S.stableCount=0; S.tipBuf=null; S.lastTurnTotal=null; S.moveMode=null;
     $('dcLayer').classList.add('open'); renderDarts(); updateActionBtn(); updateHud(); applyZoom(); fetchGlobalBias(); updateRecBadge();
+    if(S.aiOn) aiLoad().catch(function(){}); // precarico il modello ora (mentre miri), non a metà turno
     try{ await startCamera(); }
     catch(e){ alert('Fotocamera non accessibile: '+(e&&e.message?e.message:e)+'. Puoi usare il tastierino.'); closeLayer(); return; }
     const hasCal = S.H && S.calLocked.length===4;
