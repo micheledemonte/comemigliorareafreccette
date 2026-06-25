@@ -3512,6 +3512,14 @@ async function doChangePw(){
       delete users[idx].password;
       saveUsers(users);
       CU=users[idx];
+      // Persisti il flag SUBITO (non via il save debounced 1.5s). Altrimenti il listener
+      // realtime su db/users (attaccato ~800ms dopo in enterApp) rileggerebbe dal cloud il
+      // vecchio mustChangePw=true e sovrascriverebbe la cache locale; poi il save debounced
+      // ripersisterebbe true → la schermata "crea password" ricompare a ogni login (bug storico).
+      if(_firebaseOK && _fbDB){
+        try{ await _fbDB.ref('db/users').set(deepClean(users)); }
+        catch(e){ console.warn('Persist mustChangePw failed:', e.message); }
+      }
     }
     _currentLoginPw = ''; // clear stored password — no longer needed
     enterApp();
@@ -3855,9 +3863,22 @@ function startDBListeners(){
     if(!_dbCache) return;
     const val = snap.val();
     if(val && Array.isArray(val)){
+      // Guard anti-regressione "crea password": mustChangePw=true viene impostato SOLO alla
+      // creazione utente. Se l'utente loggato ha GIA' creato la sua password (mustChangePw false
+      // o loginCount>=1), uno snapshot in arrivo NON deve riportarlo a true (race col save
+      // debounced) — altrimenti la schermata "crea password" ricompare a ogni accesso.
+      const prevMe = (_dbCache.users||[]).find(u=>u.id===CU.id) || CU;
+      const pwAlreadySet = !!prevMe && (prevMe.mustChangePw===false || (prevMe.loginCount||0)>=1);
       _dbCache.users = val;
+      if(pwAlreadySet){
+        const mi = _dbCache.users.findIndex(u=>u.id===CU.id);
+        if(mi>=0 && _dbCache.users[mi].mustChangePw===true){
+          _dbCache.users[mi].mustChangePw=false;
+          if((_dbCache.users[mi].loginCount||0)<1) _dbCache.users[mi].loginCount=1;
+        }
+      }
       // Aggiorna CU con dati freschi
-      const me = val.find(u=>u.id===CU.id);
+      const me = _dbCache.users.find(u=>u.id===CU.id);
       if(me) CU = me;
       // Se admin e gestionale aperto, aggiorna
       if(CU.role==='admin'){
