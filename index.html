@@ -2829,6 +2829,14 @@ body.in-app #lProgress{display:none}
         <button data-v="redo" onclick="DartCam.pgSetCal('redo')">Rifai ora</button>
       </div>
     </div>
+    <div id="dcPgAiWrap" style="display:none">
+      <div class="dc-pg-lbl">Rilevamento punte</div>
+      <div class="dc-pg-row" id="dcPgAi">
+        <button data-v="off" onclick="DartCam.setAI(false)">Classico</button>
+        <button data-v="on" onclick="DartCam.setAI(true)">AI (beta)</button>
+      </div>
+      <div class="dc-pg-note">AI: un modello rifinisce la posizione della punta dopo i tiri (corregge l'errore aletta). Il classico resta come base. Primo uso: scarica il modello (~12 MB).</div>
+    </div>
     <div id="dcPgDataWrap" style="display:none">
       <div class="dc-pg-lbl">Dati per il modello AI</div>
       <div class="dc-pg-row" id="dcPgData">
@@ -12482,8 +12490,9 @@ window.DartCam = (function(){
   const STABLE_NEED=2;        // frame stabili richiesti (come v246, sensibilità buona)
   const REARM_TIMEOUT=5000;
   const ZMIN=1, ZMAX=3, ZSTEP=0.5;
-  const LS_CAL='dcCalPts', LS_INPUT='dcInputMethod', LS_BOARD='dcBoardType', LS_BIAS='dcBias', LS_COLLECT='dcCollect';
+  const LS_CAL='dcCalPts', LS_INPUT='dcInputMethod', LS_BOARD='dcBoardType', LS_BIAS='dcBias', LS_COLLECT='dcCollect', LS_AI='dcAI';
   const DATA_DB='dartDataset', DATA_STORE='samples';
+  const AI_MODEL_URL='dartcam_model.onnx', AI_ORT='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/';
   const CAL_LABELS=['20 (in ALTO)','6 (a DESTRA)','3 (in BASSO)','11 (a SINISTRA)'];
   const CAL_DST=[[0,-1],[1,0],[0,1],[-1,0]];
 
@@ -12496,7 +12505,8 @@ window.DartCam = (function(){
            prov:null, stableCount:0, tipBuf:null, lastCommit:0, rearmT0:0, rearmClearCount:0,
            lastTurnTotal:null, pkIdx:0, pkMult:1, chipIdx:0, moveMode:null, movePreview:null,
            bias:{sx:0,sy:0,n:0}, timer:null, settleTimer:null,
-           collect:false, _dataDB:null, _dataCount:0, _capCanvas:null};
+           collect:false, _dataDB:null, _dataCount:0, _capCanvas:null,
+           aiOn:false, aiTimer:null, _aiSess:null, _aiLoading:null, _aiCanvas:null, _aiBusy:false, _aiNC:5};
 
   const $=id=>document.getElementById(id);
   const layerOpen=()=> $('dcLayer') && $('dcLayer').classList.contains('open');
@@ -12580,7 +12590,8 @@ window.DartCam = (function(){
     const bt=localStorage.getItem(LS_BOARD); if(bt) S.boardType=bt;
     try{ const c=JSON.parse(localStorage.getItem(LS_CAL)||'null'); if(c&&c.length===4){ S.calLocked=c; S.H=solveHomography(c,CAL_DST); } }catch(e){}
     try{ const bz=JSON.parse(localStorage.getItem(LS_BIAS)||'null'); if(bz&&typeof bz.n==='number'){ S.bias=bz; } }catch(e){}
-    S.collect = localStorage.getItem(LS_COLLECT)==='1'; }
+    S.collect = localStorage.getItem(LS_COLLECT)==='1';
+    S.aiOn = localStorage.getItem(LS_AI)==='1'; }
   function savePrefs(){ localStorage.setItem(LS_INPUT,S.inputMethod); localStorage.setItem(LS_BOARD,S.boardType); }
   function saveLocalBias(){ try{ localStorage.setItem(LS_BIAS, JSON.stringify(S.bias)); }catch(e){} }
   function biasVec(){ if(S.bias.n<=0) return [0,0]; const C=0.08;
@@ -12636,6 +12647,69 @@ window.DartCam = (function(){
     idbOpen().then(function(db){ const tx=db.transaction(DATA_STORE,'readwrite'); tx.objectStore(DATA_STORE).clear();
       tx.oncomplete=function(){ S._dataCount=0; const el=$('dcPgDataCount'); if(el) el.textContent='0'; }; }).catch(function(){}); }
 
+  /* ---------- rilevamento AI (modello YOLOv8 ONNX, onnxruntime-web) ----------
+     Il classico resta il trigger (quando/quante frecce, anti-recount, timing). L'AI
+     RIFINISCE la posizione della punta dopo che le frecce sono ferme: corregge l'errore
+     punta-vs-aletta. Caricamento lazy; se fallisce → degrada al classico. */
+  function loadScript(src){ return new Promise(function(res,rej){ if(document.querySelector('script[src="'+src+'"]')){ res(); return; }
+    const s=document.createElement('script'); s.src=src; s.onload=function(){ res(); }; s.onerror=function(){ rej(new Error('load '+src)); }; document.head.appendChild(s); }); }
+  function aiLoad(){ if(S._aiSess) return Promise.resolve(S._aiSess); if(S._aiLoading) return S._aiLoading;
+    S._aiLoading=(async function(){
+      if(!window.ort){ await loadScript(AI_ORT+'ort.min.js'); }
+      ort.env.wasm.wasmPaths=AI_ORT; ort.env.wasm.numThreads=1;
+      const sess=await ort.InferenceSession.create(AI_MODEL_URL, {executionProviders:['wasm'], graphOptimizationLevel:'all'});
+      S._aiSess=sess; return sess;
+    })();
+    return S._aiLoading; }
+  function aiPreprocess(v){ // input modello = 800x800 letterbox
+    if(!S._aiCanvas){ S._aiCanvas=document.createElement('canvas'); S._aiCanvas.width=800; S._aiCanvas.height=800; }
+    const cv=S._aiCanvas, cx=cv.getContext('2d',{willReadFrequently:true});
+    const scale=Math.min(800/S.vw, 800/S.vh), nw=Math.round(S.vw*scale), nh=Math.round(S.vh*scale);
+    const padx=Math.floor((800-nw)/2), pady=Math.floor((800-nh)/2);
+    cx.fillStyle='#000'; cx.fillRect(0,0,800,800); cx.drawImage(v, padx, pady, nw, nh);
+    const id=cx.getImageData(0,0,800,800).data, HW=800*800, f=new Float32Array(3*HW);
+    for(let p=0,q=0;q<HW;q++,p+=4){ f[q]=id[p]/255; f[HW+q]=id[p+1]/255; f[2*HW+q]=id[p+2]/255; }
+    return {data:f, scale:scale, padx:padx, pady:pady}; }
+  function iou(a,b){ const x1=Math.max(a.x1,b.x1), y1=Math.max(a.y1,b.y1), x2=Math.min(a.x2,b.x2), y2=Math.min(a.y2,b.y2);
+    const w=Math.max(0,x2-x1), h=Math.max(0,y2-y1), inter=w*h; const ua=(a.x2-a.x1)*(a.y2-a.y1)+(b.x2-b.x1)*(b.y2-b.y1)-inter; return ua>0?inter/ua:0; }
+  function nms(dets, thr){ dets.sort(function(a,b){ return b.score-a.score; }); const keep=[];
+    for(let i=0;i<dets.length;i++){ let ok=true; for(let j=0;j<keep.length;j++){ if(iou(dets[i],keep[j])>thr){ ok=false; break; } } if(ok) keep.push(dets[i]); } return keep; }
+  async function aiDetectDarts(){ const v=$('dcVideo'); if(!v||!v.videoWidth) return [];
+    const sess=await aiLoad(); const pp=aiPreprocess(v);
+    const t=new ort.Tensor('float32', pp.data, [1,3,800,800]);
+    const out=await sess.run({images:t}); const o=out.output0||out[Object.keys(out)[0]];
+    const dims=o.dims, d=o.data; // [1, C, A] con C=4+NC
+    const C=dims[1], A=dims[2], NC=C-4; S._aiNC=NC; const CONF=0.25;
+    const darts=[];
+    for(let a=0;a<A;a++){ let best=4, bs=d[4*A+a]; for(let c=5;c<C;c++){ const s=d[c*A+a]; if(s>bs){ bs=s; best=c; } }
+      if(best!==4 || bs<CONF) continue; // classe 0 = dart (canale 4)
+      const cxv=d[0*A+a], cyv=d[1*A+a], ww=d[2*A+a], hh=d[3*A+a];
+      darts.push({score:bs, x1:cxv-ww/2, y1:cyv-hh/2, x2:cxv+ww/2, y2:cyv+hh/2, cx:cxv, cy:cyv}); }
+    const kept=nms(darts,0.45).slice(0,3);
+    return kept.map(function(k){ return { x:(k.cx-pp.padx)/pp.scale, y:(k.cy-pp.pady)/pp.scale, score:k.score }; }); }
+  function scheduleAiRefine(){ if(!S.aiOn) return; if(S.aiTimer) clearTimeout(S.aiTimer);
+    S.aiTimer=setTimeout(function(){ aiRefineTurn(); }, 700); }
+  async function aiRefineTurn(){ if(!S.aiOn || !layerOpen() || S.calibrating || S.moveMode!=null || S._aiBusy) return;
+    const placed=[]; for(let i=0;i<3;i++){ if(S.darts[i]) placed.push(i); } if(!placed.length) return;
+    S._aiBusy=true; let firstLoad=!S._aiSess; if(firstLoad) setHint('Carico il modello AI, un attimo…');
+    let tips; try{ tips=await aiDetectDarts(); }
+    catch(e){ S._aiBusy=false; if(firstLoad){ setHint(readyHint()); console.warn('AI non disponibile:', e); } return; }
+    if(firstLoad) setHint(readyHint());
+    if(!tips || !tips.length){ S._aiBusy=false; return; }
+    // matching greedy uno-a-uno placed↔tip per distanza (l'AI vince anche con scarto grande)
+    const pairs=[]; for(const pi of placed){ const dd=S.darts[pi]; for(let tj=0;tj<tips.length;tj++){
+      const dx=(dd.vx||0)-tips[tj].x, dy=(dd.vy||0)-tips[tj].y; pairs.push({pi:pi, tj:tj, dist:Math.hypot(dx,dy)}); } }
+    pairs.sort(function(a,b){ return a.dist-b.dist; });
+    const usedP={}, usedT={}, sameCount=(tips.length===placed.length), MAXD=S.vw*0.12;
+    for(const pr of pairs){ if(usedP[pr.pi]||usedT[pr.tj]) continue;
+      if(!sameCount && pr.dist>MAXD) continue; // conteggi diversi → snap solo se vicino (prudente)
+      usedP[pr.pi]=1; usedT[pr.tj]=1; const dd=S.darts[pr.pi], tp=tips[pr.tj];
+      const b=applyH(S.H, tp.x, tp.y); if(!b) continue; const sc=scoreForBoard(b[0],b[1]);
+      dd.vx=tp.x; dd.vy=tp.y; dd.value=sc.value; dd.base=sc.base; dd.mult=sc.mult; dd.label=sc.label; dd.detB=b; dd.auto=true; dd.posTruth='ai'; }
+    S._aiBusy=false; renderDarts(); drawOverlay(); updateActionBtn(); updateHud(); }
+  function setAI(v){ S.aiOn=!!v; try{ localStorage.setItem(LS_AI, v?'1':'0'); }catch(e){}
+    updatePgUI(); if(v) aiLoad().catch(function(){}); }
+
   /* ---------- modale pre-partita ---------- */
   function preGame(){ loadPrefs(); S.calMode='keep'; updatePgUI(); $('dcPreGame').classList.add('open'); if(S.collect) dataRefreshCount(); }
   function updatePgUI(){
@@ -12646,7 +12720,9 @@ window.DartCam = (function(){
     const bw=$('dcPgBoardWrap'); if(bw) bw.style.display = cam ? '' : 'none';
     const cw=$('dcPgCalWrap'); if(cw) cw.style.display = (cam && S.calLocked.length===4) ? '' : 'none';
     document.querySelectorAll('#dcPgData button').forEach(b=>b.classList.toggle('on', (b.dataset.v==='on')===S.collect));
-    const dw=$('dcPgDataWrap'); if(dw) dw.style.display = (cam && S.calLocked.length===4) ? '' : 'none'; }
+    const dw=$('dcPgDataWrap'); if(dw) dw.style.display = (cam && S.calLocked.length===4) ? '' : 'none';
+    document.querySelectorAll('#dcPgAi button').forEach(b=>b.classList.toggle('on', (b.dataset.v==='on')===S.aiOn));
+    const aw=$('dcPgAiWrap'); if(aw) aw.style.display = (cam && S.calLocked.length===4) ? '' : 'none'; }
   function pgSetInput(v){ S.inputMethod=v; updatePgUI(); }
   function pgSetBoard(v){ S.boardType=v; updatePgUI(); }
   function pgSetCal(v){ S.calMode=v; updatePgUI(); }
@@ -12676,7 +12752,7 @@ window.DartCam = (function(){
   function sizeCanvas(){ const c=$('dcCanvas'); if(!c)return; const r=$('dcStage').getBoundingClientRect();
     c.width=Math.max(1,Math.round(r.width)); c.height=Math.max(1,Math.round(r.height)); }
   function stopCamera(){ if(S.stream){ S.stream.getTracks().forEach(t=>t.stop()); S.stream=null; } const v=$('dcVideo'); if(v) v.srcObject=null; }
-  function closeLayer(){ stopLoop(); if(S.settleTimer){clearTimeout(S.settleTimer);S.settleTimer=null;} stopCamera();
+  function closeLayer(){ stopLoop(); if(S.settleTimer){clearTimeout(S.settleTimer);S.settleTimer=null;} if(S.aiTimer){clearTimeout(S.aiTimer);S.aiTimer=null;} stopCamera();
     ['dcLayer','dcPicker','dcChipMenu'].forEach(id=>{ const e=$(id); if(e) e.classList.remove('open'); });
     updateRecBadge();
     S.calibrating=false; S.prov=null; S.phase='idle'; S.moveMode=null; S.movePreview=null;
@@ -12814,7 +12890,7 @@ window.DartCam = (function(){
     const va=boardToVideo(adjB[0],adjB[1]); sc.vx = va?va[0]:tip.px; sc.vy = va?va[1]:tip.py;
     S._dartComps[S.curIdx]=S._lastComp; S.darts[S.curIdx]=sc; S.curIdx++; rebuildCommittedMask();
     S.refData=grabProc()||S.refData; S.lastCommit=Date.now();
-    S.prov=null; S.stableCount=0; S.tipBuf=null; renderDarts(); drawOverlay(); updateActionBtn(); updateHud(); }
+    S.prov=null; S.stableCount=0; S.tipBuf=null; renderDarts(); drawOverlay(); updateActionBtn(); updateHud(); scheduleAiRefine(); }
 
   /* ---------- disegno overlay ---------- */
   function dot(ctx,x,y,r,col){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=col; ctx.fill(); }
@@ -12923,7 +12999,7 @@ window.DartCam = (function(){
     if(typeof g501Clear==='function') g501Clear();
     const s=String(total); for(let k=0;k<s.length;k++){ if(typeof g501Digit==='function') g501Digit(s[k]); }
     if(typeof g501OKBtn==='function') g501OKBtn(); }
-  function afterTurn(){ S.darts=[null,null,null]; S._dartComps=[null,null,null]; rebuildCommittedMask(); S.curIdx=0; S.prov=null; S.stableCount=0; S.tipBuf=null; S.moveMode=null; S.movePreview=null; if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none';
+  function afterTurn(){ if(S.aiTimer){clearTimeout(S.aiTimer);S.aiTimer=null;} S.darts=[null,null,null]; S._dartComps=[null,null,null]; rebuildCommittedMask(); S.curIdx=0; S.prov=null; S.stableCount=0; S.tipBuf=null; S.moveMode=null; S.movePreview=null; if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none';
     S.phase='rearm'; S.rearmT0=0; S.rearmClearCount=0;
     setHint('Rimuovi le frecce dal bersaglio: il turno successivo parte da solo quando è libero.');
     renderDarts(); updateActionBtn(); updateHud(); }
@@ -12944,7 +13020,7 @@ window.DartCam = (function(){
   return { preGame, pgSetInput, pgSetBoard, pgSetCal, pgStart, pgCancel, startCalibration, calConfirmPoint,
            switchToKeypad, exitGame, markNoScore, undoDart, undoOrPrev, confirmTurn, pkSetMult, pkPick, pkClose,
            chipMove, chipScore, chipFell, chipMenuClose, moveConfirm, zoom, openCapture, onLegStart, closeLayer,
-           setCollect, exportData, clearData,
+           setCollect, exportData, clearData, setAI,
            _scoreForBoard:scoreForBoard, _solveHomography:solveHomography, _invert3:invert3 };
 })();
 </script>
