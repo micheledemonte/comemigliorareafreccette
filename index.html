@@ -2819,11 +2819,13 @@ body.in-app #lProgress{display:none}
       <div class="dc-pg-note">Steel: vale la freccia che resta sul bersaglio oltre 3 secondi. Soft: vale subito, anche i rimbalzi.</div>
     </div>
     <div id="dcPgCalWrap" style="display:none">
-      <div class="dc-pg-lbl">Calibrazione</div>
+      <div class="dc-pg-lbl">Calibrazione bersaglio</div>
       <div class="dc-pg-row" id="dcPgCal">
-        <button data-v="keep" onclick="DartCam.pgSetCal('keep')">Mantieni ultima</button>
-        <button data-v="redo" onclick="DartCam.pgSetCal('redo')">Rifai ora</button>
+        <button data-v="auto" onclick="DartCam.pgSetCal('auto')">Auto (AI)</button>
+        <button data-v="keep" onclick="DartCam.pgSetCal('keep')">Mantieni</button>
+        <button data-v="redo" onclick="DartCam.pgSetCal('redo')">Manuale</button>
       </div>
+      <div class="dc-pg-note">Auto: il bersaglio viene rilevato dall'AI (come Dartsmind), niente tap. Se non riesce, passa alla manuale.</div>
     </div>
     <div id="dcPgAiWrap" style="display:none">
       <div class="dc-pg-lbl">Rilevamento punte</div>
@@ -12671,19 +12673,33 @@ window.DartCam = (function(){
     const w=Math.max(0,x2-x1), h=Math.max(0,y2-y1), inter=w*h; const ua=(a.x2-a.x1)*(a.y2-a.y1)+(b.x2-b.x1)*(b.y2-b.y1)-inter; return ua>0?inter/ua:0; }
   function nms(dets, thr){ dets.sort(function(a,b){ return b.score-a.score; }); const keep=[];
     for(let i=0;i<dets.length;i++){ let ok=true; for(let j=0;j<keep.length;j++){ if(iou(dets[i],keep[j])>thr){ ok=false; break; } } if(ok) keep.push(dets[i]); } return keep; }
-  async function aiDetectDarts(){ const v=$('dcVideo'); if(!v||!v.videoWidth) return [];
+  // un'unica inferenza → punte (classe 0) + punti calibrazione (classi 1..4, =cal1..cal4)
+  async function aiRun(){ const v=$('dcVideo'); if(!v||!v.videoWidth) return {darts:[],cals:[]};
     const sess=await aiLoad(); const pp=aiPreprocess(v);
     const t=new ort.Tensor('float32', pp.data, [1,3,800,800]);
     const out=await sess.run({images:t}); const o=out.output0||out[Object.keys(out)[0]];
     const dims=o.dims, d=o.data; // [1, C, A] con C=4+NC
-    const C=dims[1], A=dims[2], NC=C-4; S._aiNC=NC; const CONF=0.10; // soglia bassa: modello ancora poco confidente (poco dato)
-    const darts=[];
+    const C=dims[1], A=dims[2], NC=C-4; S._aiNC=NC; const CONF=0.10;
+    const perCls={};
     for(let a=0;a<A;a++){ let best=4, bs=d[4*A+a]; for(let c=5;c<C;c++){ const s=d[c*A+a]; if(s>bs){ bs=s; best=c; } }
-      if(best!==4 || bs<CONF) continue; // classe 0 = dart (canale 4)
+      if(bs<CONF) continue; const cls=best-4; // 0=dart, 1..4=cal
       const cxv=d[0*A+a], cyv=d[1*A+a], ww=d[2*A+a], hh=d[3*A+a];
-      darts.push({score:bs, x1:cxv-ww/2, y1:cyv-hh/2, x2:cxv+ww/2, y2:cyv+hh/2, cx:cxv, cy:cyv}); }
-    const kept=nms(darts,0.45).slice(0,3);
-    return kept.map(function(k){ return { x:(k.cx-pp.padx)/pp.scale, y:(k.cy-pp.pady)/pp.scale, score:k.score }; }); }
+      (perCls[cls]=perCls[cls]||[]).push({score:bs, x1:cxv-ww/2, y1:cyv-hh/2, x2:cxv+ww/2, y2:cyv+hh/2, cx:cxv, cy:cyv}); }
+    const toVid=function(k){ return { x:(k.cx-pp.padx)/pp.scale, y:(k.cy-pp.pady)/pp.scale, score:k.score }; };
+    const darts=nms(perCls[0]||[],0.45).slice(0,3).map(toVid);
+    const cals=[]; for(let c=1;c<NC;c++){ const kept=nms(perCls[c]||[],0.45); if(kept.length){ const p=toVid(kept[0]); p.cls=c; cals.push(p); } }
+    return {darts:darts, cals:cals}; }
+  async function aiDetectDarts(){ return (await aiRun()).darts; }
+  // calibrazione AUTOMATICA: usa i 4 punti cal rilevati dal modello (come Dartsmind, niente tap)
+  async function aiAutoCalibrate(){
+    try{ await aiLoad(); }catch(e){ return false; }
+    let res; try{ res=await aiRun(); }catch(e){ return false; }
+    const by={}; for(const c of res.cals){ if(!by[c.cls] || c.score>by[c.cls].score) by[c.cls]=c; }
+    for(let k=1;k<=4;k++){ if(!by[k] || by[k].score<0.30) return false; } // servono tutti e 4 i punti
+    const pts=[[by[1].x,by[1].y],[by[2].x,by[2].y],[by[3].x,by[3].y],[by[4].x,by[4].y]];
+    const H=solveHomography(pts, CAL_DST); if(!H) return false;
+    S.calLocked=pts; S.H=H; S.Hinv=invert3(H); try{ localStorage.setItem(LS_CAL, JSON.stringify(pts)); }catch(e){}
+    buildMasks(); return true; }
   function scheduleAiRefine(){ if(!S.aiOn) return; if(S.aiTimer) clearTimeout(S.aiTimer);
     S.aiTimer=setTimeout(function(){ aiRefineTurn(); }, 700); }
   async function aiRefineTurn(){ if(!S.aiOn || !layerOpen() || S.calibrating || S.moveMode!=null || S._aiBusy) return;
@@ -12708,18 +12724,19 @@ window.DartCam = (function(){
     updatePgUI(); if(v) aiLoad().catch(function(){}); }
 
   /* ---------- modale pre-partita ---------- */
-  function preGame(){ loadPrefs(); S.calMode='keep'; updatePgUI(); $('dcPreGame').classList.add('open'); if(S.collect) dataRefreshCount(); }
+  function preGame(){ loadPrefs(); S.calMode=(S.calLocked.length===4)?'keep':'auto'; updatePgUI(); $('dcPreGame').classList.add('open'); if(S.collect) dataRefreshCount(); }
   function updatePgUI(){
     document.querySelectorAll('#dcPgInput button').forEach(b=>b.classList.toggle('on', b.dataset.v===S.inputMethod));
     document.querySelectorAll('#dcPgBoard button').forEach(b=>b.classList.toggle('on', b.dataset.v===S.boardType));
     document.querySelectorAll('#dcPgCal button').forEach(b=>b.classList.toggle('on', b.dataset.v===S.calMode));
-    const cam=S.inputMethod==='camera';
+    const cam=S.inputMethod==='camera', hasCal=S.calLocked.length===4;
     const bw=$('dcPgBoardWrap'); if(bw) bw.style.display = cam ? '' : 'none';
-    const cw=$('dcPgCalWrap'); if(cw) cw.style.display = (cam && S.calLocked.length===4) ? '' : 'none';
+    const cw=$('dcPgCalWrap'); if(cw) cw.style.display = cam ? '' : 'none';
+    const keepBtn=document.querySelector('#dcPgCal button[data-v="keep"]'); if(keepBtn) keepBtn.style.display = hasCal ? '' : 'none';
     document.querySelectorAll('#dcPgData button').forEach(b=>b.classList.toggle('on', (b.dataset.v==='on')===S.collect));
-    const dw=$('dcPgDataWrap'); if(dw) dw.style.display = (cam && S.calLocked.length===4) ? '' : 'none';
+    const dw=$('dcPgDataWrap'); if(dw) dw.style.display = cam ? '' : 'none';
     document.querySelectorAll('#dcPgAi button').forEach(b=>b.classList.toggle('on', (b.dataset.v==='on')===S.aiOn));
-    const aw=$('dcPgAiWrap'); if(aw) aw.style.display = (cam && S.calLocked.length===4) ? '' : 'none'; }
+    const aw=$('dcPgAiWrap'); if(aw) aw.style.display = cam ? '' : 'none'; }
   function pgSetInput(v){ S.inputMethod=v; updatePgUI(); }
   function pgSetBoard(v){ S.boardType=v; updatePgUI(); }
   function pgSetCal(v){ S.calMode=v; updatePgUI(); }
@@ -12736,7 +12753,14 @@ window.DartCam = (function(){
     try{ await startCamera(); }
     catch(e){ alert('Fotocamera non accessibile: '+(e&&e.message?e.message:e)+'. Puoi usare il tastierino.'); closeLayer(); return; }
     const hasCal = S.H && S.calLocked.length===4;
-    if(hasCal && S.calMode!=='redo'){ buildMasks(); S.calibrating=false; if($('dcCalBtn')) $('dcCalBtn').style.display=''; settleThenArm(); }
+    if(S.calMode==='auto'){
+      setHint('Calibrazione automatica del bersaglio…');
+      await new Promise(function(r){ setTimeout(r, 700); }); // lascia stabilizzare l'esposizione
+      let ok=false; try{ ok=await aiAutoCalibrate(); }catch(e){ ok=false; }
+      if(ok){ S.calibrating=false; if($('dcCalBtn')) $('dcCalBtn').style.display=''; settleThenArm(); }
+      else { setHint('Calibrazione automatica non riuscita: calibra a mano i 4 punti.'); startCalibration(); }
+    }
+    else if(hasCal && S.calMode!=='redo'){ buildMasks(); S.calibrating=false; if($('dcCalBtn')) $('dcCalBtn').style.display=''; settleThenArm(); }
     else { startCalibration(); } }
   async function startCamera(){ if(S.stream) return;
     const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
