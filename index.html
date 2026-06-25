@@ -2185,7 +2185,7 @@ body.in-app #lProgress{display:none}
           <div class="sel-group"><label>Numero di legs</label>
             <select id="legCount"><option value="1">1 leg</option><option value="2">2 legs</option><option value="3" selected>3 legs</option><option value="4">4 legs</option><option value="5">5 legs</option><option value="6">6 legs</option><option value="7">7 legs</option><option value="8">8 legs</option><option value="9">9 legs</option><option value="10">10 legs</option><option value="11">11 legs</option><option value="12">12 legs</option><option value="13">13 legs</option><option value="14">14 legs</option><option value="15">15 legs</option><option value="16">16 legs</option><option value="17">17 legs</option><option value="18">18 legs</option><option value="19">19 legs</option><option value="20">20 legs</option><option value="21">21 legs</option></select>
           </div>
-          <button class="playbtn" style="padding:10px 28px;font-size:16px;margin-top:16px" onclick="DartCam.preGame()">GIOCA DA SOLO</button>
+          <button class="playbtn" style="padding:10px 28px;font-size:16px;margin-top:16px" onclick="gioca501Solo()">GIOCA DA SOLO</button>
         </div>
       </div>
       <!-- Con avversario panel -->
@@ -2727,17 +2727,19 @@ body.in-app #lProgress{display:none}
 .dc-confirm{background:linear-gradient(135deg,#22c55e,#16a34a);color:#04140a}
 .dc-confirm.dc-bust{background:#3d0c0c;color:#ff7070}
 /* modale pre-partita (z 9520) */
-#dcPreGame{position:fixed;inset:0;z-index:9520;background:#000d;display:none;flex-direction:column;justify-content:center;align-items:center;padding:24px;font-family:'DM Sans',sans-serif}
+#dcPreGame{position:fixed;inset:0;z-index:9520;background:rgba(0,0,0,.85);display:none;flex-direction:column;justify-content:center;align-items:center;padding:24px;font-family:'DM Sans',sans-serif}
 #dcPreGame.open{display:flex}
-.dc-pg-card{width:100%;max-width:380px;background:#111;border:1px solid #ffffff1a;border-radius:18px;padding:22px 18px}
-.dc-pg-title{font-weight:800;color:#fff;font-size:20px;text-align:center;margin-bottom:18px}
-.dc-pg-lbl{font-size:12px;color:#9aa6a0;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px}
+.dc-pg-card{width:100%;max-width:400px;max-height:calc(100dvh - 48px);overflow-y:auto;background:var(--d2);border:1px solid #166534;border-radius:22px;padding:30px 26px;position:relative;box-shadow:0 0 40px #22c55e1a,0 24px 48px rgba(0,0,0,.6)}
+.dc-pg-card::before{content:'';position:absolute;top:-1px;left:15%;right:15%;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);border-radius:2px;pointer-events:none}
+.dc-pg-title{font-family:'Bebas Neue',sans-serif;font-weight:400;color:var(--light);font-size:28px;letter-spacing:.02em;text-align:center;margin-bottom:18px}
+.dc-pg-lbl{font-size:12px;color:var(--mu2);text-transform:uppercase;letter-spacing:.1em;margin:16px 0 8px}
 .dc-pg-row{display:flex;gap:10px}
-.dc-pg-row button{flex:1;border:1.5px solid #ffffff22;background:#1b1b1b;color:#ddd;border-radius:12px;padding:16px 8px;font-weight:700;font-size:15px;font-family:'DM Sans',sans-serif}
-.dc-pg-row button.on{background:#22c55e;color:#04140a;border-color:#22c55e}
-.dc-pg-note{font-size:11.5px;color:#8a948f;line-height:1.45;margin-top:8px}
-.dc-pg-start{width:100%;margin-top:20px;border:none;border-radius:12px;padding:15px;font-size:17px;font-weight:800;font-family:'DM Sans',sans-serif;background:linear-gradient(135deg,#22c55e,#16a34a);color:#04140a}
-.dc-pg-cancel{width:100%;margin-top:10px;border:1px solid #ffffff22;background:transparent;color:#aaa;border-radius:12px;padding:12px;font-weight:700;font-family:'DM Sans',sans-serif}
+.dc-pg-row button{flex:1;border:1.5px solid var(--d5);background:var(--d3);color:#cbd5d0;border-radius:12px;padding:15px 8px;font-weight:700;font-size:15px;font-family:'DM Sans',sans-serif;transition:all .15s}
+.dc-pg-row button.on{background:rgba(34,197,94,.18);color:#86efac;border-color:#22c55e;box-shadow:0 0 12px rgba(34,197,94,.25)}
+.dc-pg-note{font-size:11.5px;color:var(--muted);line-height:1.45;margin-top:8px}
+.dc-pg-start{width:100%;margin-top:22px;border:1.5px solid #22c55e;border-radius:12px;padding:15px;font-size:17px;font-weight:800;font-family:'DM Sans',sans-serif;background:rgba(34,197,94,.20);color:#86efac;box-shadow:0 0 16px rgba(34,197,94,.25)}
+.dc-pg-start:active{background:rgba(34,197,94,.32)}
+.dc-pg-cancel{width:100%;margin-top:10px;border:1px solid var(--d5);background:transparent;color:var(--muted);border-radius:12px;padding:12px;font-weight:700;font-family:'DM Sans',sans-serif}
 /* menu freccia (sposta/punteggio) z 9790 */
 #dcChipMenu{position:fixed;inset:0;z-index:9790;background:#000d;display:none;flex-direction:column;justify-content:flex-end;font-family:'DM Sans',sans-serif}
 #dcChipMenu.open{display:flex}
@@ -9985,11 +9987,19 @@ function finalizeFree501(){
   const resTitle = document.querySelector('#free501Results h3');
   if(resTitle) resTitle.textContent = 'Risultati ultima sessione 501';
   setUD(CU.id,data);
+  G.legsResults=[]; // evita doppio salvataggio se close501 (ESCI) parte dopo il finalize
   setPrev501Mode('solo');
   setTimeout(function(){
     var sel=document.getElementById('prevSessSelect');
     if(sel&&sel.options.length>1){ sel.selectedIndex=1; sel.dispatchEvent(new Event('change')); }
   }, 200);
+}
+// 501 solo: la modalità videocamera (autoscoring, in test) è riservata agli ADMIN;
+// gli utenti normali vanno diretti al tastierino (comportamento storico v239).
+function gioca501Solo(){
+  if(typeof CU!=='undefined' && CU && CU.role==='admin'){ DartCam.preGame(); }
+  else if(typeof DartCam!=='undefined' && DartCam.startKeypadSolo){ DartCam.startKeypadSolo(); }
+  else if(typeof startFree501==='function'){ startFree501(); }
 }
 
 function show501Results(legs){
@@ -12703,22 +12713,21 @@ window.DartCam = (function(){
   function scheduleAiRefine(){ if(!S.aiOn) return; if(S.aiTimer) clearTimeout(S.aiTimer);
     S.aiTimer=setTimeout(function(){ aiRefineTurn(); }, 700); }
   async function aiRefineTurn(){ if(!S.aiOn || !layerOpen() || S.calibrating || S.moveMode!=null || S._aiBusy) return;
-    const placed=[]; for(let i=0;i<3;i++){ if(S.darts[i]) placed.push(i); } if(!placed.length) return;
+    // rifinisci SOLO le frecce non ancora rifinite dall'AI e non corrette a mano (niente "salti" sui pin già buoni)
+    const todo=[]; for(let i=0;i<3;i++){ const d=S.darts[i]; if(d && !d.aiRefined && d.posTruth!=='manual') todo.push(i); }
+    if(!todo.length) return;
     S._aiBusy=true; let firstLoad=!S._aiSess; if(firstLoad) setHint('Carico il modello AI, un attimo…');
     let tips; try{ tips=await aiDetectDarts(); }
     catch(e){ S._aiBusy=false; if(firstLoad){ setHint(readyHint()); console.warn('AI non disponibile:', e); } return; }
     if(firstLoad) setHint(readyHint());
     if(!tips || !tips.length){ S._aiBusy=false; return; }
-    // matching greedy uno-a-uno placed↔tip per distanza (l'AI vince anche con scarto grande)
-    const pairs=[]; for(const pi of placed){ const dd=S.darts[pi]; for(let tj=0;tj<tips.length;tj++){
-      const dx=(dd.vx||0)-tips[tj].x, dy=(dd.vy||0)-tips[tj].y; pairs.push({pi:pi, tj:tj, dist:Math.hypot(dx,dy)}); } }
-    pairs.sort(function(a,b){ return a.dist-b.dist; });
-    const usedP={}, usedT={}, sameCount=(tips.length===placed.length), MAXD=S.vw*0.12;
-    for(const pr of pairs){ if(usedP[pr.pi]||usedT[pr.tj]) continue;
-      if(!sameCount && pr.dist>MAXD) continue; // conteggi diversi → snap solo se vicino (prudente)
-      usedP[pr.pi]=1; usedT[pr.tj]=1; const dd=S.darts[pr.pi], tp=tips[pr.tj];
-      const b=applyH(S.H, tp.x, tp.y); if(!b) continue; const sc=scoreForBoard(b[0],b[1]);
-      dd.vx=tp.x; dd.vy=tp.y; dd.value=sc.value; dd.base=sc.base; dd.mult=sc.mult; dd.label=sc.label; dd.detB=b; dd.auto=true; dd.posTruth='ai'; }
+    const usedT={}, GUARD=S.vw*0.15, MINSCORE=0.30; // snap solo se vicino al pin classico E confidente
+    for(const pi of todo){ const d=S.darts[pi]; if(!d) continue;
+      let bj=-1, bd=1e9; for(let j=0;j<tips.length;j++){ if(usedT[j]) continue;
+        const dx=(d.vx||0)-tips[j].x, dy=(d.vy||0)-tips[j].y; const dist=Math.hypot(dx,dy); if(dist<bd){ bd=dist; bj=j; } }
+      if(bj<0 || bd>GUARD || tips[bj].score<MINSCORE) continue; // nessun tip vicino/affidabile → lascia il classico
+      usedT[bj]=1; const tp=tips[bj]; const b=applyH(S.H, tp.x, tp.y); if(!b) continue; const sc=scoreForBoard(b[0],b[1]);
+      d.vx=tp.x; d.vy=tp.y; d.value=sc.value; d.base=sc.base; d.mult=sc.mult; d.label=sc.label; d.detB=b; d.auto=true; d.posTruth='ai'; d.aiRefined=true; }
     S._aiBusy=false; renderDarts(); drawOverlay(); updateActionBtn(); updateHud(); }
   function setAI(v){ S.aiOn=!!v; try{ localStorage.setItem(LS_AI, v?'1':'0'); }catch(e){}
     updatePgUI(); if(v) aiLoad().catch(function(){}); }
@@ -12742,6 +12751,9 @@ window.DartCam = (function(){
   function pgSetCal(v){ S.calMode=v; updatePgUI(); }
   function pgCancel(){ $('dcPreGame').classList.remove('open'); }
   function pgStart(){ savePrefs(); $('dcPreGame').classList.remove('open');
+    if(typeof window.startFree501==='function') window.startFree501(); }
+  // utenti normali (non-admin): 501 solo direttamente col tastierino, senza modale camera
+  function startKeypadSolo(){ S.inputMethod='keypad'; savePrefs();
     if(typeof window.startFree501==='function') window.startFree501(); }
 
   /* ---------- ciclo vita ---------- */
@@ -12962,9 +12974,23 @@ window.DartCam = (function(){
     let sum=0; for(const d of S.darts) if(d) sum+=d.value; if($('dcHudTurn')) $('dcHudTurn').textContent=sum;
     const av=$('g501closures'); if(av&&$('dcHudAvg')) $('dcHudAvg').textContent=av.textContent;
     updateConfirmBtn(sum); }
+  // esito del turno secondo la regola STEEL double-out (l'ultima freccia che porta a 0 dev'essere doppia/bull)
+  function turnOutcome(start){
+    let sum=0; for(const d of S.darts) if(d) sum+=(d.value||0);
+    if(isNaN(start)) return {kind:'score', total:sum};
+    let rem=start, tot=0;
+    for(let i=0;i<3;i++){ const d=S.darts[i]; if(!d) continue;
+      const v=d.value||0, nrem=rem-v;
+      if(nrem<0) return {kind:'bust', total:0};                  // sfondamento
+      if(nrem===0){ tot+=v; const isDbl=(d.mult===2)||(d.base===50); return isDbl?{kind:'win',total:tot}:{kind:'bust',total:0}; }
+      if(nrem===1) return {kind:'bust', total:0};                // resta 1 → impossibile chiudere
+      rem=nrem; tot+=v; }
+    return {kind:'score', total:tot}; }
   function updateConfirmBtn(sum){ const b=$('dcConfirmBtn'); if(!b) return;
-    const sc=$('g501pts'); const leg=sc?parseInt(sc.textContent):NaN; let label='CONFERMA', bust=false;
-    if(sum>0 && !isNaN(leg)){ const ns=leg-sum; if(ns<0||ns===1){ label='BUST'; bust=true; } else if(ns===0){ label='CHECKOUT'; } }
+    const sc=$('g501pts'); const leg=sc?parseInt(sc.textContent):NaN;
+    let label='CONFERMA', bust=false;
+    if(S.darts.filter(Boolean).length>0){ const o=turnOutcome(leg);
+      if(o.kind==='win') label='CHECKOUT'; else if(o.kind==='bust'){ label='BUST'; bust=true; } }
     b.textContent=label; b.classList.toggle('dc-bust', bust); }
 
   /* ---------- menu freccia (sposta / punteggio) ---------- */
@@ -13026,8 +13052,11 @@ window.DartCam = (function(){
     setHint('Rimuovi le frecce dal bersaglio: il turno successivo parte da solo quando è libero.');
     renderDarts(); updateActionBtn(); updateHud(); }
   function markNoScore(){ S.lastTurnTotal=0; feedTurn(0); afterTurn(); }
-  function confirmTurn(){ let total=0; for(const d of S.darts) if(d) total+=d.value;
-    total=Math.max(0,Math.min(180,total)); S.lastTurnTotal=total; try{ dataCapture(); }catch(e){} feedTurn(total); afterTurn(); }
+  function confirmTurn(){ const sc=$('g501pts'); const leg=sc?parseInt(sc.textContent):NaN;
+    const o=turnOutcome(leg); try{ dataCapture(); }catch(e){}
+    if(o.kind==='bust'){ S.lastTurnTotal=0; feedTurn(0); }     // bust = 0 punti, punteggio invariato (g501NoScoreLeft)
+    else { const t=Math.max(0,Math.min(180,o.total)); S.lastTurnTotal=t; feedTurn(t); }
+    afterTurn(); }
   function setHint(t){ const h=$('dcHint'); if(h) h.textContent=t; }
 
   /* ---------- init + hook ---------- */
@@ -13036,13 +13065,14 @@ window.DartCam = (function(){
     window.addEventListener('resize', ()=>{ if(layerOpen()){ sizeCanvas(); drawOverlay(); } });
     if(typeof window.startFree501==='function'){ const o=window.startFree501; window.startFree501=function(){ const r=o.apply(this,arguments); try{onLegStart();}catch(e){} return r; }; }
     if(typeof window.close501==='function'){ const o=window.close501; window.close501=function(){ try{closeLayer();}catch(e){} return o.apply(this,arguments); }; }
-    if(typeof window.finalizeTraining501==='function'){ const o=window.finalizeTraining501; window.finalizeTraining501=function(){ try{closeLayer();}catch(e){} return o.apply(this,arguments); }; } }
+    if(typeof window.finalizeTraining501==='function'){ const o=window.finalizeTraining501; window.finalizeTraining501=function(){ try{closeLayer();}catch(e){} return o.apply(this,arguments); }; }
+    if(typeof window.finalizeFree501==='function'){ const o=window.finalizeFree501; window.finalizeFree501=function(){ try{closeLayer();}catch(e){} return o.apply(this,arguments); }; } }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
 
   return { preGame, pgSetInput, pgSetBoard, pgSetCal, pgStart, pgCancel, startCalibration, calConfirmPoint,
            switchToKeypad, exitGame, markNoScore, undoDart, undoOrPrev, confirmTurn, pkSetMult, pkPick, pkClose,
            chipMove, chipScore, chipFell, chipMenuClose, moveConfirm, zoom, openCapture, onLegStart, closeLayer,
-           setCollect, exportData, clearData, setAI,
+           setCollect, exportData, clearData, setAI, startKeypadSolo,
            _scoreForBoard:scoreForBoard, _solveHomography:solveHomography, _invert3:invert3 };
 })();
 </script>
