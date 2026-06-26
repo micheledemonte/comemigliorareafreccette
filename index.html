@@ -3214,6 +3214,24 @@ function refreshNotifUI(){
   btn.classList.toggle('danger', isOn); // rosso (come BLOCCA UTENTE) quando le notifiche sono attive
 }
 
+// ── Invio eventi push al backend (Fase 2: api/notify, destinatari risolti lato server) ──
+const NOTIFY_API = '/api/notify';
+async function _postNotify(payload){
+  try{
+    if(!_fbAuth || !_fbAuth.currentUser) return;
+    const idToken = await _fbAuth.currentUser.getIdToken();
+    await fetch(NOTIFY_API, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(Object.assign({ idToken: idToken }, payload)) });
+  }catch(e){ console.warn('notify', e); }
+}
+function notifyNewRequestPush(reqObj){
+  try{ const name=((reqObj.firstName||'')+' '+(reqObj.lastName||'')).trim()||'Un utente';
+    _postNotify({ type:'new_request', senderName:name, preview:(reqObj.msg||'').slice(0,140) }); }catch(e){}
+}
+function notifyApptPush(uid, dt, action, note){
+  try{ _postNotify({ type:'appointment', targetUid:uid, action:action, dt:dt||'', note:(note||'').slice(0,140) }); }catch(e){}
+}
+
 // ── Auth state: auto-login on page load / session restore ──
 if(_fbAuth){
   _fbAuth.onAuthStateChanged(async (firebaseUser)=>{
@@ -6799,11 +6817,13 @@ function gsApptSave(){
     || (_gsApptCtx && _gsApptCtx.adminId)
     || p.lezioni[idx].adminRef  // mantieni il valore già salvato se il DOM non risponde
     || null;
+  const _prevDt = p.lezioni[idx].dt; // per distinguere "fissato" (era null) da "spostato"
   p.lezioni[idx].dt       = dt       || null;
   p.lezioni[idx].note     = note     || null;
   p.lezioni[idx].adminRef = adminId;
   if(dt) p.lezioni[idx].setAt = Date.now(); // timestamp di quando è stato fissato/spostato
   gsSetPercorso(uid, p);
+  if(dt) notifyApptPush(uid, dt, _prevDt ? 'moved' : 'created', note); // push all'utente (Fase 2)
   if(dt) gsScheduleNotifications(uid, idx, dt, note, getUsers().find(u=>u.id===uid));
   gsApptCancel();
   const u    = getUsers().find(u=>u.id===uid);
@@ -7141,6 +7161,7 @@ function reqSendRequest(){
   const doSave = async () => {
     if(_firebaseOK && _fbDB){
       await _fbDB.ref('db/requests/'+reqId).set(reqObj);
+      notifyNewRequestPush(reqObj); // push agli admin (Fase 2)
     } else {
       // Fallback locale: salva nel dbCache
       if(!_dbCache.requests) _dbCache.requests = {};
@@ -7197,6 +7218,7 @@ function reqSendFixAppt(idx){
   const doSave = async () => {
     if(_firebaseOK && _fbDB){
       await _fbDB.ref('db/requests/'+reqId).set(reqObj);
+      notifyNewRequestPush(reqObj); // push agli admin (Fase 2)
     } else {
       if(!_dbCache.requests) _dbCache.requests = {};
       _dbCache.requests[reqId] = reqObj;
@@ -7273,6 +7295,7 @@ function reqSendReschedule(idx){
   const doSave = async () => {
     if(_firebaseOK && _fbDB){
       await _fbDB.ref('db/requests/'+reqId).set(reqObj);
+      notifyNewRequestPush(reqObj); // push agli admin (Fase 2)
     } else {
       if(!_dbCache.requests) _dbCache.requests = {};
       _dbCache.requests[reqId] = reqObj;
@@ -7320,6 +7343,7 @@ function reqSendGeneric(){
   const doSave = async () => {
     if(_firebaseOK && _fbDB){
       await _fbDB.ref('db/requests/'+reqId).set(reqObj);
+      notifyNewRequestPush(reqObj); // push agli admin (Fase 2)
     } else {
       if(!_dbCache.requests) _dbCache.requests = {};
       _dbCache.requests[reqId] = reqObj;
@@ -7370,6 +7394,7 @@ function reqSendUnblock(){
   const doSave = async () => {
     if(_firebaseOK && _fbDB){
       await _fbDB.ref('db/requests/'+reqId).set(reqObj);
+      notifyNewRequestPush(reqObj); // push agli admin (Fase 2)
     } else {
       if(!_dbCache.requests) _dbCache.requests = {};
       _dbCache.requests[reqId] = reqObj;

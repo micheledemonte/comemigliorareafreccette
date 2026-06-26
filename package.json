@@ -1,0 +1,9 @@
+{
+  "name": "comemigliorareafreccette",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Centro Darts Lab — funzioni serverless (Vercel) per le notifiche push e la gestione utenti.",
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}
