@@ -12519,6 +12519,8 @@ window.DartCam = (function(){
   const SETTLE_MS=1100;       // stabilizzazione esposizione prima di acquisire lo sfondo
   const STABLE_NEED=2;        // frame stabili richiesti (come v246, sensibilità buona)
   const REARM_TIMEOUT=5000;
+  const MOTION_GATE_FRAC=0.018; // diff tra frame CONSECUTIVI oltre questa frazione del bersaglio = inquadratura instabile (treppiede che oscilla) → niente detection
+  const REBASE_RUN=5;           // tick di instabilità accumulati (~750ms) oltre i quali, al ritorno della stabilità, si rifà lo sfondo (distingue scuotimento da lancio breve)
   const ZMIN=1, ZMAX=3, ZSTEP=0.5;
   const LS_CAL='dcCalPts', LS_INPUT='dcInputMethod', LS_BOARD='dcBoardType', LS_BIAS='dcBias', LS_COLLECT='dcCollect', LS_AI='dcAI';
   const DATA_DB='dartDataset', DATA_STORE='samples';
@@ -12531,7 +12533,7 @@ window.DartCam = (function(){
            calLocked:[], calProv:null, calStep:0, calibrating:false,
            insideMask:null, rMap:null, insideCount:0, _dm:null, _vis:null,
            _committedMask:null, _dartComps:[null,null,null], _lastComp:null,
-           refData:null, emptyRef:null, phase:'idle', darts:[null,null,null], curIdx:0,
+           refData:null, emptyRef:null, prevFrame:null, unstableRun:0, phase:'idle', darts:[null,null,null], curIdx:0,
            prov:null, stableCount:0, tipBuf:null, lastCommit:0, rearmT0:0, rearmClearCount:0,
            lastTurnTotal:null, pkIdx:0, pkMult:1, chipIdx:0, moveMode:null, movePreview:null,
            bias:{sx:0,sy:0,n:0}, timer:null, settleTimer:null,
@@ -12865,10 +12867,10 @@ window.DartCam = (function(){
   function settleThenArm(){ S.phase='settle'; setHint('Messa a fuoco in corso, attendi un attimo…');
     if(S.settleTimer) clearTimeout(S.settleTimer);
     S.settleTimer=setTimeout(()=>{ const f=grabProc(); if(f){ S.emptyRef=f; S.refData=f; } S.lastCommit=Date.now();
-      S.phase='aim'; S.prov=null; S.stableCount=0; S.tipBuf=null; setHint(readyHint()); }, SETTLE_MS); }
+      S.phase='aim'; S.prov=null; S.stableCount=0; S.tipBuf=null; S.prevFrame=null; S.unstableRun=0; setHint(readyHint()); }, SETTLE_MS); }
   function armFromEmpty(cur){ const f=cur||grabProc(); if(f){ S.refData=f; if(!S.emptyRef) S.emptyRef=f; }
     S.phase='aim'; S.lastCommit=Date.now(); S.rearmT0=0; S.rearmClearCount=0;
-    S.prov=null; S.stableCount=0; S.tipBuf=null; setHint(readyHint()); }
+    S.prov=null; S.stableCount=0; S.tipBuf=null; S.prevFrame=null; S.unstableRun=0; setHint(readyHint()); }
   function dist(a,b){ return Math.hypot(a.px-b.px,a.py-b.py); }
   function tick(){ if(!layerOpen()) return; updateHud(); drawOverlay();
     if(S.calibrating || !S.H || !S.proc || S.phase==='settle') return;
@@ -12878,6 +12880,28 @@ window.DartCam = (function(){
     if(S.phase!=='aim') return;
     if(S.moveMode!=null) return;
     if(S.curIdx>=3) return;
+    // ── Gate anti-shake: confronta col frame PRECEDENTE. Una freccia conficcata = scena
+    //    ferma tra due tick (diff≈0); un treppiede che oscilla = diff alto e CONTINUO → tutti
+    //    i bordi del bersaglio cambiano e generavano falsi pallini verdi. Se l'inquadratura è
+    //    instabile NON si rileva nulla; dopo uno scuotimento prolungato si rifà lo sfondo.
+    if(S.prevFrame){
+      const motion=maskedDiffCount(cur,S.prevFrame);
+      S.prevFrame=cur;
+      if(motion > S.insideCount*MOTION_GATE_FRAC){
+        S.unstableRun=Math.min(S.unstableRun+1,12);
+        S.stableCount=0; S.tipBuf=null;
+        setHint('📷 Inquadratura instabile, stabilizza il telefono e attendi…');
+        return;
+      } else if(S.unstableRun>=REBASE_RUN){
+        // si torna stabili dopo uno scuotimento (non un lancio breve) → sfondo nuovo, no falso
+        S.refData=cur; S.lastCommit=Date.now();
+        S.unstableRun=0; S.prov=null; S.stableCount=0; S.tipBuf=null;
+        setHint(readyHint());
+        return;
+      } else {
+        S.unstableRun=Math.max(S.unstableRun-1,0);
+      }
+    } else { S.prevFrame=cur; }
     if(Date.now()-S.lastCommit < COOLDOWN) return;
     const det=detectDart(cur);
     if(det.tooBig||!det.tip){ S.stableCount=0; S.tipBuf=null; return; }
