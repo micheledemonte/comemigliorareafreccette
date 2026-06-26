@@ -4277,6 +4277,7 @@ function ldAllTabs(){
   } else {
     all.push({id:'appuntamenti', icon:'🗓️', label:'Appuntamenti'}); // user-only
     all.push(LD.userCalTab);    // CALENDARIO visible only to normal users
+    all.push({id:'profile', icon:'👤', label:'Profilo'}); // PROFILO visibile ANCHE agli utenti normali
   }
   all.push(LD.logoutTab);
   return all;
