@@ -22,6 +22,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 <!-- Vercel Web Analytics -->
 <script defer src="/_vercel/insights/script.js"></script>
 <!-- Vercel Speed Insights -->
@@ -2472,6 +2473,14 @@ body.in-app #lProgress{display:none}
           <div class="pmsg" id="pwMsg"></div>
         </div>
       </div>
+      <div class="pc">
+        <h3>🔔 NOTIFICHE</h3>
+        <div class="pf">
+          <p style="font-size:13px;color:var(--mu2);line-height:1.6;margin-bottom:14px">Ricevi promemoria degli allenamenti e avvisi anche con l'app chiusa. Su iPhone funziona solo con l'app installata sulla schermata Home.</p>
+          <button class="p-submit" id="notifToggleBtn" onclick="toggleNotifUI()">ATTIVA NOTIFICHE</button>
+          <div class="pmsg" id="notifStatus" style="margin-top:8px"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Riquadro contatto admin -->
@@ -3111,6 +3120,95 @@ try {
   _firebaseOK = true;
 } catch(e) {
   console.warn('Firebase SDK not available (Claude sandbox mode):', e.message);
+}
+
+// ══════════════════════════════════════════════════
+// NOTIFICHE PUSH (FCM) — Fase 1: registrazione token
+// Service worker: /firebase-messaging-sw.js · invio lato server: api/notify (Fase 2)
+// Token salvati su Firebase: db/fcmTokens/{uid}/{tokenKey} (nodo separato, scrittura
+// diretta → niente race col save debounced di _dbCache, come da lezione bug password).
+// ══════════════════════════════════════════════════
+const VAPID_KEY = 'BBhtrZwuxdv2xpTWyEa_OKsFMWcGibqTKAXhHjVDTwS6dl9SoVXpyCNTINSsgYDAPwNrwtmKm7dtSJU1yyC24HU';
+let _fbMessaging = null;
+let _swReg = null;
+
+function notifSupported(){
+  return _firebaseOK && ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
+}
+function sanitizeTokenKey(t){ return t.replace(/[.#$\[\]\/]/g,'_'); }
+
+async function registerPushSW(){
+  if(!('serviceWorker' in navigator)) throw new Error('unsupported');
+  if(_swReg) return _swReg;
+  _swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+  return _swReg;
+}
+
+async function enablePushNotifications(){
+  if(!notifSupported()) throw new Error('unsupported');
+  const reg = await registerPushSW();
+  const perm = await Notification.requestPermission();
+  if(perm !== 'granted') throw new Error('denied');
+  if(!_fbMessaging) _fbMessaging = firebase.messaging();
+  const token = await _fbMessaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+  if(!token) throw new Error('no-token');
+  if(_fbDB && CU){
+    await _fbDB.ref('db/fcmTokens/'+CU.id+'/'+sanitizeTokenKey(token)).set({
+      token: token, ua: (navigator.userAgent||'').slice(0,180), ts: Date.now()
+    });
+  }
+  // messaggi in primo piano (app aperta) → mostra comunque la notifica
+  try{ _fbMessaging.onMessage(p=>{ const n=p.notification||p.data||{};
+    if(_swReg) _swReg.showNotification(n.title||'Centro Darts Lab',{body:n.body||'',icon:'/icon-192.png',data:{url:(p.data&&p.data.url)||'/'}}); }); }catch(e){}
+  try{ localStorage.setItem('notifEnabled','1'); }catch(e){}
+  return token;
+}
+
+async function disablePushNotifications(){
+  try{
+    if(!_fbMessaging) _fbMessaging = firebase.messaging();
+    const reg = _swReg || await registerPushSW();
+    const token = await _fbMessaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: reg }).catch(()=>null);
+    if(token && _fbDB && CU) await _fbDB.ref('db/fcmTokens/'+CU.id+'/'+sanitizeTokenKey(token)).remove();
+    if(token) await _fbMessaging.deleteToken().catch(()=>{});
+  }catch(e){}
+  try{ localStorage.removeItem('notifEnabled'); }catch(e){}
+}
+
+async function toggleNotifUI(){
+  const btn=document.getElementById('notifToggleBtn'), status=document.getElementById('notifStatus');
+  if(!btn||!status) return;
+  const isOn = (typeof Notification!=='undefined' && Notification.permission==='granted' && localStorage.getItem('notifEnabled')==='1');
+  if(isOn){ // disattiva
+    btn.disabled=true; status.className='pmsg'; status.textContent='Disattivazione…';
+    await disablePushNotifications();
+    btn.disabled=false; refreshNotifUI();
+    status.textContent='Notifiche disattivate su questo dispositivo.';
+    return;
+  }
+  if(!notifSupported()){ status.className='pmsg err'; status.textContent='Notifiche non supportate qui. Su iPhone installa prima l\'app (Aggiungi a Home).'; return; }
+  if(typeof Notification!=='undefined' && Notification.permission==='denied'){
+    status.className='pmsg err'; status.textContent='Permesso negato. Riattiva le notifiche per questo sito dalle impostazioni del browser/telefono.'; return; }
+  try{
+    btn.disabled=true; status.className='pmsg'; status.textContent='Attivazione…';
+    await enablePushNotifications();
+    btn.disabled=false; refreshNotifUI();
+    status.className='pmsg ok'; status.textContent='✓ Notifiche attive su questo dispositivo.';
+  }catch(e){
+    btn.disabled=false;
+    status.className='pmsg err';
+    if(e.message==='denied') status.textContent='Permesso negato. Abilita le notifiche dalle impostazioni del browser/telefono.';
+    else if(e.message==='unsupported') status.textContent='Notifiche non supportate qui. Su iPhone installa prima l\'app (Aggiungi a Home, iOS 16.4+).';
+    else status.textContent='Errore attivazione. Su iPhone serve l\'app installata (Aggiungi a Home, iOS 16.4+). Dettaglio: '+(e.message||e);
+    refreshNotifUI();
+  }
+}
+
+function refreshNotifUI(){
+  const btn=document.getElementById('notifToggleBtn');
+  if(!btn) return;
+  const isOn = (typeof Notification!=='undefined' && Notification.permission==='granted' && localStorage.getItem('notifEnabled')==='1');
+  btn.textContent = isOn ? 'DISATTIVA NOTIFICHE' : 'ATTIVA NOTIFICHE';
 }
 
 // ── Auth state: auto-login on page load / session restore ──
@@ -5797,6 +5895,9 @@ function loadProfileForm(){
   // Il riquadro contatto è visibile a tutti
   const contactBox = document.getElementById('profileContactBox');
   if(contactBox) contactBox.style.display = '';
+  // Stato bottone notifiche
+  try{ refreshNotifUI(); const st=document.getElementById('notifStatus');
+    if(st && !notifSupported()){ st.className='pmsg'; st.textContent='Su iPhone le notifiche funzionano solo con l\'app installata (Aggiungi a Home).'; } }catch(e){}
 }
 
 function saveProfile(){
