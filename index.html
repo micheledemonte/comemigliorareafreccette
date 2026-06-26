@@ -12519,8 +12519,9 @@ window.DartCam = (function(){
   const SETTLE_MS=1100;       // stabilizzazione esposizione prima di acquisire lo sfondo
   const STABLE_NEED=2;        // frame stabili richiesti (come v246, sensibilità buona)
   const REARM_TIMEOUT=5000;
-  const MOTION_GATE_FRAC=0.018; // diff tra frame CONSECUTIVI oltre questa frazione del bersaglio = inquadratura instabile (treppiede che oscilla) → niente detection
+  const MOTION_GATE_FRAC=0.025; // diff tra frame CONSECUTIVI oltre questa frazione del bersaglio = inquadratura instabile (treppiede che oscilla) → niente detection
   const REBASE_RUN=5;           // tick di instabilità accumulati (~750ms) oltre i quali, al ritorno della stabilità, si rifà lo sfondo (distingue scuotimento da lancio breve)
+  const UNSTABLE_SHOW=3;        // tick instabili CONSECUTIVI prima di MOSTRARE l'avviso (debounce: un singolo spike non fa lampeggiare il messaggio)
   const ZMIN=1, ZMAX=3, ZSTEP=0.5;
   const LS_CAL='dcCalPts', LS_INPUT='dcInputMethod', LS_BOARD='dcBoardType', LS_BIAS='dcBias', LS_COLLECT='dcCollect', LS_AI='dcAI';
   const DATA_DB='dartDataset', DATA_STORE='samples';
@@ -12533,7 +12534,7 @@ window.DartCam = (function(){
            calLocked:[], calProv:null, calStep:0, calibrating:false,
            insideMask:null, rMap:null, insideCount:0, _dm:null, _vis:null,
            _committedMask:null, _dartComps:[null,null,null], _lastComp:null,
-           refData:null, emptyRef:null, prevFrame:null, unstableRun:0, phase:'idle', darts:[null,null,null], curIdx:0,
+           refData:null, emptyRef:null, prevFrame:null, unstableRun:0, hintState:null, phase:'idle', darts:[null,null,null], curIdx:0,
            prov:null, stableCount:0, tipBuf:null, lastCommit:0, rearmT0:0, rearmClearCount:0,
            lastTurnTotal:null, pkIdx:0, pkMult:1, chipIdx:0, moveMode:null, movePreview:null,
            bias:{sx:0,sy:0,n:0}, timer:null, settleTimer:null,
@@ -12867,10 +12868,10 @@ window.DartCam = (function(){
   function settleThenArm(){ S.phase='settle'; setHint('Messa a fuoco in corso, attendi un attimo…');
     if(S.settleTimer) clearTimeout(S.settleTimer);
     S.settleTimer=setTimeout(()=>{ const f=grabProc(); if(f){ S.emptyRef=f; S.refData=f; } S.lastCommit=Date.now();
-      S.phase='aim'; S.prov=null; S.stableCount=0; S.tipBuf=null; S.prevFrame=null; S.unstableRun=0; setHint(readyHint()); }, SETTLE_MS); }
+      S.phase='aim'; S.prov=null; S.stableCount=0; S.tipBuf=null; S.prevFrame=null; S.unstableRun=0; S.hintState='ready'; setHint(readyHint()); }, SETTLE_MS); }
   function armFromEmpty(cur){ const f=cur||grabProc(); if(f){ S.refData=f; if(!S.emptyRef) S.emptyRef=f; }
     S.phase='aim'; S.lastCommit=Date.now(); S.rearmT0=0; S.rearmClearCount=0;
-    S.prov=null; S.stableCount=0; S.tipBuf=null; S.prevFrame=null; S.unstableRun=0; setHint(readyHint()); }
+    S.prov=null; S.stableCount=0; S.tipBuf=null; S.prevFrame=null; S.unstableRun=0; S.hintState='ready'; setHint(readyHint()); }
   function dist(a,b){ return Math.hypot(a.px-b.px,a.py-b.py); }
   function tick(){ if(!layerOpen()) return; updateHud(); drawOverlay();
     if(S.calibrating || !S.H || !S.proc || S.phase==='settle') return;
@@ -12888,19 +12889,21 @@ window.DartCam = (function(){
       const motion=maskedDiffCount(cur,S.prevFrame);
       S.prevFrame=cur;
       if(motion > S.insideCount*MOTION_GATE_FRAC){
-        S.unstableRun=Math.min(S.unstableRun+1,12);
+        // frame mosso → niente detection su questo tick (no frecce fantasma).
+        S.unstableRun=Math.min(S.unstableRun+1,20);
         S.stableCount=0; S.tipBuf=null;
-        setHint('📷 Inquadratura instabile, stabilizza il telefono e attendi…');
+        // l'avviso compare SOLO se l'instabilità persiste (debounce): un singolo spike
+        // (la freccia che compare, un autofocus) non deve far lampeggiare il messaggio.
+        if(S.unstableRun>=UNSTABLE_SHOW && S.hintState!=='unstable'){
+          setHint('📷 Inquadratura instabile, stabilizza il telefono e attendi…'); S.hintState='unstable'; }
         return;
-      } else if(S.unstableRun>=REBASE_RUN){
-        // si torna stabili dopo uno scuotimento (non un lancio breve) → sfondo nuovo, no falso
-        S.refData=cur; S.lastCommit=Date.now();
-        S.unstableRun=0; S.prov=null; S.stableCount=0; S.tipBuf=null;
-        setHint(readyHint());
-        return;
-      } else {
-        S.unstableRun=Math.max(S.unstableRun-1,0);
       }
+      // frame fermo → si rileva. Dopo uno scuotimento PROLUNGATO si rifà lo sfondo (no falso al
+      // primo frame fermo); un lancio breve (pochi tick) NON rifà lo sfondo → freccia vera ok.
+      if(S.unstableRun>=REBASE_RUN){ S.refData=cur; S.lastCommit=Date.now(); S.prov=null; S.stableCount=0; S.tipBuf=null; }
+      S.unstableRun=0;
+      // telefono fermo → "Pronto…" torna SUBITO e resta FISSO (fix flicker instabile v257).
+      if(S.hintState!=='ready'){ setHint(readyHint()); S.hintState='ready'; }
     } else { S.prevFrame=cur; }
     if(Date.now()-S.lastCommit < COOLDOWN) return;
     const det=detectDart(cur);
