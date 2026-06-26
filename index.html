@@ -995,7 +995,7 @@ html.game-active,body.game-active{overscroll-behavior:none;touch-action:none}
   .leg-data-grid .leg-row3{ display:flex !important; align-items:center; gap:6px; flex-wrap:nowrap; white-space:nowrap; }
 }
 /* Prev501 mode filter */
-#prev501ModeSolo.active,#prev501ModeOpponent.active,#prev501ModeTournament.active{background:var(--green);color:#000}
+#prev501ModeSolo.active,#prev501ModeOpponent.active,#prev501ModeTournament.active{background:rgba(34,197,94,.18);color:#86efac;border-color:#22c55e;box-shadow:0 0 12px rgba(34,197,94,.25)}
 /* Tour compare filter */
 .tour-compare-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 
@@ -1177,8 +1177,8 @@ html.game-active,body.game-active{overscroll-behavior:none;touch-action:none}
 .at-check.on{border-color:var(--green);background:var(--gdim);color:var(--green)}
 .at-check input{display:none}
 .at-arm-sel{display:flex;gap:8px;margin-bottom:14px}
-.at-arm-btn{flex:1;padding:9px;border-radius:6px;border:1px solid var(--d5);background:var(--d3);color:var(--mu2);font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;text-align:center}
-.at-arm-btn.on{border-color:var(--green);background:var(--gdim);color:var(--green)}
+.at-arm-btn{flex:1;padding:9px;border-radius:6px;border:1.5px solid var(--d5);background:var(--d3);color:var(--mu2);font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;text-align:center}
+.at-arm-btn.on{border-color:#22c55e;background:rgba(34,197,94,.18);color:#86efac;box-shadow:0 0 12px rgba(34,197,94,.25)}
 .at-results{background:var(--d2);border:1px solid var(--d4);border-radius:16px;padding:18px;margin-top:16px;display:none}
 .at-results.show{display:block}
 .at-results-title{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--green);margin-bottom:14px;letter-spacing:.04em}
@@ -2816,7 +2816,7 @@ body.in-app #lProgress{display:none}
       <div class="dc-pg-lbl">Tipo bersaglio</div>
       <div class="dc-pg-row" id="dcPgBoard">
         <button data-v="steel" onclick="DartCam.pgSetBoard('steel')">🎯 Steel</button>
-        <button data-v="soft" onclick="DartCam.pgSetBoard('soft')">🟢 Soft</button>
+        <button data-v="soft" onclick="DartCam.pgSetBoard('soft')">🎯 Soft</button>
       </div>
       <div class="dc-pg-note">Steel: vale la freccia che resta sul bersaglio oltre 3 secondi. Soft: vale subito, anche i rimbalzi.</div>
     </div>
@@ -3789,6 +3789,8 @@ async function patchDmPenultimo(){
 function enterApp(){
   document.getElementById('loadingOverlay').style.display='none';
   closeLogin();
+  // Ad ogni login la sezione 501 riparte da Solitario (poi la scelta persiste tra le tab)
+  _trainMode='solo'; _prev501Mode='solo';
   const isAdmin        = CU.role==='admin';
   const isBlocked      = CU.blocked === true;
   const isDeviceBlocked= CU._deviceBlocked === true;
@@ -4583,6 +4585,7 @@ function showTab(name,silent=false){
     if(name==='profile')        loadProfileForm();
     if(name==='checkout')       renderCOTables();
   }
+  if(name==='play501') init501Tab();
   // Cambio tab: riparti dall'alto (ora scorre il documento, non #appLayer)
   try{ window.scrollTo(0,0); }catch(e){}
 }
@@ -9539,6 +9542,7 @@ function _doMergeTrainingSessions(trainSess){
 
 // ══ MODE SELECTOR FOR SESSIONI PRECEDENTI ══
 var _prev501Mode = 'solo'; // 'solo' | 'opponent' | 'tournament'
+var _trainMode = 'solo';   // modalità ALLENAMENTO 501 (Solitario/Con avversario): persiste tra le tab, reset a 'solo' al login
 var _tourCompareFilter = 'all'; // 'all' | 'won' | 'lost'
 
 function setPrev501Mode(mode){
@@ -9553,10 +9557,21 @@ function setPrev501Mode(mode){
 }
 
 function setTrainMode(mode){
+  _trainMode = mode; // memorizza la scelta così persiste tornando sulla tab 501
   document.getElementById('trainModeSolo').classList.toggle('active', mode==='solo');
   document.getElementById('trainModeOpponent').classList.toggle('active', mode==='opponent');
   document.getElementById('trainPanelSolo').style.display = mode==='solo' ? '' : 'none';
   document.getElementById('trainPanelOpponent').style.display = mode==='opponent' ? '' : 'none';
+}
+
+// Riapplica lo stato della tab 501 quando la si (ri)apre: la modalità scelta resta
+// selezionata cambiando sezione; di default (e a ogni login, vedi enterApp) è 'solo'.
+function init501Tab(){
+  setTrainMode(_trainMode || 'solo');
+  const pm = _prev501Mode || 'solo';
+  document.getElementById('prev501ModeSolo')?.classList.toggle('active', pm==='solo');
+  document.getElementById('prev501ModeOpponent')?.classList.toggle('active', pm==='opponent');
+  document.getElementById('prev501ModeTournament')?.classList.toggle('active', pm==='tournament');
 }
 
 function trainOppMatchTypeChange(){
