@@ -74,10 +74,11 @@ module.exports = async function handler(req, res) {
       const admins = users.filter(u => u.role === 'admin' && u.id);
       const senderName = String(body.senderName || 'Un utente').slice(0, 60);
       const preview = String(body.preview || '').slice(0, 140);
-      // 1ª riga = titolo "Centro Darts Lab"; 2ª riga = nome utente; 3ª riga = anteprima messaggio
+      // 1ª riga = nome app OS ("Centro Darts Lab", manifest short_name); 2ª riga = TITLE in
+      // grassetto = nome utente; 3ª riga = BODY = anteprima messaggio.
       const data = {
-        title: 'Centro Darts Lab',
-        body: senderName + '\n' + (preview || 'Hai ricevuto una nuova richiesta.'),
+        title: senderName,
+        body: preview || 'Hai ricevuto una nuova richiesta.',
         url: '/',
         tag: 'req_' + callerUid,
       };
@@ -106,10 +107,11 @@ module.exports = async function handler(req, res) {
       const line3 = (dataStr && oraStr)
         ? ('Allenamento ' + action + ' a ' + dataStr + ' ore ' + oraStr)
         : ('Allenamento ' + action);
-      // 1ª riga = titolo "Centro Darts Lab"; 2ª riga = "Allenamento fissato/spostato"; 3ª riga = dettaglio
+      // 1ª riga = nome app OS ("Centro Darts Lab"); 2ª riga = TITLE in grassetto = "Allenamento
+      // fissato/spostato"; 3ª riga = BODY = dettaglio con data e ora.
       const data = {
-        title: 'Centro Darts Lab',
-        body: 'Allenamento ' + action + '\n' + line3,
+        title: 'Allenamento ' + action,
+        body: line3,
         url: '/',
         tag: 'appt_' + targetUid,
       };
