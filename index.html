@@ -654,9 +654,9 @@ select:hover{border-color:var(--green)}
 .req-detail-user .rdu-label{font-size:11px;color:var(--mu2);text-transform:uppercase;letter-spacing:.07em;min-width:60px}
 .req-detail-msg{background:var(--d2);border:1px solid var(--d4);border-radius:10px;padding:16px;margin-bottom:16px;font-size:15px;color:var(--light);line-height:1.6;white-space:pre-wrap}
 .req-detail-ts{font-size:12px;color:var(--muted);margin-bottom:20px}
-.req-reply-btn{background:var(--gdim);border:1.5px solid var(--green);color:var(--green);padding:10px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;width:100%;margin-bottom:10px}
-.req-reply-btn:hover{background:#052e16}
-.req-reply-btn.replied{background:var(--d4);border-color:var(--d5);color:var(--mu2);cursor:default;pointer-events:none}
+.req-reply-btn{background:rgba(34,197,94,.18);border:1.5px solid #22c55e;color:#86efac;box-shadow:0 0 12px rgba(34,197,94,.25);padding:10px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;width:100%;margin-bottom:10px}
+.req-reply-btn:hover{background:rgba(34,197,94,.28)}
+.req-reply-btn.replied{background:var(--d4);border-color:var(--d5);color:var(--mu2);box-shadow:none;cursor:default;pointer-events:none}
 /* Dot notifica dock — sulla ld-icon del gestionale */
 .ld-dot{position:absolute;top:-3px;right:-5px;width:9px;height:9px;background:#ef4444;border-radius:50%;border:1.5px solid var(--dark);display:none}
 .ld-dot.visible{display:block}
@@ -7676,7 +7676,7 @@ function reqOpenDetail(reqId){
   const _waPhone = (r.phone||'').replace(/\D/g,'');
   const _waNum = _waPhone.startsWith('39') ? _waPhone : (_waPhone ? '39'+_waPhone : '');
   const waBtn = (_waNum && _waText)
-    ? '<a href="https://wa.me/'+_waNum+'?text='+encodeURIComponent(_waText)+'" target="_blank" onclick="reqToggleReplied(\''+reqId+'\')" style="display:block;width:100%;box-sizing:border-box;background:#25d366;color:#000;border:none;padding:12px;border-radius:999px;font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:14px;cursor:pointer;text-decoration:none;text-align:center;margin-bottom:10px;letter-spacing:.03em">💬 RISPONDI SU WHATSAPP</a>'
+    ? '<a href="https://wa.me/'+_waNum+'?text='+encodeURIComponent(_waText)+'" target="_blank" onclick="reqToggleReplied(\''+reqId+'\')" style="display:block;width:100%;box-sizing:border-box;background:#22c55e;color:#04140a;border:1.5px solid #166534;box-shadow:0 0 34px rgba(22,101,52,.95),0 0 15px rgba(22,101,52,.9);padding:12px;border-radius:999px;font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:14px;cursor:pointer;text-decoration:none;text-align:center;margin-bottom:10px;letter-spacing:.03em">💬 RISPONDI SU WHATSAPP</a>'
     : (!r.phone ? '<div style="font-size:12px;color:var(--mu2);margin-bottom:10px">⚠️ Numero di telefono non disponibile per questo utente.</div>' : '');
 
   document.getElementById('reqDetailContent').innerHTML =
@@ -7696,7 +7696,7 @@ function reqOpenDetail(reqId){
     +waBtn
     +'<button class="req-reply-btn'+(isReplied?' replied':'')+'" id="reqReplyBtn" data-reqid="'+reqId+'" onclick="reqToggleReplied(this)">'
     +(isReplied ? '✓ HAI GIÀ RISPOSTO' : '📝 SEGNA COME RISPOSTO')+'</button>'
-    +(isReplied ? '<button id="reqUnreadBtn" onclick="reqMarkUnread(\''+reqId+'\')" style="width:100%;background:transparent;color:var(--mu2);border:1.5px solid var(--d5);padding:10px;border-radius:999px;font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:13px;cursor:pointer;margin-top:8px;letter-spacing:.03em">↩ SEGNA COME NON LETTO</button>' : '');
+    +(isReplied ? '<button id="reqUnreadBtn" onclick="reqMarkUnread(\''+reqId+'\')" style="width:100%;background:rgba(34,197,94,.18);color:#86efac;border:1.5px solid #22c55e;box-shadow:0 0 12px rgba(34,197,94,.25);padding:10px;border-radius:999px;font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:13px;cursor:pointer;margin-top:8px;letter-spacing:.03em">↩ SEGNA COME NON LETTO</button>' : '');
 
   document.getElementById('reqDetailOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -7743,7 +7743,7 @@ function reqToggleReplied(elOrId){
     const unreadBtn = document.createElement('button');
     unreadBtn.id = 'reqUnreadBtn';
     unreadBtn.textContent = '↩ SEGNA COME NON LETTO';
-    unreadBtn.style.cssText = 'width:100%;background:transparent;color:var(--mu2);border:1.5px solid var(--d5);padding:10px;border-radius:999px;font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:13px;cursor:pointer;margin-top:8px;letter-spacing:.03em';
+    unreadBtn.style.cssText = 'width:100%;background:rgba(34,197,94,.18);color:#86efac;border:1.5px solid #22c55e;box-shadow:0 0 12px rgba(34,197,94,.25);padding:10px;border-radius:999px;font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:13px;cursor:pointer;margin-top:8px;letter-spacing:.03em';
     unreadBtn.onclick = function(){ reqMarkUnread(reqId); };
     if(btn.parentNode) btn.parentNode.insertBefore(unreadBtn, btn.nextSibling);
   }

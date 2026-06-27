@@ -74,9 +74,10 @@ module.exports = async function handler(req, res) {
       const admins = users.filter(u => u.role === 'admin' && u.id);
       const senderName = String(body.senderName || 'Un utente').slice(0, 60);
       const preview = String(body.preview || '').slice(0, 140);
+      // 1ª riga = titolo "Centro Darts Lab"; 2ª riga = nome utente; 3ª riga = anteprima messaggio
       const data = {
-        title: 'Nuova richiesta da ' + senderName,
-        body: preview || 'Hai ricevuto una nuova richiesta.',
+        title: 'Centro Darts Lab',
+        body: senderName + '\n' + (preview || 'Hai ricevuto una nuova richiesta.'),
         url: '/',
         tag: 'req_' + callerUid,
       };
@@ -91,17 +92,24 @@ module.exports = async function handler(req, res) {
       const targetUid = body.targetUid;
       if (!targetUid) return res.status(400).json({ error: 'Missing targetUid' });
       const action = body.action === 'moved' ? 'spostato' : 'fissato';
-      let when = '';
+      // data = "gio 02/07" (giorno settimana + gg/mm), ora = "20:30". Parse e format in UTC
+      // così la wall-clock del datetime-local viene preservata (runtime Vercel = UTC).
+      let dataStr = '', oraStr = '';
       try {
         if (body.dt) {
-          when = new Date(body.dt).toLocaleString('it-IT', {
-            weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
-          });
+          const iso = body.dt.length === 16 ? body.dt + ':00Z' : (body.dt.length === 19 ? body.dt + 'Z' : body.dt);
+          const d = new Date(iso);
+          dataStr = d.toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit', timeZone: 'UTC' });
+          oraStr  = d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
         }
       } catch (e) {}
+      const line3 = (dataStr && oraStr)
+        ? ('Allenamento ' + action + ' a ' + dataStr + ' ore ' + oraStr)
+        : ('Allenamento ' + action);
+      // 1ª riga = titolo "Centro Darts Lab"; 2ª riga = "Allenamento fissato/spostato"; 3ª riga = dettaglio
       const data = {
-        title: 'Allenamento ' + action,
-        body: when ? ('Il tuo allenamento è stato ' + action + ' per ' + when) : ('Il tuo allenamento è stato ' + action + '.'),
+        title: 'Centro Darts Lab',
+        body: 'Allenamento ' + action + '\n' + line3,
         url: '/',
         tag: 'appt_' + targetUid,
       };
