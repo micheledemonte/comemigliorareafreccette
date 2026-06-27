@@ -3948,7 +3948,6 @@ function enterApp(){
   checkReset();
   if(isAdmin) setTimeout(()=>{
     calLoadIcsSaved();
-    gsRestoreNotifications();
     reqStartListener();
     startDBListeners();
   }, 800);
@@ -6824,8 +6823,7 @@ function gsApptSave(){
   p.lezioni[idx].adminRef = adminId;
   if(dt) p.lezioni[idx].setAt = Date.now(); // timestamp di quando è stato fissato/spostato
   gsSetPercorso(uid, p);
-  if(dt) notifyApptPush(uid, dt, _prevDt ? 'moved' : 'created', note); // push all'utente (Fase 2)
-  if(dt) gsScheduleNotifications(uid, idx, dt, note, getUsers().find(u=>u.id===uid));
+  if(dt) notifyApptPush(uid, dt, _prevDt ? 'moved' : 'created', note); // push immediato (Fase 2); i promemoria schedulati li manda api/cron-reminders (Fase 3)
   gsApptCancel();
   const u    = getUsers().find(u=>u.id===uid);
   const body = document.getElementById('gsBody_'+uid);
@@ -8466,55 +8464,11 @@ function calExportICS(btn){
   // La classe ics-saved mantiene lo stile grigio in modo permanente
 }
 // ══════════════════════════════════════════════════
-// NOTIFICHE BROWSER — appuntamenti lezioni
+// NOTIFICHE LEZIONI → lato server: api/cron-reminders.js + GitHub Action (Fase 3).
+// Rimosso il vecchio scheduler setTimeout (richiedeva la pagina aperta, inutile ad app
+// chiusa). I promemoria [24h,12h,2h,1h,30m,15m] li manda il cron; l'invio immediato
+// "fissato/spostato" resta in gsApptSave via notifyApptPush.
 // ══════════════════════════════════════════════════
-// Chiave Firebase: userData[adminUid]/__notifTimers = { 'uid_idx': dt }
-// Le notifiche vengono schedulate via setTimeout localmente alla sessione
-// e richiedono la pagina aperta (no push server-side).
-
-let _gsNotifTimers = {}; // key -> [timeoutId, ...]
-
-function gsScheduleNotifications(uid, idx, dt, note, studentUser){
-  if(!dt) return;
-  const key = uid+'_'+idx;
-  // Cancella timer precedenti per questa lezione
-  (_gsNotifTimers[key]||[]).forEach(t=>clearTimeout(t));
-  _gsNotifTimers[key] = [];
-
-  const lessonMs = new Date(dt).getTime();
-  const now      = Date.now();
-  const userName = studentUser ? studentUser.firstName+' '+studentUser.lastName : 'Studente';
-  const noteStr  = note ? ` · ${note}` : '';
-  const label    = `Allenamento ${idx+1} — ${userName}${noteStr}`;
-
-  const offsets = [
-    {ms: 24*60*60*1000, txt:'tra 24 ore'},
-    {ms: 12*60*60*1000, txt:'tra 12 ore'},
-    {ms:    60*60*1000, txt:'tra 1 ora'},
-    {ms:    30*60*1000, txt:'tra 30 minuti'},
-  ];
-
-  // Richiedi permesso notifiche
-  if('Notification' in window && Notification.permission==='default'){
-    Notification.requestPermission();
-  }
-
-  offsets.forEach(({ms, txt})=>{
-    const fireAt = lessonMs - ms;
-    const delay  = fireAt - now;
-    if(delay < 0) return; // già passato
-    const tid = setTimeout(()=>{
-      if(Notification.permission==='granted'){
-        new Notification('📅 '+label, {
-          body: `L'allenamento è ${txt}`,
-          icon: '/favicon.ico',
-          tag:  key+'_'+ms,
-        });
-      }
-    }, delay);
-    _gsNotifTimers[key].push(tid);
-  });
-}
 
 // ── Elimina tutte le richieste (admin only, uso una-tantum) ─────────────────
 
@@ -8543,20 +8497,6 @@ function calLoadIcsSaved(){
   });
 }
 
-// Re-schedula notifiche al login per tutti gli appuntamenti futuri degli admin
-function gsRestoreNotifications(){
-  if(!CU || CU.role!=='admin') return;
-  const users = getUsers().filter(u=>u.role!=='admin');
-  users.forEach(u=>{
-    const p = gsGetPercorso(u.id);
-    if(!p) return;
-    p.lezioni.forEach((l,i)=>{
-      if(l.dt && new Date(l.dt).getTime() > Date.now()){
-        gsScheduleNotifications(u.id, i, l.dt, l.note, u);
-      }
-    });
-  });
-}
 
 // (renderStatsInto rimossa: l'admin ora riusa renderStats(uid, {container, idPrefix:'asc'})
 //  per mostrare ESATTAMENTE gli stessi grafici dell'utente.)

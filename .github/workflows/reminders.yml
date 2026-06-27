@@ -1,0 +1,20 @@
+name: Promemoria allenamenti
+
+# Scheduler dei promemoria push (Fase 3). Ogni ~5 minuti chiama l'endpoint Vercel
+# api/cron-reminders, che manda le notifiche [24h,12h,2h,1h,30m,15m] prima di ogni lezione.
+# Repo pubblico → minuti Actions gratis. Le notifiche vere le decide/invia l'endpoint.
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # ogni 5 minuti (orario UTC)
+  workflow_dispatch:          # permette l'esecuzione manuale dal tab "Actions"
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chiama api/cron-reminders
+        run: |
+          curl -sS -m 60 -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://comemigliorareafreccette.vercel.app/api/cron-reminders" \
+            -w "\nHTTP %{http_code}\n"
