@@ -25,12 +25,28 @@ const LABEL = {
 };
 
 function sanitizeTokenKey(t) { return t.replace(/[.#$\[\]\/]/g, '_'); }
-function toUtcIso(dt) { return dt.length === 16 ? dt + ':00Z' : (dt.length === 19 ? dt + 'Z' : dt); }
+// L'orario lezione (datetime-local, SENZA fuso) è ora ITALIANA. Va convertito in epoch reale
+// (DST-aware via Europe/Rome): interpretarlo come UTC sfasava il confronto con "now" di 1-2h,
+// così le finestre 30m/15m scattavano 1-2h dopo la lezione → nessuna notifica.
+function romeOffsetMinutes(utcMs) {
+  const s = new Date(utcMs).toLocaleString('en-US', { timeZone: 'Europe/Rome', hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const m = s.match(/(\d{2})\/(\d{2})\/(\d{4}),?\s+(\d{2}):(\d{2}):(\d{2})/);
+  if (!m) return 0;
+  const asIfUtc = Date.UTC(+m[3], +m[1] - 1, +m[2], +m[4], +m[5], +m[6]);
+  return Math.round((asIfUtc - utcMs) / 60000);
+}
+function lessonEpoch(dt) {
+  const m = String(dt).match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!m) return NaN;
+  const naiveUtc = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+  return naiveUtc - romeOffsetMinutes(naiveUtc) * 60000;
+}
 function fmtDateTime(dt) {
-  const d = new Date(toUtcIso(dt));
+  const d = new Date(lessonEpoch(dt));
   return {
-    data: d.toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit', timeZone: 'UTC' }),
-    ora:  d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }),
+    data: d.toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit', timeZone: 'Europe/Rome' }),
+    ora:  d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }),
   };
 }
 
@@ -78,7 +94,7 @@ module.exports = async function handler(req, res) {
       if (!perc || !Array.isArray(perc.lezioni)) continue;
       for (const lez of perc.lezioni) {
         if (!lez || !lez.dt || !lez.icsId) continue;
-        const lessonMs = new Date(toUtcIso(lez.dt)).getTime();
+        const lessonMs = lessonEpoch(lez.dt);
         if (isNaN(lessonMs) || lessonMs <= now) continue; // lezione passata o invalida
         checked++;
         for (const W of WINDOWS) {
