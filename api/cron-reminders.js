@@ -128,7 +128,7 @@ module.exports = async function handler(req, res) {
           const sentVal = sentSnap.val() || {};
           const wins = WINDOWS.map(W => {
             const s = (now - (lessonMs - W * 60000)) / 60000;
-            return { W, sinceTrigger: +s.toFixed(2), eligible: s >= 0 && s < GRACE_MIN, alreadySent: sentVal[W] != null };
+            return { W, sinceTrigger: +s.toFixed(2), eligible: s >= 0 && s < GRACE_MIN, alreadySent: sentVal[W] === lez.dt, mark: sentVal[W] != null ? String(sentVal[W]) : null };
           });
           report.push({ uid, dt: lez.dt, icsId: lez.icsId, minutesToLesson: +minsTo.toFixed(2), tokens: tk.length, sentKeys: Object.keys(sentVal), windows: wins });
         }
@@ -154,10 +154,14 @@ module.exports = async function handler(req, res) {
           const sinceTrigger = (now - (lessonMs - W * 60000)) / 60000; // minuti dal trigger
           if (sinceTrigger < 0 || sinceTrigger >= GRACE_MIN) continue;  // non scattata o ormai stale
           ops.push((async () => {
-            // anti-doppione: scrive solo se la finestra non è già stata inviata
+            // anti-doppione legato a (icsId, W, dt): invia solo se quella finestra non è già
+            // stata inviata PER QUESTA data/ora. Memorizza lez.dt come marca. Se la lezione viene
+            // spostata (dt cambia), la marca vecchia ≠ dt nuovo → la finestra si ri-arma e riparte.
+            // (Bug precedente: marca = timestamp legata al solo icsId → spostando/riprovando una
+            //  lezione la chiave restava settata e bloccava per sempre quella finestra, es. i 15 min.)
             const ref = db.ref('db/reminderSent/' + lez.icsId + '/' + W);
-            const tx = await ref.transaction(cur => (cur === null ? now : undefined));
-            if (!tx.committed) return; // già inviata da un altro run
+            const tx = await ref.transaction(cur => (cur === lez.dt ? undefined : lez.dt));
+            if (!tx.committed) return; // già inviata per questa stessa data/ora
             const { data, ora } = fmtDateTime(lez.dt);
             const n = await sendToUid(uid, {
               title: LABEL[W] || 'Promemoria allenamento',
