@@ -95,47 +95,6 @@ module.exports = async function handler(req, res) {
       const p = ps.val();
       if (p && Array.isArray(p.lezioni)) percMap[u.id] = p;
     }));
-    // DEBUG read-only: ?debug=1 → per ogni lezione futura, stato per-finestra senza scrivere/inviare.
-    // ?force=<icsId>&w=<min>&uid=<uid> → invia SUBITO quella finestra (test delivery isolato, ignora orario/anti-doppione).
-    if (req.query && (req.query.debug || req.query.force)) {
-      if (req.query.force) {
-        const fIcs = String(req.query.force), fW = Number(req.query.w) || 15, fUid = String(req.query.uid || '');
-        let dt = null, uid = fUid;
-        for (const u of Object.keys(percMap)) {
-          for (const lez of (percMap[u].lezioni || [])) {
-            if (lez && lez.icsId === fIcs) { dt = lez.dt; uid = uid || u; }
-          }
-        }
-        const fmt = dt ? fmtDateTime(dt) : { data: '(test)', ora: '' };
-        const tk = await tokensForUid(uid);
-        const n = await sendToUid(uid, {
-          title: LABEL[fW] || 'Promemoria allenamento',
-          body: 'Allenamento ' + fmt.data + ' ore ' + fmt.ora,
-          url: '/', tag: 'reminder_' + fIcs + '_' + fW,
-        });
-        return res.status(200).json({ force: true, uid, icsId: fIcs, w: fW, tokens: tk.length, sent: n });
-      }
-      const report = [];
-      for (const uid of Object.keys(percMap)) {
-        const tk = await tokensForUid(uid);
-        for (const lez of (percMap[uid].lezioni || [])) {
-          if (!lez || !lez.dt || !lez.icsId) continue;
-          const lessonMs = lessonEpoch(lez.dt);
-          if (isNaN(lessonMs)) continue;
-          const minsTo = (lessonMs - now) / 60000;
-          if (minsTo < -GRACE_MIN || minsTo > 1500) continue; // solo lezioni rilevanti a breve
-          const sentSnap = await db.ref('db/reminderSent/' + lez.icsId).once('value');
-          const sentVal = sentSnap.val() || {};
-          const wins = WINDOWS.map(W => {
-            const s = (now - (lessonMs - W * 60000)) / 60000;
-            return { W, sinceTrigger: +s.toFixed(2), eligible: s >= 0 && s < GRACE_MIN, alreadySent: sentVal[W] === lez.dt, mark: sentVal[W] != null ? String(sentVal[W]) : null };
-          });
-          report.push({ uid, dt: lez.dt, icsId: lez.icsId, minutesToLesson: +minsTo.toFixed(2), tokens: tk.length, sentKeys: Object.keys(sentVal), windows: wins });
-        }
-      }
-      return res.status(200).json({ debug: true, now, nowISO: new Date(now).toISOString(), lessons: report });
-    }
-
     let checked = 0, sent = 0;
     const ops = [];
 
