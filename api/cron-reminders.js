@@ -84,14 +84,22 @@ module.exports = async function handler(req, res) {
 
   try {
     const now = Date.now();
-    const udSnap = await db.ref('db/userData').once('value');
-    const ud = udSnap.val() || {};
+    // Lettura LEAN: db/users (profili) + per-utente db/userData/{uid}/__percorso, invece di tutto
+    // db/userData (sessioni/statistiche di tutti → troppo pesante da scaricare a ogni run del cron).
+    const usersSnap = await db.ref('db/users').once('value');
+    const usersVal = usersSnap.val() || [];
+    const users = Array.isArray(usersVal) ? usersVal.filter(Boolean) : Object.values(usersVal).filter(Boolean);
+    const percMap = {};
+    await Promise.all(users.filter(u => u && u.id).map(async (u) => {
+      const ps = await db.ref('db/userData/' + u.id + '/__percorso').once('value');
+      const p = ps.val();
+      if (p && Array.isArray(p.lezioni)) percMap[u.id] = p;
+    }));
     let checked = 0, sent = 0;
     const ops = [];
 
-    for (const uid of Object.keys(ud)) {
-      const perc = ud[uid] && ud[uid].__percorso;
-      if (!perc || !Array.isArray(perc.lezioni)) continue;
+    for (const uid of Object.keys(percMap)) {
+      const perc = percMap[uid];
       for (const lez of perc.lezioni) {
         if (!lez || !lez.dt || !lez.icsId) continue;
         const lessonMs = lessonEpoch(lez.dt);
