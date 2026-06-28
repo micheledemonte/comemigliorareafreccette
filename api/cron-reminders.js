@@ -103,7 +103,11 @@ module.exports = async function handler(req, res) {
       for (const lez of perc.lezioni) {
         if (!lez || !lez.dt || !lez.icsId) continue;
         const lessonMs = lessonEpoch(lez.dt);
-        if (isNaN(lessonMs) || lessonMs <= now) continue; // lezione passata o invalida
+        // Tieni la lezione idonea fino a GRACE_MIN dopo l'inizio: così la finestra da 15 min
+        // (W < GRACE) non perde la sua coda di grazia e ha gli stessi ~20 min di cattura delle
+        // altre. Con la vecchia guardia (lessonMs <= now) la coda dei 15 veniva tagliata a 15 min
+        // → con cron a intervalli > 15 min la finestra 15 saltava mentre le altre (20 min) no.
+        if (isNaN(lessonMs) || now >= lessonMs + GRACE_MIN * 60000) continue; // passata o invalida
         checked++;
         for (const W of WINDOWS) {
           const sinceTrigger = (now - (lessonMs - W * 60000)) / 60000; // minuti dal trigger
