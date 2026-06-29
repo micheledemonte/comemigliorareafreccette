@@ -2703,21 +2703,24 @@ body.in-app #lProgress{display:none}
 /* layer camera: z 9505 → sopra lo scoreboard (9500), sotto i dialog doppie/checkout (9510) */
 #dcLayer{position:fixed;inset:0;z-index:9505;background:#000;display:none;flex-direction:column;overflow:hidden;touch-action:none;font-family:'DM Sans',sans-serif}
 #dcLayer.open{display:flex}
-.dc-hud{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 12px;background:#1a3a1a;border-bottom:1px solid #166534}
-.dc-hud-left{flex:1;display:flex;flex-direction:column;gap:5px;align-items:flex-start;font-size:12px;color:#86efac;min-width:0}
+.dc-hud{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:14px 12px;min-height:82px;background:#1a3a1a;border-bottom:1px solid #166534}
+.dc-hud-left{flex:1;display:flex;flex-direction:column;gap:7px;align-items:flex-start;font-size:15px;color:#86efac;min-width:0}
 .dc-hud-left span{white-space:nowrap}
 .dc-hud-left b{color:#fff;font-weight:700}
 .dc-hud-main{flex:0 0 auto;text-align:center;line-height:1}
-.dc-hud-score{font-family:'Bebas Neue',sans-serif;font-size:38px;color:#fff;letter-spacing:1px}
-.dc-hud-co{display:none;font-size:12px;font-weight:600;color:#7fffb5;line-height:1.3;margin-top:2px;letter-spacing:.2px}
+.dc-hud-score{font-family:'Bebas Neue',sans-serif;font-size:54px;color:#fff;letter-spacing:1px}
+.dc-hud-co{display:none;font-size:16px;font-weight:600;color:#7fffb5;line-height:1.3;margin-top:3px;letter-spacing:.2px}
 .dc-hud-right{flex:1;display:flex;justify-content:flex-end}
-.dc-hud-x{background:#ffffff14;border:1px solid #ffffff33;color:#fff;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif}
+.dc-hud-x{background:#000;border:1px solid #ffffff33;color:#fff;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif}
 #dcStage{position:relative;flex:1;min-height:0;overflow:hidden;background:#050505}
 #dcZoomWrap{position:absolute;inset:0;transform-origin:center center;will-change:transform}
 #dcVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
 #dcCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
-.dc-tl{position:absolute;top:10px;left:12px;display:flex;gap:6px;align-items:center;z-index:3}
-.dc-tr{position:absolute;top:10px;right:12px;display:flex;gap:8px;align-items:center;z-index:3}
+.dc-tl{position:absolute;top:10px;left:12px;display:flex;flex-direction:column;gap:6px;align-items:flex-start;z-index:3}
+.dc-tr{position:absolute;top:10px;right:12px;display:flex;flex-direction:column;gap:8px;align-items:flex-end;z-index:3}
+.dc-zoomrow{display:flex;gap:6px;align-items:center}
+#dcRec{display:none;align-items:center;gap:6px;background:#7f1d1dcc;color:#fff;font:600 11px 'DM Sans',sans-serif;padding:3px 9px;border-radius:999px;pointer-events:none}
+#dcTurnSum{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:30px;line-height:1;letter-spacing:1px;pointer-events:none;text-shadow:0 1px 4px #000,0 0 8px #000}
 .dc-x{background:#000a;border:1px solid #ffffff33;color:#fff;border-radius:8px;padding:7px 11px;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif}
 .dc-zoombtn{background:#000a;border:1px solid #ffffff33;color:#fff;border-radius:8px;width:36px;height:36px;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif}
 .dc-zoomlbl{background:#000a;border:1px solid #ffffff33;color:#fff;border-radius:8px;padding:7px 9px;font-size:12px;font-weight:700;min-width:42px;text-align:center;font-family:'DM Sans',sans-serif}
@@ -2776,7 +2779,7 @@ body.in-app #lProgress{display:none}
   <div class="dc-hud">
     <div class="dc-hud-left">
       <span>Turno: <b id="dcHudRound">1</b></span>
-      <span>Punteggio: <b id="dcHudTurn">0</b></span>
+      <span>Frecce: <b id="dcHudDarts">0</b></span>
       <span>Media: <b id="dcHudAvg">—</b></span>
     </div>
     <div class="dc-hud-main">
@@ -2793,15 +2796,18 @@ body.in-app #lProgress{display:none}
     </div>
     <canvas id="dcCanvas"></canvas>
     <div class="dc-tl">
-      <button class="dc-zoombtn" onclick="DartCam.zoom(-1)">−</button>
-      <button class="dc-zoomlbl" id="dcZoomLbl" onclick="DartCam.zoom(0)">1.0×</button>
-      <button class="dc-zoombtn" onclick="DartCam.zoom(1)">+</button>
+      <div class="dc-zoomrow">
+        <button class="dc-zoombtn" onclick="DartCam.zoom(-1)">−</button>
+        <button class="dc-zoomlbl" id="dcZoomLbl" onclick="DartCam.zoom(0)">1.0×</button>
+        <button class="dc-zoombtn" onclick="DartCam.zoom(1)">+</button>
+      </div>
+      <div id="dcRec">● REC dati AI</div>
     </div>
     <div class="dc-tr">
       <button class="dc-x" onclick="DartCam.switchToKeypad()">Tastierino</button>
       <button class="dc-x" id="dcCalBtn" onclick="DartCam.startCalibration()" style="display:none">Ricalibra</button>
     </div>
-    <div id="dcRec" style="display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;align-items:center;gap:6px;background:#7f1d1dcc;color:#fff;font:600 11px 'DM Sans',sans-serif;padding:3px 9px;border-radius:999px;pointer-events:none">● REC dati AI</div>
+    <div id="dcTurnSum"></div>
     <button class="dc-stage-btn" id="dcCalConfirm" onclick="DartCam.calConfirmPoint()" style="display:none">✓ Conferma punto</button>
     <button class="dc-stage-btn" id="dcMoveConfirm" onclick="DartCam.moveConfirm()" style="display:none">✓ Conferma posizione</button>
     <div class="dc-hint" id="dcHint"></div>
@@ -12823,6 +12829,7 @@ window.DartCam = (function(){
   function scheduleAiRefine(){ if(!S.aiOn) return; if(S.aiTimer) clearTimeout(S.aiTimer);
     S.aiTimer=setTimeout(function(){ aiRefineTurn(); }, 700); }
   async function aiRefineTurn(){ if(!S.aiOn || !layerOpen() || S.calibrating || S.moveMode!=null || S._aiBusy) return;
+    if(S.darts.filter(Boolean).length>=3) return; // turno completo: detection/rifinitura ferme fino alla conferma
     // rifinisci SOLO le frecce non ancora rifinite dall'AI e non corrette a mano (niente "salti" sui pin già buoni)
     const todo=[]; for(let i=0;i<3;i++){ const d=S.darts[i]; if(d && !d.aiRefined && d.posTruth!=='manual') todo.push(i); }
     if(!todo.length) return;
@@ -12948,10 +12955,8 @@ window.DartCam = (function(){
   function stopLoop(){ if(S.timer){ clearInterval(S.timer); S.timer=null; } }
   function grabProc(){ const v=$('dcVideo'); if(!v||!v.videoWidth) return null;
     S.pctx.drawImage(v,0,0,S.proc.width,S.proc.height); return S.pctx.getImageData(0,0,S.proc.width,S.proc.height); }
-  function readyHint(){ return S.boardType==='steel'
-      ? 'Pronto. Tira le 3 frecce. Se una cade, segnala 0 dal menu della freccia. Tocca una freccia in basso per correggerla.'
-      : 'Pronto. Tira le 3 frecce. Tocca una freccia in basso per correggerla.'; }
-  function settleThenArm(){ S.phase='settle'; setHint('Messa a fuoco in corso, attendi un attimo…');
+  function readyHint(){ return 'Pronto'; }
+  function settleThenArm(){ S.phase='settle'; setHint('Messa a fuoco, attendi...');
     if(S.settleTimer) clearTimeout(S.settleTimer);
     S.settleTimer=setTimeout(()=>{ const f=grabProc(); if(f){ S.emptyRef=f; S.refData=f; } S.lastCommit=Date.now();
       S.phase='aim'; S.prov=null; S.stableCount=0; S.tipBuf=null; S.prevFrame=null; S.unstableRun=0; S.hintState='ready'; setHint(readyHint()); }, SETTLE_MS); }
@@ -12981,7 +12986,7 @@ window.DartCam = (function(){
         // l'avviso compare SOLO se l'instabilità persiste (debounce): un singolo spike
         // (la freccia che compare, un autofocus) non deve far lampeggiare il messaggio.
         if(S.unstableRun>=UNSTABLE_SHOW && S.hintState!=='unstable'){
-          setHint('📷 Inquadratura instabile, stabilizza il telefono e attendi…'); S.hintState='unstable'; }
+          setHint('Inquadratura Instabile'); S.hintState='unstable'; }
         return;
       }
       // frame fermo → si rileva. Dopo uno scuotimento PROLUNGATO si rifà lo sfondo (no falso al
@@ -13099,14 +13104,25 @@ window.DartCam = (function(){
     updateActionBtn(); }
   function updateActionBtn(){ const b=$('dcUndoBtn'); if(!b) return;
     const filled=S.darts.filter(Boolean).length; b.textContent = filled>0 ? 'Cancella' : 'Turno prec.'; }
-  function updateHud(){ const sc=$('g501pts'); if(sc&&$('dcHudScore')) $('dcHudScore').textContent=sc.textContent;
-    const co=$('g501co'); const ce=$('dcHudCo');
-    if(ce){ const ds=co?co.querySelectorAll('.g501-co-dart'):null;
-      if(ds&&ds.length){ ce.textContent=Array.prototype.map.call(ds,s=>s.textContent.trim()).join(' + '); ce.style.display='inline-block'; }
+  function updateHud(){
+    const sc=$('g501pts'); const committed = sc?parseInt(sc.textContent,10):NaN;
+    let sum=0; for(const d of S.darts) if(d) sum+=(d.value||0);
+    // punteggio del leg in TEMPO REALE: i punti del turno si sottraggono freccia per freccia.
+    // committed = punteggio del motore keypad (aggiornato solo alla conferma); live = quello mostrato.
+    const live = isNaN(committed) ? null : (committed - sum);
+    if($('dcHudScore')) $('dcHudScore').textContent = (live==null) ? (sc?sc.textContent:'') : String(live);
+    // suggerimento checkout calcolato sul punteggio LIVE → si aggiorna freccia dopo freccia in chiusura.
+    const ce=$('dcHudCo');
+    if(ce){ const coStr = (live!=null && live>=2 && live<=170 && CO[live]) ? CO[live] : '';
+      if(coStr){ ce.textContent=coStr; ce.style.display='inline-block'; }
       else { ce.textContent=''; ce.style.display='none'; } }
     const rd=$('g501round'); if(rd&&$('dcHudRound')) $('dcHudRound').textContent=rd.textContent;
-    let sum=0; for(const d of S.darts) if(d) sum+=d.value; if($('dcHudTurn')) $('dcHudTurn').textContent=sum;
+    const dt=$('g501darts'); if(dt&&$('dcHudDarts')) $('dcHudDarts').textContent=dt.textContent;
+    const ts=$('dcTurnSum'); if(ts) ts.textContent = sum>0 ? String(sum) : '';
     const av=$('g501closures'); if(av&&$('dcHudAvg')) $('dcHudAvg').textContent=av.textContent;
+    // turno completo (3 frecce) → annulla un'eventuale rifinitura AI in coda: non deve alterare
+    // le frecce già messe mentre l'utente sistema l'ultima.
+    if(S.darts.filter(Boolean).length>=3 && S.aiTimer){ clearTimeout(S.aiTimer); S.aiTimer=null; }
     updateConfirmBtn(sum); }
   // esito del turno secondo la regola STEEL double-out (l'ultima freccia che porta a 0 dev'essere doppia/bull)
   function turnOutcome(start){
@@ -13183,7 +13199,7 @@ window.DartCam = (function(){
     if(typeof g501OKBtn==='function') g501OKBtn(); }
   function afterTurn(){ if(S.aiTimer){clearTimeout(S.aiTimer);S.aiTimer=null;} S.darts=[null,null,null]; S._dartComps=[null,null,null]; rebuildCommittedMask(); S.curIdx=0; S.prov=null; S.stableCount=0; S.tipBuf=null; S.moveMode=null; S.movePreview=null; if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none';
     S.phase='rearm'; S.rearmT0=0; S.rearmClearCount=0;
-    setHint('Rimuovi le frecce dal bersaglio: il turno successivo parte da solo quando è libero.');
+    setHint('Rimuovi le frecce');
     renderDarts(); updateActionBtn(); updateHud(); }
   function markNoScore(){ S.lastTurnTotal=0; feedTurn(0); afterTurn(); }
   function confirmTurn(){ const sc=$('g501pts'); const leg=sc?parseInt(sc.textContent):NaN;
