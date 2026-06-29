@@ -12618,9 +12618,9 @@ window.DartCam = (function(){
   const LS_CAL='dcCalPts', LS_INPUT='dcInputMethod', LS_BOARD='dcBoardType', LS_BIAS='dcBias', LS_COLLECT='dcCollect', LS_AI='dcAI';
   const DATA_DB='dartDataset', DATA_STORE='samples';
   const AI_MODEL_URL='dartcam_model.onnx', AI_ORT='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/';
-  const CAL_LABELS=['20 (in ALTO)','6 (a DESTRA)','3 (in BASSO)','11 (a SINISTRA)'];
-  const CAL_DST=[[0,-1],[1,0],[0,1],[-1,0]];
-  const EXT_RAD=1.50; // raggio maschera ESTESA (coord. bersaglio): in chiusura (<50) intercetta i tiri FUORI dal board → segnati 0/miss
+  const CAL_LABELS=['D20','D6','D3','D11','Bull'];
+  const CAL_DST=[[0,-1],[1,0],[0,1],[-1,0],[0,0]]; // 4 doppi esterni (D20/D6/D3/D11) + Bull (centro)
+  const EXT_RAD=1.40; // raggio maschera ESTESA (coord. bersaglio): in chiusura (<50) intercetta i tiri FUORI dal board → segnati 0/miss
 
   const S={inputMethod:'keypad', boardType:'steel', calMode:'keep', stream:null, vw:0,vh:0,
            proc:null,pctx:null, H:null, Hinv:null, zoom:1,
@@ -12645,9 +12645,13 @@ window.DartCam = (function(){
         for(let c=i;c<n;c++) M[r][c]-=f*M[i][c]; b[r]-=f*b[i]; } }
     const x=new Array(n); for(let i=0;i<n;i++) x[i]=b[i]/M[i][i]; return x; }
   function solveHomography(src,dst){ const A=[];
-    for(let i=0;i<4;i++){ const [x,y]=src[i],[u,v]=dst[i];
+    for(let i=0;i<src.length;i++){ const [x,y]=src[i],[u,v]=dst[i];
       A.push([x,y,1,0,0,0,-u*x,-u*y,u]); A.push([0,0,0,x,y,1,-v*x,-v*y,v]); }
-    return gauss(A.map(r=>r.slice(0,8)), A.map(r=>r[8])); }
+    if(A.length===8) return gauss(A.map(r=>r.slice(0,8)), A.map(r=>r[8]));
+    // N>4 (es. con Bull): sistema sovra-determinato → minimi quadrati via equazioni normali (8x8).
+    const ATA=Array.from({length:8},()=>new Array(8).fill(0)), ATb=new Array(8).fill(0);
+    for(const row of A){ const u=row[8]; for(let i=0;i<8;i++){ ATb[i]+=row[i]*u; for(let j=0;j<8;j++) ATA[i][j]+=row[i]*row[j]; } }
+    return gauss(ATA, ATb); }
   function applyH(h,x,y){ if(!h) return null; const d=h[6]*x+h[7]*y+1; if(Math.abs(d)<1e-9) return null;
     return [(h[0]*x+h[1]*y+h[2])/d, (h[3]*x+h[4]*y+h[5])/d]; }
   function invert3(h){ if(!h) return null;
@@ -12715,7 +12719,7 @@ window.DartCam = (function(){
   /* ---------- preferenze + bias ---------- */
   function loadPrefs(){ const im=localStorage.getItem(LS_INPUT); if(im) S.inputMethod=im;
     const bt=localStorage.getItem(LS_BOARD); if(bt) S.boardType=bt;
-    try{ const c=JSON.parse(localStorage.getItem(LS_CAL)||'null'); if(c&&c.length===4){ S.calLocked=c; S.H=solveHomography(c,CAL_DST); } }catch(e){}
+    try{ const c=JSON.parse(localStorage.getItem(LS_CAL)||'null'); if(c&&(c.length===4||c.length===5)){ S.calLocked=c; S.H=solveHomography(c,CAL_DST); } }catch(e){}
     try{ const bz=JSON.parse(localStorage.getItem(LS_BIAS)||'null'); if(bz&&typeof bz.n==='number'){ S.bias=bz; } }catch(e){}
     S.collect = localStorage.getItem(LS_COLLECT)==='1';
     S.aiOn = localStorage.getItem(LS_AI)==='1'; }
@@ -12749,7 +12753,7 @@ window.DartCam = (function(){
     rq.onerror=function(){ rej(rq.error); }; }); }
   function dataRefreshCount(){ idbOpen().then(function(db){ const rq=db.transaction(DATA_STORE,'readonly').objectStore(DATA_STORE).count();
     rq.onsuccess=function(){ S._dataCount=rq.result; const el=$('dcPgDataCount'); if(el) el.textContent=rq.result; }; }).catch(function(){}); }
-  function dataCapture(){ if(!S.collect) return; const v=$('dcVideo'); if(!v||!v.videoWidth||!S.H||S.calLocked.length!==4) return;
+  function dataCapture(){ if(!S.collect) return; const v=$('dcVideo'); if(!v||!v.videoWidth||!S.H||S.calLocked.length<4) return;
     const darts=S.darts.filter(Boolean); if(!darts.length) return;
     const MAXW=720, scale=Math.min(1, MAXW/S.vw), iw=Math.round(S.vw*scale), ih=Math.round(S.vh*scale);
     let cv=S._capCanvas; if(!cv){ cv=S._capCanvas=document.createElement('canvas'); }
@@ -12823,11 +12827,11 @@ window.DartCam = (function(){
     try{ await aiLoad(); }catch(e){ return false; }
     let res; try{ res=await aiRun(); }catch(e){ return false; }
     const by={}; for(const c of res.cals){ if(!by[c.cls] || c.score>by[c.cls].score) by[c.cls]=c; }
-    for(let k=1;k<=4;k++){ if(!by[k] || by[k].score<0.30) return false; } // servono tutti e 4 i punti
+    for(let k=1;k<=4;k++){ if(!by[k] || by[k].score<0.30) return false; } // servono tutti e 4 i punti AI
     const pts=[[by[1].x,by[1].y],[by[2].x,by[2].y],[by[3].x,by[3].y],[by[4].x,by[4].y]];
-    const H=solveHomography(pts, CAL_DST); if(!H) return false;
-    S.calLocked=pts; S.H=H; S.Hinv=invert3(H); try{ localStorage.setItem(LS_CAL, JSON.stringify(pts)); }catch(e){}
-    buildMasks(); return true; }
+    if(!solveHomography(pts, CAL_DST)) return false; // i 4 punti devono dare un'omografia valida
+    // i 4 esterni li mette l'AI; il Bull (5°) lo tocca l'utente per raffinare il centro → omografia finale a 5 punti.
+    S.calLocked=pts; S.calStep=4; S.calProv=null; return true; }
   function scheduleAiRefine(){ if(!S.aiOn) return; if(S.aiTimer) clearTimeout(S.aiTimer);
     S.aiTimer=setTimeout(function(){ aiRefineTurn(); }, 700); }
   async function aiRefineTurn(){ if(!S.aiOn || !layerOpen() || S.calibrating || S.moveMode!=null || S._aiBusy) return;
@@ -12852,12 +12856,12 @@ window.DartCam = (function(){
     updatePgUI(); if(v) aiLoad().catch(function(){}); }
 
   /* ---------- modale pre-partita ---------- */
-  function preGame(){ loadPrefs(); S.calMode=(S.calLocked.length===4)?'keep':'auto'; updatePgUI(); $('dcPreGame').classList.add('open'); if(S.collect) dataRefreshCount(); }
+  function preGame(){ loadPrefs(); S.calMode=(S.calLocked.length>=4)?'keep':'auto'; updatePgUI(); $('dcPreGame').classList.add('open'); if(S.collect) dataRefreshCount(); }
   function updatePgUI(){
     document.querySelectorAll('#dcPgInput button').forEach(b=>b.classList.toggle('on', b.dataset.v===S.inputMethod));
     document.querySelectorAll('#dcPgBoard button').forEach(b=>b.classList.toggle('on', b.dataset.v===S.boardType));
     document.querySelectorAll('#dcPgCal button').forEach(b=>b.classList.toggle('on', b.dataset.v===S.calMode));
-    const cam=S.inputMethod==='camera', hasCal=S.calLocked.length===4;
+    const cam=S.inputMethod==='camera', hasCal=S.calLocked.length>=4;
     const bw=$('dcPgBoardWrap'); if(bw) bw.style.display = cam ? '' : 'none';
     const cw=$('dcPgCalWrap'); if(cw) cw.style.display = cam ? '' : 'none';
     const keepBtn=document.querySelector('#dcPgCal button[data-v="keep"]'); if(keepBtn) keepBtn.style.display = hasCal ? '' : 'none';
@@ -12883,13 +12887,13 @@ window.DartCam = (function(){
     if(S.aiOn) aiLoad().catch(function(){}); // precarico il modello ora (mentre miri), non a metà turno
     try{ await startCamera(); }
     catch(e){ alert('Fotocamera non accessibile: '+(e&&e.message?e.message:e)+'. Puoi usare il tastierino.'); closeLayer(); return; }
-    const hasCal = S.H && S.calLocked.length===4;
+    const hasCal = S.H && S.calLocked.length>=4;
     if(S.calMode==='auto'){
       setHint('Calibrazione automatica del bersaglio…');
       await new Promise(function(r){ setTimeout(r, 700); }); // lascia stabilizzare l'esposizione
       let ok=false; try{ ok=await aiAutoCalibrate(); }catch(e){ ok=false; }
-      if(ok){ S.calibrating=false; if($('dcCalBtn')) $('dcCalBtn').style.display=''; settleThenArm(); }
-      else { setHint('Calibrazione automatica non riuscita: calibra a mano i 4 punti.'); startCalibration(); }
+      if(ok){ startBullCalibration(); }   // 4 punti dall'AI ok → l'utente tocca il Bull (5°)
+      else { setHint('Calibrazione automatica non riuscita: calibra a mano.'); startCalibration(); }
     }
     else if(hasCal && S.calMode!=='redo'){ buildMasks(); S.calibrating=false; if($('dcCalBtn')) $('dcCalBtn').style.display=''; settleThenArm(); }
     else { startCalibration(); } }
@@ -12917,16 +12921,22 @@ window.DartCam = (function(){
   function startCalibration(){ S.calibrating=true; S.calStep=0; S.calLocked=[]; S.calProv=null; S.phase='calib';
     if($('dcCalBtn')) $('dcCalBtn').style.display='none'; if($('dcCalConfirm')) $('dcCalConfirm').style.display='none';
     S.moveMode=null; S.movePreview=null; if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none';
-    setHint('CALIBRAZIONE · Punto 1 di 4 · tocca il bordo esterno del doppio: '+CAL_LABELS[0]+'. Ritocca finché sei preciso, poi conferma.');
+    setHint('Calibrazione: '+CAL_LABELS[0]);
+    drawOverlay(); }
+  // calibrazione del solo Bull (5° punto) dopo l'auto-cal AI: i 4 esterni sono già in S.calLocked.
+  function startBullCalibration(){ S.calibrating=true; S.calStep=4; S.calProv=null; S.phase='calib';
+    if($('dcCalBtn')) $('dcCalBtn').style.display='none'; if($('dcCalConfirm')) $('dcCalConfirm').style.display='none';
+    S.moveMode=null; S.movePreview=null; if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none';
+    setHint('Calibrazione: '+CAL_LABELS[4]);
     drawOverlay(); }
   function calConfirmPoint(){ if(!S.calProv) return;
-    S.calLocked.push(S.calProv); S.calProv=null; S.calStep++;
+    S.calLocked.push(S.calProv); S.calProv=null; S.calStep=S.calLocked.length;
     if($('dcCalConfirm')) $('dcCalConfirm').style.display='none';
-    if(S.calStep<4){ setHint('CALIBRAZIONE · Punto '+(S.calStep+1)+' di 4 · tocca: '+CAL_LABELS[S.calStep]+'. Ritocca per correggere, poi conferma.'); }
+    if(S.calLocked.length<5){ setHint('Calibrazione: '+CAL_LABELS[S.calLocked.length]); }
     else { S.H=solveHomography(S.calLocked,CAL_DST); S.calibrating=false;
       if(S.H){ localStorage.setItem(LS_CAL,JSON.stringify(S.calLocked)); if($('dcCalBtn')) $('dcCalBtn').style.display='';
         buildMasks(); settleThenArm(); }
-      else { setHint('Calibrazione non valida (servono 4 punti distinti). Riprovo.'); startCalibration(); } }
+      else { setHint('Calibrazione non valida (servono 5 punti distinti). Riprovo.'); startCalibration(); } }
     drawOverlay(); }
 
   /* ---------- tap sul video ---------- */
@@ -13130,9 +13140,10 @@ window.DartCam = (function(){
     const dt=$('g501darts'); if(dt&&$('dcHudDarts')) $('dcHudDarts').textContent=dt.textContent;
     const ts=$('dcTurnSum'); if(ts) ts.textContent = sum>0 ? String(sum) : '';
     const av=$('g501closures'); if(av&&$('dcHudAvg')) $('dcHudAvg').textContent=av.textContent;
-    // turno completo (3 frecce) → annulla un'eventuale rifinitura AI in coda: non deve alterare
-    // le frecce già messe mentre l'utente sistema l'ultima.
-    if(S.darts.filter(Boolean).length>=3 && S.aiTimer){ clearTimeout(S.aiTimer); S.aiTimer=null; }
+    // turno completo (3 frecce): ferma la rifinitura AI in coda (non deve alterare le frecce già
+    // messe mentre l'utente sistema l'ultima) e mostra "Attendo conferma" (detection già ferma).
+    if(S.darts.filter(Boolean).length>=3){ if(S.aiTimer){ clearTimeout(S.aiTimer); S.aiTimer=null; }
+      if(S.phase==='aim' && S.hintState!=='wait'){ setHint('Attendo conferma'); S.hintState='wait'; } }
     updateConfirmBtn(sum); }
   // esito del turno secondo la regola STEEL double-out (l'ultima freccia che porta a 0 dev'essere doppia/bull)
   function turnOutcome(start){
