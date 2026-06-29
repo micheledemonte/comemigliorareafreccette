@@ -4689,6 +4689,10 @@ function gameOverlayClose(){
   document.documentElement.style.overflow='';
   document.body.style.overflow='';
   try { if(typeof window._preGameScrollY === 'number') window.scrollTo(0, window._preGameScrollY); } catch(e){}
+  // iOS/PWA: dopo un overlay fixed + camera (getUserMedia) lo scroll a volte NON si riattiva finché
+  // non avviene un reflow → forziamone uno e diamo un micro-nudge (altrimenti, chiudendo la modalità
+  // videocamera, la schermata 501 "non scorre" finché non si cambia sezione e si torna).
+  try { void document.body.offsetHeight; requestAnimationFrame(function(){ try{ window.scrollBy(0,1); window.scrollBy(0,-1); }catch(e){} }); } catch(e){}
 }
 
 function showTab(name,silent=false){
@@ -13140,10 +13144,12 @@ window.DartCam = (function(){
     const dt=$('g501darts'); if(dt&&$('dcHudDarts')) $('dcHudDarts').textContent=dt.textContent;
     const ts=$('dcTurnSum'); if(ts) ts.textContent = sum>0 ? String(sum) : '';
     const av=$('g501closures'); if(av&&$('dcHudAvg')) $('dcHudAvg').textContent=av.textContent;
-    // turno completo (3 frecce): ferma la rifinitura AI in coda (non deve alterare le frecce già
-    // messe mentre l'utente sistema l'ultima) e mostra "Attendo conferma" (detection già ferma).
+    // turno completo (3 frecce, comunque inserite: auto, picker o pallino manuale): ferma la
+    // rifinitura AI in coda e mostra "Attendo conferma" FINO alla conferma del turno. Ri-asserito
+    // ogni tick così edit/spostamenti dei pallini non lo riportano a "Pronto". Durante uno
+    // spostamento (moveMode) non si tocca il messaggio.
     if(S.darts.filter(Boolean).length>=3){ if(S.aiTimer){ clearTimeout(S.aiTimer); S.aiTimer=null; }
-      if(S.phase==='aim' && S.hintState!=='wait'){ setHint('Attendo conferma'); S.hintState='wait'; } }
+      if(S.phase==='aim' && S.moveMode==null){ setHint('Attendo conferma'); S.hintState='wait'; } }
     updateConfirmBtn(sum); }
   // esito del turno secondo la regola STEEL double-out (l'ultima freccia che porta a 0 dev'essere doppia/bull)
   function turnOutcome(start){
@@ -13175,11 +13181,11 @@ window.DartCam = (function(){
     renderDarts(); drawOverlay(); updateActionBtn(); updateHud(); }
   function chipMove(){ chipMenuClose(); S.moveMode=S.chipIdx;
     const d=S.darts[S.chipIdx]; S.movePreview=(d&&d.vx!=null)?{px:d.vx,py:d.vy}:null;
-    if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='';
-    setHint('Tocca sul video la punta della Freccia '+(S.chipIdx+1)+'. Puoi ritoccare più volte, poi premi Conferma posizione.'); renderDarts(); drawOverlay(); }
+    if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='';   // solo il tasto "Conferma posizione", nessun messaggio
+    renderDarts(); drawOverlay(); }
   function moveConfirm(){ if(S.moveMode==null) return; const i=S.moveMode;
     if(S.movePreview) moveDartTo(i, S.movePreview.px, S.movePreview.py);
-    cancelMove(); setHint(readyHint()); }
+    cancelMove(); setHint(S.darts.filter(Boolean).length>=3 ? 'Attendo conferma' : readyHint()); }
   function cancelMove(){ S.moveMode=null; S.movePreview=null; if($('dcMoveConfirm')) $('dcMoveConfirm').style.display='none'; renderDarts(); drawOverlay(); }
   function chipScore(){ chipMenuClose(); pkOpen(S.chipIdx); }
 
