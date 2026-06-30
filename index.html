@@ -2841,10 +2841,9 @@ body.in-app #lProgress{display:none}
       <div class="dc-pg-lbl">Calibrazione bersaglio</div>
       <div class="dc-pg-row" id="dcPgCal">
         <button data-v="auto" onclick="DartCam.pgSetCal('auto')">Auto (AI)</button>
-        <button data-v="keep" onclick="DartCam.pgSetCal('keep')">Mantieni</button>
         <button data-v="redo" onclick="DartCam.pgSetCal('redo')">Manuale</button>
       </div>
-      <div class="dc-pg-note">Auto: il bersaglio viene rilevato dall'AI (come Dartsmind), niente tap. Se non riesce, passa alla manuale.</div>
+      <div class="dc-pg-note">Auto: il bersaglio viene rilevato dall'AI (come Dartsmind), niente tap. Calibra una volta a inizio partita e riusa la stessa nei leg successivi. Se non riesce, passa alla manuale.</div>
     </div>
     <div id="dcPgAiWrap" style="display:none">
       <div class="dc-pg-lbl">Rilevamento punte</div>
@@ -12611,7 +12610,7 @@ window.DartCam = (function(){
   const MAX_DART_FRAC=0.22;   // un singolo componente non supera ~22% del bersaglio (braccio)
   const PROC_W=240;
   const STEEL_MS=3000;
-  const COOLDOWN=1000;        // ms minimi tra due frecce
+  const COOLDOWN=300;         // ms minimi tra due frecce
   const SETTLE_MS=1100;       // stabilizzazione esposizione prima di acquisire lo sfondo
   const STABLE_NEED=2;        // frame stabili richiesti (come v246, sensibilità buona)
   const REARM_TIMEOUT=5000;
@@ -12626,7 +12625,7 @@ window.DartCam = (function(){
   const CAL_DST=[[0,-1],[1,0],[0,1],[-1,0],[0,0]]; // 4 doppi esterni (D20/D6/D3/D11) + Bull (centro)
   const EXT_RAD=1.40; // raggio maschera ESTESA (coord. bersaglio): in chiusura (<50) intercetta i tiri FUORI dal board → segnati 0/miss
 
-  const S={inputMethod:'keypad', boardType:'steel', calMode:'keep', stream:null, vw:0,vh:0,
+  const S={inputMethod:'keypad', boardType:'steel', calMode:'auto', _calMatchDone:false, stream:null, vw:0,vh:0,
            proc:null,pctx:null, H:null, Hinv:null, zoom:1,
            calLocked:[], calProv:null, calStep:0, calibrating:false,
            insideMask:null, outMask:null, rMap:null, insideCount:0, outCount:0, _dm:null, _vis:null,
@@ -12636,7 +12635,7 @@ window.DartCam = (function(){
            lastTurnTotal:null, pkIdx:0, pkMult:1, chipIdx:0, moveMode:null, movePreview:null,
            bias:{sx:0,sy:0,n:0}, timer:null, settleTimer:null,
            collect:false, _dataDB:null, _dataCount:0, _capCanvas:null,
-           aiOn:false, aiTimer:null, _aiSess:null, _aiLoading:null, _aiCanvas:null, _aiBusy:false, _aiNC:5};
+           aiOn:true, aiTimer:null, _aiSess:null, _aiLoading:null, _aiCanvas:null, _aiBusy:false, _aiNC:5};
 
   const $=id=>document.getElementById(id);
   const layerOpen=()=> $('dcLayer') && $('dcLayer').classList.contains('open');
@@ -12726,7 +12725,7 @@ window.DartCam = (function(){
     try{ const c=JSON.parse(localStorage.getItem(LS_CAL)||'null'); if(c&&(c.length===4||c.length===5)){ S.calLocked=c; S.H=solveHomography(c,CAL_DST); } }catch(e){}
     try{ const bz=JSON.parse(localStorage.getItem(LS_BIAS)||'null'); if(bz&&typeof bz.n==='number'){ S.bias=bz; } }catch(e){}
     S.collect = localStorage.getItem(LS_COLLECT)==='1';
-    S.aiOn = localStorage.getItem(LS_AI)==='1'; }
+    S.aiOn = true; }  // rilevamento SOLO AI: motore unico, niente più toggle Classico/AI
   function savePrefs(){ localStorage.setItem(LS_INPUT,S.inputMethod); localStorage.setItem(LS_BOARD,S.boardType); }
   function saveLocalBias(){ try{ localStorage.setItem(LS_BIAS, JSON.stringify(S.bias)); }catch(e){} }
   function biasVec(){ if(S.bias.n<=0) return [0,0]; const C=0.08;
@@ -12758,7 +12757,8 @@ window.DartCam = (function(){
   function dataRefreshCount(){ idbOpen().then(function(db){ const rq=db.transaction(DATA_STORE,'readonly').objectStore(DATA_STORE).count();
     rq.onsuccess=function(){ S._dataCount=rq.result; const el=$('dcPgDataCount'); if(el) el.textContent=rq.result; }; }).catch(function(){}); }
   function dataCapture(){ if(!S.collect) return; const v=$('dcVideo'); if(!v||!v.videoWidth||!S.H||S.calLocked.length<4) return;
-    const darts=S.darts.filter(Boolean); if(!darts.length) return;
+    // registra SOLO le frecce con posizione e punteggio validi (AI o spostate a mano); scarta 'need'/pending senza pin.
+    const darts=S.darts.filter(function(d){ return d && d.vx!=null && d.value!=null; }); if(!darts.length) return;
     const MAXW=720, scale=Math.min(1, MAXW/S.vw), iw=Math.round(S.vw*scale), ih=Math.round(S.vh*scale);
     let cv=S._capCanvas; if(!cv){ cv=S._capCanvas=document.createElement('canvas'); }
     cv.width=iw; cv.height=ih; cv.getContext('2d').drawImage(v,0,0,iw,ih);
@@ -12837,30 +12837,38 @@ window.DartCam = (function(){
     // i 4 esterni li mette l'AI; il Bull (5°) lo tocca l'utente per raffinare il centro → omografia finale a 5 punti.
     S.calLocked=pts; S.calStep=4; S.calProv=null; return true; }
   function scheduleAiRefine(){ if(!S.aiOn) return; if(S.aiTimer) clearTimeout(S.aiTimer);
-    S.aiTimer=setTimeout(function(){ aiRefineTurn(); }, 700); }
+    S.aiTimer=setTimeout(function(){ aiRefineTurn(); }, 350); }
   async function aiRefineTurn(){ if(!S.aiOn || !layerOpen() || S.calibrating || S.moveMode!=null || S._aiBusy) return;
-    if(S.darts.filter(Boolean).length>=3) return; // turno completo: detection/rifinitura ferme fino alla conferma
-    // rifinisci SOLO le frecce non ancora rifinite dall'AI e non corrette a mano (niente "salti" sui pin già buoni)
-    const todo=[]; for(let i=0;i<3;i++){ const d=S.darts[i]; if(d && !d.aiRefined && d.posTruth!=='manual') todo.push(i); }
+    // Processa le frecce ancora "pending": rilevate dal trigger classico, in attesa della punta AI.
+    // L'AI è l'UNICO motore di posizione/punteggio. Se non trova la punta → slot da inserire a mano.
+    const todo=[]; for(let i=0;i<3;i++){ const d=S.darts[i]; if(d && d.pending) todo.push(i); }
     if(!todo.length) return;
     S._aiBusy=true; let firstLoad=!S._aiSess; if(firstLoad) setHint('Carico il modello AI, un attimo…');
     let tips; try{ tips=await aiDetectDarts(); }
-    catch(e){ S._aiBusy=false; if(firstLoad){ setHint(readyHint()); console.warn('AI non disponibile:', e); } return; }
+    catch(e){ S._aiBusy=false; console.warn('AI non disponibile:', e);
+      // modello non caricabile → niente classico di ripiego: lo slot va inserito a mano.
+      for(const pi of todo){ const d=S.darts[pi]; if(d&&d.pending){ d.pending=false; d.posTruth='need'; d.label='?'; d.vx=null; d.vy=null; } }
+      if(firstLoad) setHint(readyHint()); renderDarts(); drawOverlay(); updateActionBtn(); updateHud(); return; }
     if(firstLoad) setHint(readyHint());
-    if(!tips || !tips.length){ S._aiBusy=false; return; }
-    const usedT={}, GUARD=S.vw*0.15, MINSCORE=0.30; // snap solo se vicino al pin classico E confidente
+    tips=tips||[];
+    const usedT={}, GUARD=S.vw*0.35, MINSCORE=0.30; // associa il tip AI alla freccia (ancora = posizione del trigger classico)
     for(const pi of todo){ const d=S.darts[pi]; if(!d) continue;
-      let bj=-1, bd=1e9; for(let j=0;j<tips.length;j++){ if(usedT[j]) continue;
-        const dx=(d.vx||0)-tips[j].x, dy=(d.vy||0)-tips[j].y; const dist=Math.hypot(dx,dy); if(dist<bd){ bd=dist; bj=j; } }
-      if(bj<0 || bd>GUARD || tips[bj].score<MINSCORE) continue; // nessun tip vicino/affidabile → lascia il classico
-      usedT[bj]=1; const tp=tips[bj]; const b=applyH(S.H, tp.x, tp.y); if(!b) continue; const sc=scoreForBoard(b[0],b[1]);
-      d.vx=tp.x; d.vy=tp.y; d.value=sc.value; d.base=sc.base; d.mult=sc.mult; d.label=sc.label; d.detB=b; d.auto=true; d.posTruth='ai'; d.aiRefined=true; }
+      let bj=-1, bd=1e9; for(let j=0;j<tips.length;j++){ if(usedT[j]||tips[j].score<MINSCORE) continue;
+        const dx=(d._ax||0)-tips[j].x, dy=(d._ay||0)-tips[j].y; const dist=Math.hypot(dx,dy); if(dist<bd){ bd=dist; bj=j; } }
+      if(bj>=0 && bd<=GUARD){   // AI ha trovato la punta → posizione + punteggio dall'AI
+        usedT[bj]=1; const tp=tips[bj]; const b=applyH(S.H, tp.x, tp.y);
+        if(b){ const sc=scoreForBoard(b[0],b[1]);
+          d.vx=tp.x; d.vy=tp.y; d.value=sc.value; d.base=sc.base; d.mult=sc.mult; d.label=sc.label; d.detB=b; d.auto=true; d.posTruth='ai'; }
+        else { d.value=null; d.base=null; d.mult=null; d.label='?'; d.vx=null; d.vy=null; d.posTruth='need'; } }
+      else {                    // AI non ha trovato la punta → nessun pin, punteggio manuale
+        d.value=null; d.base=null; d.mult=null; d.label='?'; d.vx=null; d.vy=null; d.posTruth='need'; }
+      d.pending=false; }
     S._aiBusy=false; renderDarts(); drawOverlay(); updateActionBtn(); updateHud(); }
   function setAI(v){ S.aiOn=!!v; try{ localStorage.setItem(LS_AI, v?'1':'0'); }catch(e){}
     updatePgUI(); if(v) aiLoad().catch(function(){}); }
 
   /* ---------- modale pre-partita ---------- */
-  function preGame(){ loadPrefs(); S.calMode=(S.calLocked.length>=4)?'keep':'auto'; updatePgUI(); $('dcPreGame').classList.add('open'); if(S.collect) dataRefreshCount(); }
+  function preGame(){ loadPrefs(); if(S.calMode!=='redo') S.calMode='auto'; updatePgUI(); $('dcPreGame').classList.add('open'); if(S.collect) dataRefreshCount(); }
   function updatePgUI(){
     document.querySelectorAll('#dcPgInput button').forEach(b=>b.classList.toggle('on', b.dataset.v===S.inputMethod));
     document.querySelectorAll('#dcPgBoard button').forEach(b=>b.classList.toggle('on', b.dataset.v===S.boardType));
@@ -12868,16 +12876,14 @@ window.DartCam = (function(){
     const cam=S.inputMethod==='camera', hasCal=S.calLocked.length>=4;
     const bw=$('dcPgBoardWrap'); if(bw) bw.style.display = cam ? '' : 'none';
     const cw=$('dcPgCalWrap'); if(cw) cw.style.display = cam ? '' : 'none';
-    const keepBtn=document.querySelector('#dcPgCal button[data-v="keep"]'); if(keepBtn) keepBtn.style.display = hasCal ? '' : 'none';
     document.querySelectorAll('#dcPgData button').forEach(b=>b.classList.toggle('on', (b.dataset.v==='on')===S.collect));
     const dw=$('dcPgDataWrap'); if(dw) dw.style.display = cam ? '' : 'none';
-    document.querySelectorAll('#dcPgAi button').forEach(b=>b.classList.toggle('on', (b.dataset.v==='on')===S.aiOn));
-    const aw=$('dcPgAiWrap'); if(aw) aw.style.display = cam ? '' : 'none'; }
+    const aw=$('dcPgAiWrap'); if(aw) aw.style.display = 'none'; }  // motore unico AI: toggle Classico/AI rimosso
   function pgSetInput(v){ S.inputMethod=v; updatePgUI(); }
   function pgSetBoard(v){ S.boardType=v; updatePgUI(); }
   function pgSetCal(v){ S.calMode=v; updatePgUI(); }
   function pgCancel(){ $('dcPreGame').classList.remove('open'); }
-  function pgStart(){ savePrefs(); $('dcPreGame').classList.remove('open');
+  function pgStart(){ savePrefs(); S._calMatchDone=false; $('dcPreGame').classList.remove('open');  // nuovo match → ricalibra una volta
     if(typeof window.startFree501==='function') window.startFree501(); }
   // utenti normali (non-admin): 501 solo direttamente col tastierino, senza modale camera
   function startKeypadSolo(){ S.inputMethod='keypad'; savePrefs();
@@ -12892,15 +12898,16 @@ window.DartCam = (function(){
     try{ await startCamera(); }
     catch(e){ alert('Fotocamera non accessibile: '+(e&&e.message?e.message:e)+'. Puoi usare il tastierino.'); closeLayer(); return; }
     const hasCal = S.H && S.calLocked.length>=4;
-    if(S.calMode==='auto'){
+    if(S.calMode==='redo'){ startCalibration(); }                 // Manuale: sempre a mano
+    else if(hasCal && S._calMatchDone){                            // già calibrato in questo match → riusa (no ricalibrazione ogni leg)
+      buildMasks(); S.calibrating=false; if($('dcCalBtn')) $('dcCalBtn').style.display=''; settleThenArm(); }
+    else {                                                         // Auto (AI): calibra ora (prima volta del match)
       setHint('Calibrazione automatica del bersaglio…');
       await new Promise(function(r){ setTimeout(r, 700); }); // lascia stabilizzare l'esposizione
       let ok=false; try{ ok=await aiAutoCalibrate(); }catch(e){ ok=false; }
       if(ok){ startBullCalibration(); }   // 4 punti dall'AI ok → l'utente tocca il Bull (5°)
       else { setHint('Calibrazione automatica non riuscita: calibra a mano.'); startCalibration(); }
-    }
-    else if(hasCal && S.calMode!=='redo'){ buildMasks(); S.calibrating=false; if($('dcCalBtn')) $('dcCalBtn').style.display=''; settleThenArm(); }
-    else { startCalibration(); } }
+    } }
   async function startCamera(){ if(S.stream) return;
     const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
     S.stream=stream; const v=$('dcVideo'); v.srcObject=stream;
@@ -12939,6 +12946,7 @@ window.DartCam = (function(){
     if(S.calLocked.length<5){ setHint('Calibrazione: '+CAL_LABELS[S.calLocked.length]); }
     else { S.H=solveHomography(S.calLocked,CAL_DST); S.calibrating=false;
       if(S.H){ localStorage.setItem(LS_CAL,JSON.stringify(S.calLocked)); if($('dcCalBtn')) $('dcCalBtn').style.display='';
+        S._calMatchDone=true;   // calibrata: i leg successivi del match la riusano
         buildMasks(); settleThenArm(); }
       else { setHint('Calibrazione non valida (servono 5 punti distinti). Riprovo.'); startCalibration(); } }
     drawOverlay(); }
@@ -13017,7 +13025,7 @@ window.DartCam = (function(){
     if(det.tooBig||!det.tip){ S.stableCount=0; S.tipBuf=null; return; }
     // steel e soft: stesso comportamento (rilevamento immediato su frame stabili).
     // Se in steel la freccia cade, sarà l'utente a segnarla 0 dal menu della freccia.
-    if(S.tipBuf && dist(det.tip,S.tipBuf)<S.vw*0.07) S.stableCount++; else S.stableCount=1;
+    if(S.tipBuf && dist(det.tip,S.tipBuf)<S.vw*0.05) S.stableCount++; else S.stableCount=1;
     S.tipBuf=det.tip; if(S.stableCount>=STABLE_NEED){ commitDart(det.tip); } }
   function handleRearm(cur){ if(!S.rearmT0) S.rearmT0=Date.now();
     const d=maskedDiffCount(cur, S.emptyRef);
@@ -13081,11 +13089,13 @@ window.DartCam = (function(){
     if(wsum<=0){ ex=cx; ey=cy; wsum=1; }
     S._lastComp=best;
     return {area:bestSize, tip:{ px:(ex/wsum)*S.vw/w, py:(ey/wsum)*S.vh/h }}; }
-  function commitDart(tip){ if(S.curIdx>=3) return; const rawB=applyH(S.H,tip.px,tip.py); if(!rawB) return;
-    const bv=biasVec(); const adjB=[rawB[0]+bv[0], rawB[1]+bv[1]];
-    const sc=scoreForBoard(adjB[0],adjB[1]); sc.auto=true; sc.detB=rawB; sc.posTruth='auto';
-    const va=boardToVideo(adjB[0],adjB[1]); sc.vx = va?va[0]:tip.px; sc.vy = va?va[1]:tip.py;
-    S._dartComps[S.curIdx]=S._lastComp; S.darts[S.curIdx]=sc; S.curIdx++; rebuildCommittedMask();
+  function commitDart(tip){ if(S.curIdx>=3) return;
+    // Il CLASSICO ora è SOLO trigger + ancora per associare la freccia al rilevamento AI.
+    // Nessun pin/punteggio classico: posizione e punteggio li decide l'AI (aiRefineTurn).
+    // Se l'AI non trova la punta, lo slot resta "da inserire a mano" (nessun pin classico mostrato).
+    const d={ value:null, base:null, mult:null, label:'…', vx:null, vy:null,
+              auto:true, posTruth:'auto', pending:true, _ax:tip.px, _ay:tip.py };
+    S._dartComps[S.curIdx]=S._lastComp; S.darts[S.curIdx]=d; S.curIdx++; rebuildCommittedMask();
     S.refData=grabProc()||S.refData; S.lastCommit=Date.now();
     S.prov=null; S.stableCount=0; S.tipBuf=null; renderDarts(); drawOverlay(); updateActionBtn(); updateHud(); scheduleAiRefine(); }
 
@@ -13121,8 +13131,8 @@ window.DartCam = (function(){
   function renderDarts(){ const wrap=$('dcDarts'); if(!wrap) return; wrap.innerHTML='';
     for(let i=0;i<3;i++){ const d=S.darts[i]; const mv=(S.moveMode===i);
       const el=document.createElement('div'); el.className='dc-dart'+(d?' filled':'')+(mv?' prov':'');
-      const val=d?(''+d.value):'—';
-      const sub=mv?'tocca sul video':(d?d.label:'tocca per opzioni');
+      const val=d?(d.value==null?(d.pending?'…':'?'):''+d.value):'—';
+      const sub=mv?'tocca sul video':(d?(d.pending?'rilevo…':(d.value==null?'tocca: punteggio':d.label)):'tocca per opzioni');
       el.innerHTML='<div class="dl">Freccia '+(i+1)+'</div><div class="dv">'+val+'</div><div class="de">'+sub+'</div>';
       el.onclick=()=>chipMenu(i); wrap.appendChild(el); }
     updateActionBtn(); }
@@ -13148,7 +13158,9 @@ window.DartCam = (function(){
     // rifinitura AI in coda e mostra "Attendo conferma" FINO alla conferma del turno. Ri-asserito
     // ogni tick così edit/spostamenti dei pallini non lo riportano a "Pronto". Durante uno
     // spostamento (moveMode) non si tocca il messaggio.
-    if(S.darts.filter(Boolean).length>=3){ if(S.aiTimer){ clearTimeout(S.aiTimer); S.aiTimer=null; }
+    // 3 frecce: NON cancellare la rifinitura AI in coda (l'ultima freccia va ancora rilevata dall'AI).
+    // "Attendo conferma" appare solo quando l'AI ha risolto tutte (nessuna pending), così non lampeggia.
+    if(S.darts.filter(Boolean).length>=3 && !S.darts.some(function(d){return d&&d.pending;})){
       if(S.phase==='aim' && S.moveMode==null){ setHint('Attendo conferma'); S.hintState='wait'; } }
     updateConfirmBtn(sum); }
   // esito del turno secondo la regola STEEL double-out (l'ultima freccia che porta a 0 dev'essere doppia/bull)
