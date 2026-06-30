@@ -12623,7 +12623,8 @@ window.DartCam = (function(){
   const AI_MODEL_URL='dartcam_model.onnx', AI_ORT='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/';
   const CAL_LABELS=['D20','D6','D3','D11','Bull'];
   const CAL_DST=[[0,-1],[1,0],[0,1],[-1,0],[0,0]]; // 4 doppi esterni (D20/D6/D3/D11) + Bull (centro)
-  const EXT_RAD=1.40; // raggio maschera ESTESA (coord. bersaglio): in chiusura (<50) intercetta i tiri FUORI dal board → segnati 0/miss
+  const EXT_RAD=1.55; // raggio maschera ESTESA (coord. bersaglio): in chiusura (<50) intercetta i tiri FUORI dal board → segnati 0/miss
+  const REARM_GRACE=900; // ms di grazia dopo il riarmo (frecce tolte): sfondo si assesta, niente commit fantasma (BUG A)
 
   const S={inputMethod:'keypad', boardType:'steel', calMode:'auto', _calMatchDone:false, stream:null, vw:0,vh:0,
            proc:null,pctx:null, H:null, Hinv:null, zoom:1,
@@ -12631,7 +12632,7 @@ window.DartCam = (function(){
            insideMask:null, outMask:null, rMap:null, insideCount:0, outCount:0, _dm:null, _vis:null,
            _committedMask:null, _dartComps:[null,null,null], _lastComp:null,
            refData:null, emptyRef:null, prevFrame:null, unstableRun:0, hintState:null, phase:'idle', darts:[null,null,null], curIdx:0,
-           prov:null, stableCount:0, tipBuf:null, lastCommit:0, rearmT0:0, rearmClearCount:0,
+           prov:null, stableCount:0, tipBuf:null, lastCommit:0, rearmT0:0, rearmClearCount:0, armGraceUntil:0,
            lastTurnTotal:null, pkIdx:0, pkMult:1, chipIdx:0, moveMode:null, movePreview:null,
            bias:{sx:0,sy:0,n:0}, timer:null, settleTimer:null,
            collect:false, _dataDB:null, _dataCount:0, _capCanvas:null,
@@ -12705,7 +12706,7 @@ window.DartCam = (function(){
       const vb=applyH(S.H, x*S.vw/w, y*S.vh/h);
       if(!vb){ mask[idx]=0; omask[idx]=0; rmap[idx]=99; continue; }
       const r=Math.hypot(vb[0],vb[1]); rmap[idx]=r;
-      if(r<=1.10){ mask[idx]=1; cnt++; } else mask[idx]=0;
+      if(r<=1.20){ mask[idx]=1; cnt++; } else mask[idx]=0;   // 1.10→1.20: non tagliare il blob delle frecce vicine alla doppia (BUG D)
       if(r<=EXT_RAD){ omask[idx]=1; ocnt++; } else omask[idx]=0; } }   // maschera estesa (chiusura <50)
     S.insideMask=mask; S.outMask=omask; S.rMap=rmap; S.insideCount=cnt||1; S.outCount=ocnt||1; S.Hinv=invert3(S.H);
     S._dm=new Uint8Array(w*h); S._vis=new Uint8Array(w*h);
@@ -12852,6 +12853,12 @@ window.DartCam = (function(){
     if(firstLoad) setHint(readyHint());
     tips=tips||[];
     const usedT={}, GUARD=S.vw*0.35, MINSCORE=0.30; // associa il tip AI alla freccia (ancora = posizione del trigger classico)
+    // BUG B: marca come "occupati" i tip AI già vicini alle frecce GIÀ piazzate (non pending, con pin),
+    // così una nuova freccia non ripesca il tip di una precedente → niente stessa freccia rilevata più volte.
+    for(let i=0;i<3;i++){ const d=S.darts[i]; if(!d||d.pending||d.vx==null) continue;
+      let bj=-1, bd=1e9; for(let j=0;j<tips.length;j++){ if(usedT[j]) continue;
+        const dx=d.vx-tips[j].x, dy=d.vy-tips[j].y; const dd=Math.hypot(dx,dy); if(dd<bd){ bd=dd; bj=j; } }
+      if(bj>=0 && bd<=GUARD) usedT[bj]=1; }
     for(const pi of todo){ const d=S.darts[pi]; if(!d) continue;
       let bj=-1, bd=1e9; for(let j=0;j<tips.length;j++){ if(usedT[j]||tips[j].score<MINSCORE) continue;
         const dx=(d._ax||0)-tips[j].x, dy=(d._ay||0)-tips[j].y; const dist=Math.hypot(dx,dy); if(dist<bd){ bd=dist; bj=j; } }
@@ -12986,6 +12993,7 @@ window.DartCam = (function(){
       S.phase='aim'; S.prov=null; S.stableCount=0; S.tipBuf=null; S.prevFrame=null; S.unstableRun=0; S.hintState='ready'; setHint(readyHint()); }, SETTLE_MS); }
   function armFromEmpty(cur){ const f=cur||grabProc(); if(f){ S.refData=f; if(!S.emptyRef) S.emptyRef=f; }
     S.phase='aim'; S.lastCommit=Date.now(); S.rearmT0=0; S.rearmClearCount=0;
+    S.armGraceUntil=Date.now()+REARM_GRACE;   // grazia post-riarmo: niente commit fantasma mentre lo sfondo si assesta (BUG A)
     S.prov=null; S.stableCount=0; S.tipBuf=null; S.prevFrame=null; S.unstableRun=0; S.hintState='ready'; setHint(readyHint()); }
   function dist(a,b){ return Math.hypot(a.px-b.px,a.py-b.py); }
   function tick(){ if(!layerOpen()) return; updateHud(); drawOverlay();
@@ -12996,6 +13004,10 @@ window.DartCam = (function(){
     if(S.phase!=='aim') return;
     if(S.moveMode!=null) return;
     if(S.curIdx>=3) return;
+    // grazia post-riarmo (BUG A): dopo aver tolto le frecce non rilevare per REARM_GRACE ms e
+    // tieni lo sfondo aggiornato all'ultimo frame, così l'assestamento di esposizione/scena non
+    // genera un commit fantasma "?". Una freccia vera non si tira entro <1s dall'aver tolto le frecce.
+    if(S.armGraceUntil){ if(Date.now()<S.armGraceUntil){ S.refData=cur; S.prevFrame=cur; S.stableCount=0; S.tipBuf=null; return; } S.armGraceUntil=0; }
     // ── Gate anti-shake: confronta col frame PRECEDENTE. Una freccia conficcata = scena
     //    ferma tra due tick (diff≈0); un treppiede che oscilla = diff alto e CONTINUO → tutti
     //    i bordi del bersaglio cambiano e generavano falsi pallini verdi. Se l'inquadratura è
@@ -13025,11 +13037,11 @@ window.DartCam = (function(){
     if(det.tooBig||!det.tip){ S.stableCount=0; S.tipBuf=null; return; }
     // steel e soft: stesso comportamento (rilevamento immediato su frame stabili).
     // Se in steel la freccia cade, sarà l'utente a segnarla 0 dal menu della freccia.
-    if(S.tipBuf && dist(det.tip,S.tipBuf)<S.vw*0.05) S.stableCount++; else S.stableCount=1;
+    if(S.tipBuf && dist(det.tip,S.tipBuf)<S.vw*0.07) S.stableCount++; else S.stableCount=1;  // il classico è SOLO trigger (precisione = AI): tolleranza larga = più frecce periferiche scattano
     S.tipBuf=det.tip; if(S.stableCount>=STABLE_NEED){ commitDart(det.tip); } }
   function handleRearm(cur){ if(!S.rearmT0) S.rearmT0=Date.now();
     const d=maskedDiffCount(cur, S.emptyRef);
-    if(d < MIN_AREA*1.6){ S.rearmClearCount++; if(S.rearmClearCount>=2){ armFromEmpty(cur); } }
+    if(d < MIN_AREA*1.6){ S.rearmClearCount++; if(S.rearmClearCount>=3){ armFromEmpty(cur); } }   // 2→3 frame vuoti: mano fuori campo prima di catturare lo sfondo (BUG A)
     else S.rearmClearCount=0;
     if(Date.now()-S.rearmT0 > REARM_TIMEOUT){ S.emptyRef=cur; armFromEmpty(cur); } }
   function maskedDiffCount(cur, ref){ if(!ref||!S.insideMask) return 0;
