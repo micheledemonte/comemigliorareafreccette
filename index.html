@@ -12839,6 +12839,18 @@ window.DartCam = (function(){
     S.calLocked=pts; S.calStep=4; S.calProv=null; return true; }
   function scheduleAiRefine(){ if(!S.aiOn) return; if(S.aiTimer) clearTimeout(S.aiTimer);
     S.aiTimer=setTimeout(function(){ aiRefineTurn(); }, 350); }
+  // L'AI non ha trovato la punta di una freccia: invece di forzare sempre il manuale ("?"), uso la
+  // posizione del TRIGGER classico (ancora _ax/_ay) per i casi gestibili senza precisione fine:
+  //   • FUORI dal board (r ben oltre il doppio) → Miss 0 (chiusura, tiri fuori).
+  //   • BULL / 25 (centro) → punteggio dal classico (lì l'AI fatica per via della classe cal5/Bull).
+  // Altrove (singoli/doppi/tripli) resta "?" manuale: lì il classico è impreciso sui bordi settore.
+  // In tutti i casi vx=null → nessun pin classico mostrato e nulla loggato (dataCapture filtra vx!=null).
+  function resolveFailedDart(d){
+    const b=(S.H && d._ax!=null) ? applyH(S.H, d._ax, d._ay) : null;
+    if(b){ const r=Math.hypot(b[0],b[1]), sc=scoreForBoard(b[0],b[1]);
+      if(r>RAD.dblOut*1.05){ d.value=0; d.base=0; d.mult=0; d.label='—'; d.vx=null; d.vy=null; d.posTruth='miss'; d.auto=true; return; }
+      if(r<=RAD.obull){ d.value=sc.value; d.base=sc.base; d.mult=sc.mult; d.label=sc.label; d.vx=null; d.vy=null; d.posTruth='auto'; d.auto=true; return; } }
+    d.value=null; d.base=null; d.mult=null; d.label='?'; d.vx=null; d.vy=null; d.posTruth='need'; }
   async function aiRefineTurn(){ if(!S.aiOn || !layerOpen() || S.calibrating || S.moveMode!=null || S._aiBusy) return;
     // Processa le frecce ancora "pending": rilevate dal trigger classico, in attesa della punta AI.
     // L'AI è l'UNICO motore di posizione/punteggio. Se non trova la punta → slot da inserire a mano.
@@ -12847,8 +12859,8 @@ window.DartCam = (function(){
     S._aiBusy=true; let firstLoad=!S._aiSess; if(firstLoad) setHint('Carico il modello AI, un attimo…');
     let tips; try{ tips=await aiDetectDarts(); }
     catch(e){ S._aiBusy=false; console.warn('AI non disponibile:', e);
-      // modello non caricabile → niente classico di ripiego: lo slot va inserito a mano.
-      for(const pi of todo){ const d=S.darts[pi]; if(d&&d.pending){ d.pending=false; d.posTruth='need'; d.label='?'; d.vx=null; d.vy=null; } }
+      // modello non caricabile → fallback su posizione classica (Miss fuori board / bull-25), resto "?".
+      for(const pi of todo){ const d=S.darts[pi]; if(d&&d.pending){ resolveFailedDart(d); d.pending=false; } }
       if(firstLoad) setHint(readyHint()); renderDarts(); drawOverlay(); updateActionBtn(); updateHud(); return; }
     if(firstLoad) setHint(readyHint());
     tips=tips||[];
@@ -12866,9 +12878,8 @@ window.DartCam = (function(){
         usedT[bj]=1; const tp=tips[bj]; const b=applyH(S.H, tp.x, tp.y);
         if(b){ const sc=scoreForBoard(b[0],b[1]);
           d.vx=tp.x; d.vy=tp.y; d.value=sc.value; d.base=sc.base; d.mult=sc.mult; d.label=sc.label; d.detB=b; d.auto=true; d.posTruth='ai'; }
-        else { d.value=null; d.base=null; d.mult=null; d.label='?'; d.vx=null; d.vy=null; d.posTruth='need'; } }
-      else {                    // AI non ha trovato la punta → nessun pin, punteggio manuale
-        d.value=null; d.base=null; d.mult=null; d.label='?'; d.vx=null; d.vy=null; d.posTruth='need'; }
+        else { resolveFailedDart(d); } }
+      else { resolveFailedDart(d); }   // AI non ha trovato la punta → fallback: Miss fuori board / bull-25 dal classico / "?"
       d.pending=false; }
     S._aiBusy=false; renderDarts(); drawOverlay(); updateActionBtn(); updateHud(); }
   function setAI(v){ S.aiOn=!!v; try{ localStorage.setItem(LS_AI, v?'1':'0'); }catch(e){}
