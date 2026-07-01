@@ -4764,10 +4764,54 @@ const SESS={
 };
 
 // ══════════════════════════════════════════════════
+// SBLOCCO SEQUENZIALE allenamenti/sessioni
+// ══════════════════════════════════════════════════
+// Una sessione è "completata" se TUTTE le caselle dei giochi inline sono piene (il 501 non conta),
+// stessa regola di autoLoadNextSession. Sbloccate = tutte le completate + la PRIMA non completata
+// (quella corrente). Tutto ciò che viene dopo resta bloccato (lucchetto). Vale anche per l'admin.
+function trainSessComplete(sessKey, sessData){
+  const sess=SESS[sessKey]; if(!sess) return true;
+  let gi=0;
+  for(const g of sess.games){ const gid='g'+gi++; if(g.t==='s501') continue;
+    const gd=sessData&&sessData[gid];
+    if(!gd||typeof gd!=='object') return false;
+    const vals=Object.values(gd);
+    if(vals.length===0) return false;
+    if(vals.some(v=>String(v).trim()==='')) return false; }
+  return true;
+}
+// indice piatto (0..39) della PRIMA sessione non completata = sessione corrente; tutto oltre è bloccato
+function trainMaxUnlockedIdx(){
+  const data=(CU&&CU.id)?getUD(CU.id):{};
+  for(let i=0;i<40;i++){ const w=Math.floor(i/5)+1, s=(i%5)+1, key=w+'-'+s;
+    const sd=data[key];
+    const done=!!(sd&&sd.__meta)&&trainSessComplete(key,sd);
+    if(!done) return i; }
+  return 39; // tutte le 40 completate
+}
+function updateTrainingLocks(){
+  const wSel=document.getElementById('weekSel'), sSel=document.getElementById('sessSel');
+  if(!wSel||!sSel||!CU) return;
+  const maxU=trainMaxUnlockedIdx();
+  const curW=Math.floor(maxU/5)+1, curSInCurW=(maxU%5)+1;
+  // Allenamenti: sbloccato se la sua sessione 1 rientra tra le sbloccate
+  for(const opt of wSel.options){ const w=Number(opt.value); const locked=((w-1)*5)>maxU;
+    opt.disabled=locked; opt.textContent='Allenamento '+w+(locked?' 🔒':''); }
+  if(Number(wSel.value)>curW) wSel.value=String(curW);
+  // Sessioni dell'allenamento selezionato: sbloccate fino alla corrente (o tutte se allenamento già finito)
+  const w=Number(wSel.value);
+  const weekMaxSess=(w<curW)?5:(w===curW?curSInCurW:0);
+  for(const opt of sSel.options){ const s=Number(opt.value); const locked=s>weekMaxSess;
+    opt.disabled=locked; opt.textContent='Sessione '+s+(locked?' 🔒':''); }
+  if(Number(sSel.value)>weekMaxSess) sSel.value=String(Math.max(1,weekMaxSess));
+}
+
+// ══════════════════════════════════════════════════
 // RENDER
 // ══════════════════════════════════════════════════
 let _gi=0;
 function renderSession(){
+  updateTrainingLocks();   // sblocco sequenziale: aggiorna 🔒 e riallinea le tendine prima di leggere i valori
   const w=document.getElementById('weekSel').value;
   const s=document.getElementById('sessSel').value;
   const key=w+'-'+s;
@@ -5327,6 +5371,7 @@ function saveSession(){
   data[key]=res;
   data[key].__meta={week:parseInt(w),session:parseInt(s),title:sess.title,type:sess.type,savedAt:new Date().toISOString()};
   setUD(CU.id,data);
+  updateTrainingLocks();   // sessione completata → sblocca la successiva nel menu
   const msg=document.getElementById('saveMsg');
   msg.textContent='✓ Sessione salvata!';
   setTimeout(()=>msg.textContent='',2500);
