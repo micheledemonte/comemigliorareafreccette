@@ -3373,6 +3373,10 @@ async function loadDBFromCloud(){
 let _saveTimer = null;
 let _lastSaveTime = 0;   // ms timestamp of last completed save
 let _saveInFlight = false; // true while a save is pending or running
+// Cancellazioni pendenti su db/userData (path→null): scritte come null nello STESSO update()
+// atomico di saveDBToCloud, così .update() le rimuove DAVVERO (update() da solo non cancella
+// le chiavi assenti). Sostituisce il vecchio .remove() che andava in race col listener realtime.
+let _pendingUDDeletes = {};
 function saveDBToCloud(){
   if(!_firebaseOK || !_fbDB) return;
   if(!_dbLoaded) return; // non salvare finché il DB non è completamente caricato
@@ -3398,10 +3402,14 @@ function saveDBToCloud(){
           });
         });
       }
+      // Cancellazioni pendenti (sessioni unite/eliminate): null nello STESSO update() atomico.
+      const _delPaths = Object.keys(_pendingUDDeletes);
+      for(const p of _delPaths) updates[p] = null;
       // NOTA: db/requests NON viene mai toccato da saveDBToCloud
       // Le requests sono scritte direttamente su Firebase path separato
       // (come __devices) e non passano per _dbCache per evitare cancellazioni accidentali
       await _fbDB.ref('/').update(updates);
+      _delPaths.forEach(p=>{ delete _pendingUDDeletes[p]; }); // scritte con successo → svuota
       _lastSaveTime = Date.now();
       console.log('✓ Firebase DB saved');
     } catch(e){
@@ -3966,7 +3974,11 @@ function startDBListeners(){
   _dbUserDataListener = _fbDB.ref('db/userData/'+CU.id).on('value', snap=>{
     if(!_dbCache) return;
     const val = snap.val();
-    if(val && typeof val === 'object'){
+    // Durante un salvataggio locale in corso (_saveInFlight, incluso il debounce) NON sovrascrivere
+    // la cache: uno snapshot cloud "vecchio" (es. a metà di una cancellazione di sessioni unite)
+    // resusciterebbe le sessioni eliminate o cancellerebbe quella appena creata. La cache locale è
+    // autoritativa finché il nostro update() non completa. (Fix bug ricorrente merge sessioni.)
+    if(!_saveInFlight && val && typeof val === 'object'){
       const existing = (_dbCache.userData && _dbCache.userData[CU.id]) || {};
       // Preserva __devices dalla cache locale (non sovrascrivere)
       const devices = existing.__devices || val.__devices;
@@ -4708,7 +4720,7 @@ function showTab(name,silent=false){
     if(name==='admin')          renderAdmin();
     if(name==='gestionale')     renderGestionale();
     if(name==='calendario')     renderCalendario();
-    if(name==='user-calendario') renderUserCalendario();
+    if(name==='user-calendario'){ const _t=new Date(); _userCalMonth=_t.getMonth(); _userCalYear=_t.getFullYear(); _userCalSelDay=calDateStr(_t); renderUserCalendario(); }  // apri con OGGI già selezionato → pannello appuntamenti subito visibile
     if(name==='appuntamenti')   renderApptUser();
     if(name==='profile')        loadProfileForm();
     if(name==='checkout')       renderCOTables();
@@ -8067,7 +8079,10 @@ function calBuildHtml(){
     days.push({date:calDateStr(new Date(_calYear,_calMonth,d)),inMonth:true});
   }
   while(days.length%7!==0){
-    const d=new Date(_calYear,_calMonth+1,days.length-lastDay.getDate());
+    // giorno del mese SUCCESSIVO = (celle trailing già aggiunte)+1. Trailing aggiunte =
+    // days.length - startDow(leading) - giorni del mese corrente. Prima mancava "-startDow+1"
+    // → duplicava l'ultimo giorno del mese e sfasava di 1 (30 giugno doppio, 1 ago mancante).
+    const d=new Date(_calYear,_calMonth+1,days.length-startDow-lastDay.getDate()+1);
     days.push({date:calDateStr(d),inMonth:false});
   }
 
@@ -8100,7 +8115,11 @@ function calBuildHtml(){
   let listHtml;
   if(_calMyFilter && CU){
     // Vista "I miei appuntamenti"
-    const myEvs  = allEvents.filter(ev=>ev.adminRef===CU.id).sort((a,b)=>a.dt.localeCompare(b.dt));
+    const _nowMs = Date.now();
+    const myEvs  = allEvents.filter(ev=>ev.adminRef===CU.id)
+      .filter(ev=>{ const past = new Date(ev.dt).getTime() < _nowMs;   // 'done'=svolti (passati), 'todo'=da svolgere (futuri)
+        return _calMyApptFilter==='done' ? past : !past; })
+      .sort((a,b)=>a.dt.localeCompare(b.dt));
     const colorMap2 = calGetUserColorMap();
     const rowsHtml = myEvs.length
       ? myEvs.map(ev=>{
@@ -8119,10 +8138,14 @@ function calBuildHtml(){
             +'</div>'
             +'</div>';
         }).join('')
-      : '<div class="gs-empty" style="padding:16px">Nessun appuntamento assegnato a te.</div>';
+      : '<div class="gs-empty" style="padding:16px">'+(_calMyApptFilter==='done'?'Nessun appuntamento gi&agrave; svolto.':'Nessun appuntamento da svolgere.')+'</div>';
     listHtml = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">'
       +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--green);letter-spacing:.04em">👤 I MIEI APPUNTAMENTI</div>'
       +'<button onclick="calClearFilter()" style="background:var(--d3);border:1px solid var(--d5);color:var(--mu2);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">✕ RIMUOVI SELEZIONE</button>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'
+      +'<button class="req-filter-btn'+(_calMyApptFilter==='todo'?' active':'')+'" onclick="calSetMyApptFilter(\'todo\')">📅 DA SVOLGERE</button>'
+      +'<button class="req-filter-btn'+(_calMyApptFilter==='done'?' active':'')+'" onclick="calSetMyApptFilter(\'done\')">✅ SVOLTI</button>'
       +'</div>'+rowsHtml;
   } else if(_calFilterUid){
     const u     = getUsers().find(u=>u.id===_calFilterUid);
@@ -8409,9 +8432,17 @@ function calIcsBtn(ev, titleStr){
 
 // ── Filtro "I miei appuntamenti" ─────────────────────────────────────────────
 let _calMyFilter = false;
+let _calMyApptFilter = 'todo';   // 'todo' = da svolgere (futuri) | 'done' = svolti (passati)
+
+function calSetMyApptFilter(f){
+  _calMyApptFilter = f;
+  const calEl = document.getElementById('calContainer');
+  if(calEl) calEl.innerHTML = calBuildHtml();
+}
 
 function calToggleMyFilter(){
   _calMyFilter   = !_calMyFilter;
+  _calMyApptFilter = 'todo';   // apre sempre su "da svolgere"
   _calFilterUid  = null;
   _calSelDay     = null;
   const srch = document.getElementById('calSearch');
@@ -9584,7 +9615,7 @@ function _doMergeTournamentSessions(tourSessions){
   // Delete original sessions — locale + Firebase (pattern obbligatorio come __percorso)
   sorted.forEach(s=>{
     delete data[s.key];
-    if(_firebaseOK && _fbDB) _fbDB.ref('db/userData/'+CU.id+'/'+s.key).remove();
+    _pendingUDDeletes['db/userData/'+CU.id+'/'+s.key] = null;  // cancellazione atomica nel prossimo saveDBToCloud
   });
 
 
@@ -9656,7 +9687,7 @@ function _doMergeTrainingSessions(trainSess){
   // Delete originals — locale + Firebase (pattern obbligatorio come __percorso)
   sorted.forEach(s=>{
     delete data[s.key];
-    if(_firebaseOK && _fbDB) _fbDB.ref('db/userData/'+CU.id+'/'+s.key).remove();
+    _pendingUDDeletes['db/userData/'+CU.id+'/'+s.key] = null;  // cancellazione atomica nel prossimo saveDBToCloud
   });
   setUD(CU.id, data);
   _selected501Sessions = [];
@@ -10436,11 +10467,8 @@ function delete501Sess(key){
       if(!CU) return;
       const data=getUD(CU.id);
       delete data[key];
+      _pendingUDDeletes['db/userData/'+CU.id+'/'+key] = null;  // cancellazione atomica nel prossimo saveDBToCloud (no race col listener)
       setUD(CU.id,data);
-      // Elimina direttamente su Firebase (setUD/saveDBToCloud non cancella campi)
-      if(_firebaseOK && _fbDB){
-        _fbDB.ref('db/userData/'+CU.id+'/'+key).remove();
-      }
       // Remove from selected list too
       const idx=_selected501Sessions.findIndex(s=>s.key===key);
       if(idx>=0) _selected501Sessions.splice(idx,1);
